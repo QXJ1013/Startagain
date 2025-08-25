@@ -151,13 +151,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, nextTick, onMounted, watch } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useSessionStore } from '../stores/session'
+import { useChatStore } from '../stores/chat'
 import { api } from '../services/api'
 
 // State
 const sessionStore = useSessionStore()
-const messages = ref<any[]>([])
+const chatStore = useChatStore()
 const userInput = ref('')
 const supplementaryText = ref('')
 const selectedOptions = ref<string[]>([])
@@ -165,6 +166,10 @@ const currentStage = ref('Processing diagnosis')
 const isLoading = ref(false)
 const error = ref('')
 const messagesContainer = ref<HTMLElement>()
+const hasInitialized = ref(false)
+
+// Use messages from chat store
+const messages = computed(() => chatStore.messages)
 
 // Computed
 const hasCurrentQuestion = computed(() => {
@@ -209,15 +214,15 @@ async function sendMessage() {
   userInput.value = ''
   
   // Add user message
-  messages.value.push({
+  chatStore.addMessage({
     type: 'user',
     content: messageText,
     timestamp: new Date()
   })
   
-  // Check if this is the first real user message (excluding welcome message)
-  const userMessages = messages.value.filter(m => m.type === 'user')
-  if (userMessages.length === 1) {
+  // Check if this is the first real user message in this conversation
+  const userMessages = chatStore.messages.filter(m => m.type === 'user')
+  if (userMessages.length === 1 && chatStore.conversationType === 'general') {
     // This is the first user message, start conversation with routing
     await startConversationWithInput(messageText)
   } else {
@@ -238,7 +243,7 @@ async function submitSelection() {
   }
   
   // Add user message showing their selection
-  messages.value.push({
+  chatStore.addMessage({
     type: 'user',
     content: responseText,
     timestamp: new Date()
@@ -272,7 +277,8 @@ async function processUserInput(input: string) {
         timestamp: new Date()
       }
       
-      messages.value.push(assistantMessage)
+      chatStore.addMessage(assistantMessage)
+      chatStore.incrementQuestionCount()
       await scrollToBottom()
     }
     
@@ -287,8 +293,10 @@ async function startConversationWithInput(userMessage: string) {
   isLoading.value = true
   error.value = ''
   
-  // Reset session for fresh conversation to ensure proper routing
-  sessionStore.resetSession()
+  // Only reset session for brand new conversations
+  if (chatStore.conversationType === 'general' && !sessionStore.currentPnm) {
+    sessionStore.resetSession()
+  }
   
   try {
     // Send the user's first message to backend which will route and return first question
@@ -306,7 +314,14 @@ async function startConversationWithInput(userMessage: string) {
         timestamp: new Date()
       }
       
-      messages.value.push(assistantMessage)
+      chatStore.addMessage(assistantMessage)
+      chatStore.incrementQuestionCount()
+      
+      // Update session state if provided
+      if (response.current_pnm) {
+        sessionStore.setState(response.current_pnm, response.current_term, response.fsm_state || 'ROUTE')
+      }
+      
       await scrollToBottom()
     }
   } catch (e: any) {
@@ -336,7 +351,7 @@ async function startConversation() {
         timestamp: new Date()
       }
       
-      messages.value.push(assistantMessage)
+      chatStore.addMessage(assistantMessage)
     }
   } catch (e: any) {
     error.value = e.message || 'Failed to start conversation'
@@ -351,7 +366,7 @@ async function skipQuestion() {
   if (isLoading.value) return
   
   // Add user message indicating skip
-  messages.value.push({
+  chatStore.addMessage({
     type: 'user',
     content: 'Skip this question',
     timestamp: new Date()
@@ -378,20 +393,24 @@ async function scrollToBottom() {
 }
 
 // Watch for dimension focus from data page
-watch(() => sessionStore.dimensionFocus, (newDimension) => {
-  if (newDimension) {
-    startDimensionConversation(newDimension)
+watch(() => sessionStore.dimensionFocus, async (newDimension) => {
+  if (newDimension && !hasInitialized.value) {
+    // Clear messages when starting a dimension-specific conversation
+    await startDimensionConversation(newDimension)
     sessionStore.setDimensionFocus(null) // Clear after handling
   }
 }, { immediate: true })
 
 // Start dimension-specific conversation
 async function startDimensionConversation(dimension: string) {
-  messages.value = []
-  isLoading.value = true
+  // Start a new dimension-specific conversation
+  chatStore.startNewConversation('dimension', dimension)
   
-  // Reset session to start fresh for dimension-focused conversation
+  // Create a new session for this dimension
   sessionStore.resetSession()
+  
+  isLoading.value = true
+  hasInitialized.value = true
   
   try {
     // Get the first question for this dimension from the backend
@@ -410,13 +429,19 @@ async function startDimensionConversation(dimension: string) {
         timestamp: new Date()
       }
       
-      messages.value.push(assistantMessage)
+      chatStore.addMessage(assistantMessage)
+      chatStore.incrementQuestionCount()
       currentStage.value = `${dimension} Assessment`
+      
+      // Update session state
+      if (response.current_pnm) {
+        sessionStore.setState(response.current_pnm, response.current_term, response.fsm_state || 'ROUTE')
+      }
     }
   } catch (e: any) {
     error.value = e.message || 'Failed to start dimension conversation'
     // Fallback message
-    messages.value.push({
+    chatStore.addMessage({
       type: 'assistant',
       content: `Starting ${dimension} assessment. Please describe any issues or concerns related to this dimension.`,
       timestamp: new Date()
@@ -430,20 +455,31 @@ async function startDimensionConversation(dimension: string) {
 }
 
 onMounted(() => {
-  // Don't auto-start conversation - wait for user action
   // Check if there's a dimension focus on mount
-  if (sessionStore.dimensionFocus) {
+  if (sessionStore.dimensionFocus && !hasInitialized.value) {
     startDimensionConversation(sessionStore.dimensionFocus)
     sessionStore.setDimensionFocus(null)
-  } else if (messages.value.length === 0) {
-    // Show welcome message if no messages yet
-    messages.value.push({
+  } else if (chatStore.messages.length === 0) {
+    // Start a new general conversation
+    chatStore.startNewConversation('general')
+    
+    // Create fresh session for new conversation
+    sessionStore.resetSession()
+    
+    // Show welcome message
+    chatStore.addMessage({
       type: 'assistant',
       content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
       options: [],
       timestamp: new Date()
     })
   }
+  hasInitialized.value = true
+})
+
+onUnmounted(() => {
+  // Clear initialization flag when leaving
+  hasInitialized.value = false
 })
 </script>
 
