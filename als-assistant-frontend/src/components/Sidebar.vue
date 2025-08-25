@@ -5,17 +5,13 @@
       <p class="subtitle">Self-Awareness Assessment</p>
     </div>
     <nav>
-      <RouterLink to="/assessment" class="nav-link primary">
-        <span class="nav-icon">🎯</span>
-        <span>Assessment</span>
+      <RouterLink to="/chat" class="nav-link primary">
+        <span class="nav-icon">💬</span>
+        <span>Chat</span>
       </RouterLink>
       <RouterLink to="/data" class="nav-link">
         <span class="nav-icon">📊</span>
         <span>Results & Data</span>
-      </RouterLink>
-      <RouterLink to="/chat" class="nav-link">
-        <span class="nav-icon">💬</span>
-        <span>Chat (Legacy)</span>
       </RouterLink>
       <RouterLink to="/profile" class="nav-link">
         <span class="nav-icon">👤</span>

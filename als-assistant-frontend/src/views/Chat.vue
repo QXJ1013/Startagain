@@ -50,10 +50,10 @@
               
               <!-- Optional text input -->
               <div v-if="message.allowTextInput" class="text-input-container">
-                <div class="input-label">（可补充说明）</div>
+                <div class="input-label">(Optional additional details)</div>
                 <textarea 
                   v-model="supplementaryText" 
-                  placeholder="输入补充说明..."
+                  placeholder="Enter additional details..."
                   rows="2"
                   class="supplement-input"
                 ></textarea>
@@ -71,7 +71,7 @@
                 </div>
               </div>
               <div class="card-disclaimer">
-                {{ card.disclaimer || "此建议基于你的回答与内部资料摘要，不构成诊断。" }}
+                {{ card.disclaimer || "This advice is based on your responses and internal resources. It does not constitute a diagnosis." }}
               </div>
             </div>
           </div>
@@ -85,19 +85,19 @@
           <span></span>
           <span></span>
         </div>
-        <div class="loading-text">正在分析您的回答...</div>
+        <div class="loading-text">Analyzing your response...</div>
       </div>
     </div>
 
     <!-- Input Area -->
     <div class="input-area">
-      <!-- Free text input (for initial input or when no options) -->
-      <div v-if="showTextInput" class="text-input-section">
+      <!-- Always show text input for user to type -->
+      <div class="text-input-section">
         <div class="input-container">
           <textarea 
             v-model="userInput"
             @keydown.enter.ctrl="sendMessage"
-            placeholder="请描述您的情况..."
+            placeholder="Describe your situation or enter your response..."
             rows="3"
             class="main-input"
           ></textarea>
@@ -106,37 +106,26 @@
             :disabled="!userInput.trim() || isLoading"
             class="send-btn primary"
           >
-            发送
+            Send
           </button>
         </div>
       </div>
 
-      <!-- Action buttons when options are available -->
-      <div v-else-if="hasCurrentQuestion" class="action-buttons">
+      <!-- Action buttons when options are selected -->
+      <div v-if="hasCurrentQuestion && hasSelection" class="action-buttons">
         <button 
           @click="submitSelection"
           :disabled="!hasSelection || isLoading"
           class="submit-btn primary"
         >
-          提交回答
+          Submit selected options
         </button>
         
         <button 
-          @click="skipQuestion"
-          :disabled="isLoading"
-          class="skip-btn secondary"
+          @click="clearSelection"
+          class="clear-btn secondary"
         >
-          跳过此题
-        </button>
-      </div>
-
-      <!-- Start/Continue buttons -->
-      <div v-else class="start-buttons">
-        <button @click="startConversation" class="start-btn primary" :disabled="isLoading">
-          开始对话
-        </button>
-        <button @click="continueFromData" class="continue-btn" :disabled="isLoading">
-          从数据页继续
+          Clear selection
         </button>
       </div>
     </div>
@@ -147,7 +136,7 @@
         <span class="notification-icon">ℹ️</span>
         {{ sessionStore.message }}
       </div>
-      <button @click="sessionStore.setMessage(null)" class="dismiss-notification">关闭</button>
+      <button @click="sessionStore.setMessage(null)" class="dismiss-notification">Close</button>
     </div>
 
     <!-- Error Display -->
@@ -156,7 +145,7 @@
         <span class="error-icon">⚠️</span>
         {{ error }}
       </div>
-      <button @click="error = null" class="dismiss-error">关闭</button>
+      <button @click="error = null" class="dismiss-error">Close</button>
     </div>
   </div>
 </template>
@@ -178,11 +167,6 @@ const error = ref('')
 const messagesContainer = ref<HTMLElement>()
 
 // Computed
-const showTextInput = computed(() => {
-  // Always show text input - users should be able to type freely even when options are available
-  return true
-})
-
 const hasCurrentQuestion = computed(() => {
   const lastMessage = messages.value[messages.value.length - 1]
   return lastMessage && lastMessage.type === 'assistant' && lastMessage.options && lastMessage.options.length > 0
@@ -213,6 +197,11 @@ function selectOption(value: string, multiSelect: boolean) {
   }
 }
 
+function clearSelection() {
+  selectedOptions.value = []
+  supplementaryText.value = ''
+}
+
 async function sendMessage() {
   if (!userInput.value.trim() || isLoading.value) return
   
@@ -226,7 +215,12 @@ async function sendMessage() {
     timestamp: new Date()
   })
   
-  await processUserInput(messageText)
+  // If this is the first message and no conversation started, start it
+  if (messages.value.length === 1) {
+    await startConversationWithInput(messageText)
+  } else {
+    await processUserInput(messageText)
+  }
 }
 
 async function submitSelection() {
@@ -237,7 +231,7 @@ async function submitSelection() {
   let responseText = selectedLabels
   
   if (supplementaryText.value.trim()) {
-    responseText += `\n补充说明: ${supplementaryText.value.trim()}`
+    responseText += `\nAdditional details: ${supplementaryText.value.trim()}`
   }
   
   // Add user message showing their selection
@@ -280,23 +274,48 @@ async function processUserInput(input: string) {
     }
     
   } catch (e: any) {
-    error.value = e.message || '处理消息时出错'
+    error.value = e.message || 'Error processing message'
   } finally {
     isLoading.value = false
   }
 }
 
-// Function removed - now using real API calls instead of simulation
+async function startConversationWithInput(userMessage: string) {
+  isLoading.value = true
+  error.value = ''
+  
+  try {
+    // Send the user's first message to backend which will route and return first question
+    const response = await api.getNextQuestion(sessionStore.sessionId, userMessage)
+    
+    if (response) {
+      const assistantMessage = {
+        type: 'assistant',
+        content: response.question_text,
+        options: response.options || [],
+        multiSelect: false,
+        allowTextInput: response.allow_text_input,
+        transition: response.transition_message || null,
+        infoCards: response.info_cards || null,
+        timestamp: new Date()
+      }
+      
+      messages.value.push(assistantMessage)
+      await scrollToBottom()
+    }
+  } catch (e: any) {
+    error.value = e.message || 'Error processing message'
+  } finally {
+    isLoading.value = false
+  }
+}
 
 async function startConversation() {
+  // This is now only called when starting from Data page with dimension focus
   messages.value = []
   isLoading.value = true
   
-  // Reset session to start fresh
-  sessionStore.resetSession()
-  
   try {
-    // Get the first question from the backend
     const response = await api.getNextQuestion(sessionStore.sessionId)
     
     if (response) {
@@ -314,13 +333,7 @@ async function startConversation() {
       messages.value.push(assistantMessage)
     }
   } catch (e: any) {
-    error.value = e.message || '启动对话失败，请重试'
-    // Fallback message
-    messages.value.push({
-      type: 'assistant',
-      content: '欢迎使用ALS助手！请描述您当前遇到的问题或关心的症状。',
-      timestamp: new Date()
-    })
+    error.value = e.message || 'Failed to start conversation'
   } finally {
     isLoading.value = false
   }
@@ -334,7 +347,7 @@ async function skipQuestion() {
   // Add user message indicating skip
   messages.value.push({
     type: 'user',
-    content: '跳过此题',
+    content: 'Skip this question',
     timestamp: new Date()
   })
   
@@ -343,12 +356,12 @@ async function skipQuestion() {
   supplementaryText.value = ''
   
   // Process skip as user response
-  await processUserInput('跳过')
+  await processUserInput('skip')
 }
 
 function continueFromData() {
   // This would be called from the data page
-  sessionStore.setError('此功能需要从数据页面启动')
+  sessionStore.setError('This feature needs to be launched from the Data page')
 }
 
 async function scrollToBottom() {
@@ -394,11 +407,11 @@ async function startDimensionConversation(dimension: string) {
       currentStage.value = `${dimension} Assessment`
     }
   } catch (e: any) {
-    error.value = e.message || '启动维度对话失败'
+    error.value = e.message || 'Failed to start dimension conversation'
     // Fallback message
     messages.value.push({
       type: 'assistant',
-      content: `开始 ${dimension} 维度的评估。请描述与此维度相关的任何问题或关心的事项。`,
+      content: `Starting ${dimension} assessment. Please describe any issues or concerns related to this dimension.`,
       timestamp: new Date()
     })
     currentStage.value = `${dimension} Assessment`
@@ -410,12 +423,19 @@ async function startDimensionConversation(dimension: string) {
 }
 
 onMounted(() => {
+  // Don't auto-start conversation - wait for user action
   // Check if there's a dimension focus on mount
   if (sessionStore.dimensionFocus) {
     startDimensionConversation(sessionStore.dimensionFocus)
     sessionStore.setDimensionFocus(null)
-  } else {
-    startConversation()
+  } else if (messages.value.length === 0) {
+    // Show welcome message if no messages yet
+    messages.value.push({
+      type: 'assistant',
+      content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
+      options: [],
+      timestamp: new Date()
+    })
   }
 })
 </script>
@@ -743,7 +763,8 @@ onMounted(() => {
 }
 
 .skip-btn,
-.continue-btn {
+.continue-btn,
+.clear-btn {
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
@@ -755,7 +776,8 @@ onMounted(() => {
 }
 
 .skip-btn:hover:not(:disabled),
-.continue-btn:hover:not(:disabled) {
+.continue-btn:hover:not(:disabled),
+.clear-btn:hover:not(:disabled) {
   background: #e5e7eb;
 }
 

@@ -3,13 +3,13 @@
     <!-- Overall Stage Badge -->
     <div class="stage-header">
       <div class="stage-badge">Researching solutions</div>
-      <p class="stage-subtitle">当前进展阶段</p>
+      <p class="stage-subtitle">Current Progress Stage</p>
     </div>
 
     <div class="main-content">
       <!-- Left: 8-Dimension Bar Chart -->
       <div class="dimensions-section">
-        <h2>八项维度评分</h2>
+        <h2>Eight Dimension Scores</h2>
         <div class="dimensions-chart">
           <div 
             v-for="dim in eightDimensions" 
@@ -31,7 +31,7 @@
             <!-- Hover button -->
             <div v-if="hoveredDimension === dim.name" class="dimension-hover-btn">
               <button @click="startDimensionChat(dim.name)" class="start-chat-btn">
-                开始该维度问答
+                Start this dimension
               </button>
             </div>
           </div>
@@ -40,12 +40,12 @@
 
       <!-- Right: Recent Completed Terms -->
       <div class="recent-terms-section">
-        <h3>最近完成的 term</h3>
+        <h3>Recently Completed Terms</h3>
         <div class="terms-table">
           <div v-for="term in recentTerms" :key="term.name" class="term-row">
             <span class="term-name">{{ term.name }}</span>
             <span class="term-score">{{ term.score }}/7</span>
-            <span class="term-date">（上次：{{ term.lastDate }}）</span>
+            <span class="term-date">(Last: {{ term.lastDate }})</span>
           </div>
         </div>
       </div>
@@ -53,10 +53,10 @@
 
     <!-- Next Steps Suggestions -->
     <div class="next-steps-section">
-      <h3>建议下一步</h3>
+      <h3>Suggested Next Steps</h3>
       <div class="suggestions">
-        <div class="suggestion">继续 Physiological 下的 Mobility or Sleep</div>
-        <div class="suggestion">若频繁呛咳，可考虑与团队讨论饮品增稠与吞咽训练</div>
+        <div class="suggestion">Continue with Physiological - Mobility or Sleep</div>
+        <div class="suggestion">If experiencing frequent choking, consider discussing thickened liquids and swallowing exercises with your team</div>
       </div>
     </div>
 
@@ -104,14 +104,17 @@ function hideDimensionHover() {
 
 async function startDimensionChat(dimensionName: string) {
   try {
-    // Navigate to Chat page directly since we have structured conversation flow
+    // Set dimension focus in session store
+    sessionStore.setDimensionFocus(dimensionName);
+    
+    // Navigate to Chat page which will pick up the dimension focus
     router.push('/chat');
     
     // Show notification
-    sessionStore.setMessage(`已为你在 Chat 准备好 ${dimensionName} 的问答`);
+    sessionStore.setMessage(`Starting ${dimensionName} assessment`);
   } catch (error) {
     console.error('Error starting dimension chat:', error);
-    sessionStore.setMessage(`启动 ${dimensionName} 问答时出错`);
+    sessionStore.setMessage(`Error starting ${dimensionName} assessment`);
   }
 }
 
@@ -164,7 +167,7 @@ async function loadData() {
         .map(score => ({
           name: score.domain,
           score: (score.total_score || 0).toFixed(1),
-          lastDate: '最近'
+          lastDate: 'Recent'
         }));
     }
     
@@ -182,8 +185,8 @@ async function loadData() {
       { name: "Transcendence", score: 1.0 }
     ];
     recentTerms.value = [
-      { name: "Emergency planning", score: "3", lastDate: "今天" },
-      { name: "Travel planning", score: "2", lastDate: "昨天" }
+      { name: "Emergency planning", score: "3", lastDate: "Today" },
+      { name: "Travel planning", score: "2", lastDate: "Yesterday" }
     ];
   } finally {
     isLoading.value = false;
