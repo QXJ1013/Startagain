@@ -53,6 +53,9 @@ class SessionState:
             lock_until_turn=self.lock_until_turn,
             turn_index=self.turn_index,
             last_info_turn=self.last_info_turn,
+            keyword_pool=self.keyword_pool,
+            ai_confidence=self.ai_confidence,
+            routing_method=self.routing_method,
             pnm_scores=pnm_scores_dicts,
             evidence_count=self.evidence_count,
         )

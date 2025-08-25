@@ -13,6 +13,7 @@ router = APIRouter(prefix="/chat", tags=["conversation"])
 # Pydantic models
 class ConversationRequest(BaseModel):
     user_response: Optional[str] = None
+    dimension_focus: Optional[str] = None
 
 class ConversationResponse(BaseModel):
     question_text: str
@@ -57,7 +58,8 @@ async def handle_conversation(
         response = get_conversation_manager().get_next_question(
             session=session,
             user_response=conv_request.user_response,
-            storage=storage
+            storage=storage,
+            dimension_focus=conv_request.dimension_focus
         )
         
         # Save session state after processing
@@ -141,7 +143,10 @@ async def get_conversation_state(request: Request):
             "evidence_count": getattr(session, 'evidence_count', {}),
             "turn_index": getattr(session, 'turn_index', 0),
             "asked_qids": getattr(session, 'asked_qids', []),
-            "pnm_scores_count": len(getattr(session, 'pnm_scores', []))
+            "pnm_scores_count": len(getattr(session, 'pnm_scores', [])),
+            "keyword_pool": getattr(session, 'keyword_pool', []),
+            "ai_confidence": getattr(session, 'ai_confidence', 0.0),
+            "routing_method": getattr(session, 'routing_method', None)
         }
         
     except Exception as e:

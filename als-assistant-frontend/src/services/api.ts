@@ -55,8 +55,11 @@ interface PNMProfile {
 
 export const api = {
   // Start or continue conversation
-  getNextQuestion(sessionId: string, userResponse?: string) {
-    const body = userResponse ? { user_response: userResponse } : {};
+  getNextQuestion(sessionId: string, userResponse?: string, dimensionFocus?: string) {
+    const body: any = {};
+    if (userResponse) body.user_response = userResponse;
+    if (dimensionFocus) body.dimension_focus = dimensionFocus;
+    
     return http<ConversationResponse>("/chat/conversation", {
       method: "POST", 
       headers: headers(sessionId),

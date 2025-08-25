@@ -215,10 +215,13 @@ async function sendMessage() {
     timestamp: new Date()
   })
   
-  // If this is the first message and no conversation started, start it
-  if (messages.value.length === 1) {
+  // Check if this is the first real user message (excluding welcome message)
+  const userMessages = messages.value.filter(m => m.type === 'user')
+  if (userMessages.length === 1) {
+    // This is the first user message, start conversation with routing
     await startConversationWithInput(messageText)
   } else {
+    // Continue existing conversation
     await processUserInput(messageText)
   }
 }
@@ -283,6 +286,9 @@ async function processUserInput(input: string) {
 async function startConversationWithInput(userMessage: string) {
   isLoading.value = true
   error.value = ''
+  
+  // Reset session for fresh conversation to ensure proper routing
+  sessionStore.resetSession()
   
   try {
     // Send the user's first message to backend which will route and return first question
@@ -389,7 +395,8 @@ async function startDimensionConversation(dimension: string) {
   
   try {
     // Get the first question for this dimension from the backend
-    const response = await api.getNextQuestion(sessionStore.sessionId)
+    // Pass the dimension focus to backend
+    const response = await api.getNextQuestion(sessionStore.sessionId, undefined, dimension)
     
     if (response) {
       const assistantMessage = {

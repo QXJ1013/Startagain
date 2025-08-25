@@ -8,6 +8,7 @@ from app.config import get_settings
 from app.services.question_bank import QuestionBank
 from app.services.info_provider_enhanced import EnhancedInfoProvider
 from app.services.pnm_scoring import PNMScoringEngine, PNMScore
+from app.services.ai_routing import AIRoutingService
 
 
 class QuestionType(Enum):
@@ -52,7 +53,8 @@ class ConversationManager:
         self,
         session,
         user_response: Optional[str] = None,
-        storage=None
+        storage=None,
+        dimension_focus: Optional[str] = None
     ) -> QuestionResponse:
         """
         Get the next question in the conversation flow.
@@ -61,17 +63,37 @@ class ConversationManager:
             session: Current session state
             user_response: User's answer to previous question
             storage: Storage instance for persistence
+            dimension_focus: Optional PNM dimension to focus on
             
         Returns:
             QuestionResponse with question, options, and any info cards
         """
-        # If user provided a response, process it first
+        import logging
+        log = logging.getLogger(__name__)
+        log.info(f"get_next_question called: user_response={bool(user_response)}, dimension_focus={dimension_focus}, turn_index={session.turn_index}, current_pnm={session.current_pnm}")
+        
+        # Route if this is a new conversation or dimension selection
+        # Always route if:
+        # 1. Dimension focus is provided
+        # 2. First user message (turn_index == 0) 
+        # 3. No PNM set yet (fresh session)
+        should_route = (
+            dimension_focus is not None or
+            (user_response and (session.turn_index == 0 or not session.current_pnm))
+        )
+        
+        log.info(f"Should route: {should_route}")
+        
+        if should_route:
+            self._route_initial_query(session, user_response, dimension_focus)
+        
+        # If user provided a response, process it
         if user_response:
             self._process_user_response(session, user_response, storage)
         
         # Determine what question to ask next
         if self._should_ask_main_question(session):
-            return self._get_main_question(session, storage)
+            return self._get_main_question(session, storage, dimension_focus)
         elif self._should_ask_followup(session):
             return self._get_followup_question(session, storage)
         else:
@@ -80,6 +102,9 @@ class ConversationManager:
     
     def _process_user_response(self, session, user_response: str, storage=None):
         """Process user's response and update session state"""
+        # Store the response for AI routing context
+        session.last_user_response = user_response
+        
         # Store the response
         if storage:
             # Get current turn index and increment
@@ -95,22 +120,28 @@ class ConversationManager:
         self._update_evidence(session, user_response)
         
         # Generate PNM score for user response
-        current_pnm = getattr(session, 'current_pnm', 'Physiological')
-        current_term = getattr(session, 'current_term', 'General needs')
+        current_pnm = getattr(session, 'current_pnm', None)
+        current_term = getattr(session, 'current_term', None)
         
         # Ensure we have a PNM and term for scoring
         if not current_pnm or not current_term:
             # Use fallback values based on response content
             if any(word in user_response.lower() for word in ['breath', 'bipap', 'oxygen', 'ventil']):
-                current_pnm, current_term = 'Physiological', 'Breathing'
+                current_pnm, current_term = 'Physiological', 'Breathing exercises'
             elif any(word in user_response.lower() for word in ['walk', 'move', 'mobility', 'wheelchair']):
-                current_pnm, current_term = 'Physiological', 'Mobility'
+                current_pnm, current_term = 'Physiological', 'Mobility and transfers'
             elif any(word in user_response.lower() for word in ['safe', 'emergency', 'plan', 'access']):
                 current_pnm, current_term = 'Safety', 'Emergency preparedness'
-            elif any(word in user_response.lower() for word in ['communic', 'talk', 'speech', 'voice']):
-                current_pnm, current_term = 'Love & Belonging', 'Communication'
+            elif any(word in user_response.lower() for word in ['swallow', 'choke', 'eat', 'food', 'drink', 'nutrition']):
+                current_pnm, current_term = 'Physiological', 'Nutrition management'
+            elif any(word in user_response.lower() for word in ['speak', 'communic', 'talk', 'speech', 'voice']):
+                current_pnm, current_term = 'Love & Belonging', 'Communication with support network'
             else:
-                current_pnm, current_term = 'Physiological', 'General needs'
+                current_pnm, current_term = 'Cognitive', 'Emergency preparedness'
+            
+            # Update session with these values
+            session.current_pnm = current_pnm
+            session.current_term = current_term
         
         # Generate PNM score with fallback mechanisms
         pnm_score = None
@@ -152,6 +183,41 @@ class ConversationManager:
         if hasattr(session, 'followup_ptr') and session.followup_ptr is not None:
             session.followup_ptr += 1
     
+    def _route_initial_query(self, session, user_response: str, dimension_focus: Optional[str] = None):
+        """Route initial user query to appropriate PNM dimension and term using AI routing"""
+        
+        import logging
+        log = logging.getLogger(__name__)
+        log.info(f"_route_initial_query called with: user_response='{user_response}', dimension_focus='{dimension_focus}'")
+        
+        try:
+            # Use the new AI routing service
+            routing_result = AIRoutingService.route_query(user_response, dimension_focus)
+            
+            # Update session with routing results
+            session.current_pnm = routing_result.pnm
+            session.current_term = routing_result.term
+            session.keyword_pool = routing_result.keywords
+            session.ai_confidence = routing_result.confidence
+            session.routing_method = routing_result.method
+            
+            # Log routing for debugging
+            log.info(f"[AI Routing] Method: {routing_result.method}")
+            log.info(f"[AI Routing] PNM: {routing_result.pnm}, Term: {routing_result.term}")
+            log.info(f"[AI Routing] Keywords: {routing_result.keywords}")
+            log.info(f"[AI Routing] Confidence: {routing_result.confidence}")
+            
+        except Exception as e:
+            log.error(f"AI Routing failed: {e}")
+            # Fallback to Cognitive/Emergency preparedness
+            session.current_pnm = 'Cognitive'
+            session.current_term = 'Emergency preparedness'
+            session.keyword_pool = []
+            session.ai_confidence = 0.0
+            session.routing_method = 'fallback_error'
+        
+        return
+    
     def _should_ask_main_question(self, session) -> bool:
         """Check if we should ask a main question"""
         # If no current question ID, we need to start
@@ -182,7 +248,7 @@ class ConversationManager:
         return (session.followup_ptr < self.max_followups and 
                 not self._evidence_threshold_met(session))
     
-    def _get_main_question(self, session, storage=None) -> QuestionResponse:
+    def _get_main_question(self, session, storage=None, dimension_focus: Optional[str] = None) -> QuestionResponse:
         """Get the next main question"""
         # Select next question from bank
         question_item = self._select_next_question(session)
@@ -293,9 +359,75 @@ class ConversationManager:
         return next_question
     
     def _select_next_question(self, session) -> Optional[Any]:
-        """Select the next appropriate question from the bank"""
+        """Select the next appropriate question using AI routing"""
         # Get questions not yet asked
         asked_qids = getattr(session, 'asked_qids', []) or []
+        
+        # Filter by current PNM and term if set
+        current_pnm = getattr(session, 'current_pnm', None)
+        current_term = getattr(session, 'current_term', None)
+        keywords = getattr(session, 'keyword_pool', [])
+        
+        # Debug logging
+        import logging
+        log = logging.getLogger(__name__)
+        log.info(f"_select_next_question: PNM='{current_pnm}', Term='{current_term}', Keywords={keywords}, asked={len(asked_qids)}")
+        
+        # Convert question bank to dict format for AI routing
+        question_dicts = []
+        for q in self.question_bank.questions:
+            question_dicts.append({
+                'id': q.id,
+                'Prompt_Main': q.prompt_main,
+                'Primary_Need_Model': q.pnm,
+                'Term': q.term,
+                'options': q.options
+            })
+        
+        # Use AI routing to find matching questions with flexible matching
+        matching_questions = AIRoutingService.find_matching_questions(
+            current_pnm, current_term, question_dicts
+        )
+        
+        # If we have keywords and matching questions, use scoring to select best
+        if matching_questions and keywords:
+            # Get the user's original input if available (stored during routing)
+            user_input = ''
+            if hasattr(session, 'last_user_response'):
+                user_input = session.last_user_response
+            
+            selected_dict = AIRoutingService.select_best_question(
+                matching_questions, keywords, user_input, asked_qids
+            )
+            
+            if selected_dict:
+                # Find the corresponding Question object
+                for q in self.question_bank.questions:
+                    if str(q.id) == str(selected_dict.get('id')):
+                        # Update asked questions
+                        if not hasattr(session, 'asked_qids') or session.asked_qids is None:
+                            session.asked_qids = []
+                        session.asked_qids.append(q.id)
+                        log.info(f"Selected question ID {q.id} using AI scoring")
+                        return q
+        
+        # Fallback: Try to find any question in the PNM dimension
+        if current_pnm:
+            available_questions = [
+                q for q in self.question_bank.questions 
+                if q.id not in asked_qids 
+                and q.pnm == current_pnm
+            ]
+            
+            if available_questions:
+                selected = available_questions[0]
+                if not hasattr(session, 'asked_qids') or session.asked_qids is None:
+                    session.asked_qids = []
+                session.asked_qids.append(selected.id)
+                log.info(f"Fallback: Selected question ID {selected.id} from PNM {current_pnm}")
+                return selected
+        
+        # Last resort: Get any available question
         available_questions = [
             q for q in self.question_bank.questions 
             if q.id not in asked_qids
@@ -304,14 +436,14 @@ class ConversationManager:
         if not available_questions:
             return None
         
-        # Simple selection: first available question
-        # In production, this could be more sophisticated (priority, relevance, etc.)
+        # Select the first available question
         selected = available_questions[0]
         
         # Update asked questions
         if not hasattr(session, 'asked_qids') or session.asked_qids is None:
             session.asked_qids = []
         session.asked_qids.append(selected.id)
+        log.warning(f"Last resort: Selected any available question ID {selected.id}")
         
         return selected
     
