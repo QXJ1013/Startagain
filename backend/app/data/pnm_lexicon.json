@@ -1,0 +1,416 @@
+{
+    "Physiological": {
+      "terms": {
+        "Breathing": [
+          "shortness of breath",
+          "breathlessness",
+          "breathless",
+          "sob",
+          "dyspnea",
+          "orthopnea",
+          "nocturnal breathlessness",
+          "waking up breathless",
+          "bipap",
+          "cpap",
+          "niv",
+          "ventilator",
+          "respiratory",
+          "breathing at night",
+          "morning headache",
+          "breathing trouble",
+          "breathing difficulty",
+          "breathing problems",
+          "trouble breathing",
+          "difficulty breathing",
+          "can't breathe",
+          "cannot breathe",
+          "short of breath",
+          "out of breath",
+          "respiratory problems",
+          "respiratory issues",
+          "respiratory difficulty",
+          "chest tightness",
+          "air hunger",
+          "need more pillows",
+          "sit up to breathe",
+          "breathing worse at night"
+        ],
+        "Mobility": [
+          "walking",
+          "gait",
+          "legs feel weak",
+          "trip",
+          "stairs",
+          "wheelchair",
+          "walking aid",
+          "cane",
+          "rollator",
+          "transfer"
+        ],
+        "Hand function": [
+          "hand weakness",
+          "grip",
+          "gripping",
+          "fine motor",
+          "dexterity",
+          "button",
+          "zipper",
+          "jar",
+          "writing",
+          "typing",
+          "finger",
+          "hands weak",
+          "hands are weak",
+          "hand weak",
+          "weak hands",
+          "hand problems",
+          "hand issues",
+          "hand difficulty",
+          "trouble with hands",
+          "difficulty with hands",
+          "hand function",
+          "finger weakness",
+          "finger problems",
+          "grip strength",
+          "grip problems",
+          "cannot grip",
+          "can't grip",
+          "dropping things",
+          "fumbling",
+          "clumsy hands"
+        ],
+        "Swallowing": [
+          "dysphagia",
+          "choking",
+          "aspiration",
+          "cough when eating",
+          "thickener",
+          "modified diet",
+          "peg",
+          "feeding tube",
+          "chewing",
+          "swallow safety",
+          "trouble swallowing",
+          "difficulty swallowing",
+          "swallowing problems",
+          "swallowing issues",
+          "swallowing difficulty",
+          "cannot swallow",
+          "can't swallow",
+          "choke when drinking",
+          "choke when eating",
+          "food stuck",
+          "liquid goes down wrong way",
+          "coughing when eating",
+          "coughing when drinking",
+          "eating difficulty",
+          "drinking difficulty",
+          "trouble eating",
+          "difficulty eating",
+          "aspiration risk",
+          "swallow reflex",
+          "gag reflex",
+          "throat problems",
+          "eating problems",
+          "drinking problems",
+          "food getting stuck",
+          "food stuck",
+          "food gets stuck",
+          "stuck food",
+          "speaking is difficult",
+          "speaking difficult",
+          "eating is difficult",
+          "eating difficult"
+        ],
+        "Speech": [
+          "dysarthria",
+          "slurred speech",
+          "voice",
+          "talking",
+          "hard to speak",
+          "aac",
+          "speech device",
+          "communication aid",
+          "voice weak",
+          "voice weaker",
+          "voice getting weaker",
+          "voice problems",
+          "voice issues",
+          "voice changes",
+          "weak voice",
+          "soft voice",
+          "quiet voice",
+          "slurred words",
+          "unclear speech",
+          "difficulty speaking",
+          "trouble speaking",
+          "cannot speak",
+          "can't speak",
+          "hard to understand",
+          "mumbling",
+          "speech problems",
+          "speech issues",
+          "speech difficulty",
+          "trouble talking",
+          "difficulty talking",
+          "speak clearly",
+          "speaking clearly",
+          "articulation",
+          "pronunciation",
+          "verbal communication"
+        ],
+        "Nutrition & Weight": [
+          "weight loss",
+          "low weight",
+          "calories",
+          "appetite",
+          "malnutrition",
+          "dietitian",
+          "nutrition"
+        ],
+        "Fatigue": [
+          "tired",
+          "fatigued",
+          "exhausted",
+          "low energy",
+          "fatigue"
+        ],
+        "Spasticity & Cramp": [
+          "cramp",
+          "cramps",
+          "stiffness",
+          "spasm",
+          "spasticity"
+        ],
+        "Pain": [
+          "pain",
+          "ache",
+          "aching",
+          "sore"
+        ],
+        "Saliva & Secretions": [
+          "drooling",
+          "sialorrhea",
+          "saliva control",
+          "suction"
+        ],
+        "Sleep": [
+          "insomnia",
+          "poor sleep",
+          "sleep quality",
+          "sleep at night",
+          "daytime sleepiness"
+        ],
+        "Bowel & Bladder": [
+          "constipation",
+          "bowel",
+          "urination",
+          "incontinence"
+        ]
+      }
+    },
+  
+    "Safety": {
+      "terms": {
+        "Falls risk": [
+          "fall risk",
+          "falls",
+          "falling",
+          "trip risk",
+          "balance"
+        ],
+        "Choking risk": [
+          "choking risk",
+          "aspiration risk",
+          "swallow safely",
+          "food textures"
+        ],
+        "Pressure care": [
+          "pressure ulcer",
+          "pressure sore",
+          "skin breakdown",
+          "reposition"
+        ],
+        "Equipment safety": [
+          "ventilator alarm",
+          "alarm",
+          "battery backup",
+          "power outage",
+          "mask fit",
+          "tubing"
+        ],
+        "Home adaptations": [
+          "ramp",
+          "grab rail",
+          "bathroom adaptation",
+          "shower chair",
+          "hoist",
+          "home safety"
+        ]
+      }
+    },
+  
+    "Love & Belonging": {
+      "terms": {
+        "Social support": [
+          "family support",
+          "friends support",
+          "carer",
+          "caregiver",
+          "support network",
+          "peer group"
+        ],
+        "Communication access": [
+          "stay in touch",
+          "video call",
+          "messaging",
+          "aac access",
+          "phone"
+        ],
+        "Relationship & intimacy": [
+          "intimacy",
+          "partner",
+          "relationship",
+          "sex life"
+        ],
+        "Isolation": [
+          "lonely",
+          "isolation",
+          "feel isolated"
+        ]
+      }
+    },
+  
+    "Esteem": {
+      "terms": {
+        "Independence": [
+          "independent",
+          "self care",
+          "adl",
+          "autonomy",
+          "do it myself"
+        ],
+        "Work & role": [
+          "job",
+          "employment",
+          "work role",
+          "workplace",
+          "return to work"
+        ],
+        "Confidence": [
+          "confidence",
+          "self efficacy",
+          "capable",
+          "self esteem"
+        ],
+        "Control & choice": [
+          "control",
+          "choices",
+          "decision control"
+        ]
+      }
+    },
+  
+    "Self-Actualisation": {
+      "terms": {
+        "Hobbies & goals": [
+          "hobby",
+          "hobbies",
+          "goal",
+          "travel plan",
+          "project"
+        ],
+        "Learning & skills": [
+          "learn new",
+          "training",
+          "practice",
+          "course"
+        ],
+        "Contribute & advocacy": [
+          "advocacy",
+          "volunteer",
+          "help others",
+          "share experience"
+        ]
+      }
+    },
+  
+    "Cognitive": {
+      "terms": {
+        "Memory & attention": [
+          "memory",
+          "forget",
+          "attention",
+          "concentration",
+          "focus"
+        ],
+        "Planning & organisation": [
+          "planning",
+          "organize",
+          "routine",
+          "schedule"
+        ],
+        "Understanding ALS/MND": [
+          "disease education",
+          "learn about als",
+          "what is mnd",
+          "treatment options"
+        ],
+        "Decision making": [
+          "advance care planning",
+          "decisions",
+          "consent",
+          "power of attorney"
+        ]
+      }
+    },
+  
+    "Aesthetic": {
+      "terms": {
+        "Personal appearance": [
+          "appearance",
+          "look good",
+          "grooming",
+          "clothing",
+          "style"
+        ],
+        "Comfortable environment": [
+          "comfort at home",
+          "tidy",
+          "pleasant space",
+          "lighting",
+          "noise"
+        ]
+      }
+    },
+  
+    "Transcendence": {
+      "terms": {
+        "Meaning & purpose": [
+          "meaning",
+          "purpose",
+          "life meaning",
+          "purposeful"
+        ],
+        "Spirituality & faith": [
+          "spiritual",
+          "faith",
+          "religion",
+          "pastoral"
+        ],
+        "Legacy & sharing": [
+          "legacy",
+          "share story",
+          "memoir",
+          "letters"
+        ],
+        "Gratitude & reflection": [
+          "gratitude",
+          "reflect",
+          "journaling",
+          "mindfulness"
+        ]
+      }
+    }
+  }
+  

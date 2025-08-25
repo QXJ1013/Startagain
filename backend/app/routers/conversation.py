@@ -1,0 +1,188 @@
+# app/routers/conversation.py
+from __future__ import annotations
+from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import Optional, Dict, Any, List
+from pydantic import BaseModel
+
+from app.deps import get_session_store, SessionStore
+from app.services.conversation_manager import ConversationManager
+from app.services.storage import Storage
+
+router = APIRouter(prefix="/chat", tags=["conversation"])
+
+# Pydantic models
+class ConversationRequest(BaseModel):
+    user_response: Optional[str] = None
+
+class ConversationResponse(BaseModel):
+    question_text: str
+    question_type: str
+    options: List[Dict[str, str]]
+    allow_text_input: bool = True
+    transition_message: Optional[str] = None
+    info_cards: Optional[List[Dict[str, Any]]] = None
+    evidence_threshold_met: bool = False
+    current_pnm: Optional[str] = None
+    current_term: Optional[str] = None
+    fsm_state: Optional[str] = None
+
+class PNMProfileResponse(BaseModel):
+    profile: Optional[Dict[str, Any]] = None
+    suggestions: List[str] = []
+    scores: List[Dict[str, Any]] = []
+
+# Global conversation manager instance (lazy loading for hot reload)
+conversation_manager = None
+
+def get_conversation_manager():
+    global conversation_manager
+    if conversation_manager is None:
+        conversation_manager = ConversationManager()
+    return conversation_manager
+
+@router.post("/conversation", response_model=ConversationResponse)
+async def handle_conversation(
+    conv_request: ConversationRequest,
+    request: Request
+):
+    """Handle conversation flow - get next question or process user response"""
+    try:
+        # Extract session ID from header, fallback to default
+        session_id = request.headers.get("X-Session-Id", "default_session")
+        session_store = get_session_store(session_id)
+        session = session_store.get_session()
+        storage = Storage()
+        
+        # Get next question in conversation flow
+        response = get_conversation_manager().get_next_question(
+            session=session,
+            user_response=conv_request.user_response,
+            storage=storage
+        )
+        
+        # Save session state after processing
+        session_store.save_session()
+        
+        # Convert internal response to API response
+        return ConversationResponse(
+            question_text=response.question_text,
+            question_type=response.question_type.value,
+            options=[{"value": opt["value"], "label": opt["label"]} for opt in response.options],
+            allow_text_input=response.allow_text_input,
+            transition_message=response.transition_message,
+            info_cards=response.info_cards,
+            evidence_threshold_met=response.evidence_threshold_met,
+            current_pnm=getattr(session, 'current_pnm', None),
+            current_term=getattr(session, 'current_term', None),
+            fsm_state=getattr(session, 'fsm_state', None)
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Conversation error: {str(e)}")
+
+@router.get("/pnm-profile", response_model=PNMProfileResponse)
+async def get_pnm_profile(request: Request):
+    """Get current PNM awareness profile for the session"""
+    try:
+        # Extract session ID from header, fallback to default
+        session_id = request.headers.get("X-Session-Id", "default_session")
+        session_store = get_session_store(session_id)
+        session = session_store.get_session()
+        
+        # Get PNM profile from conversation manager
+        profile = get_conversation_manager().get_pnm_awareness_profile(session)
+        
+        # Get improvement suggestions
+        suggestions = []
+        scores = []
+        
+        if profile and hasattr(session, 'pnm_scores') and session.pnm_scores:
+            suggestions = get_conversation_manager().scoring_engine.generate_improvement_suggestions(profile)
+            
+            # Convert PNMScore objects to dictionaries
+            scores = [
+                {
+                    "pnm_level": score.pnm_level,
+                    "domain": score.domain,
+                    "awareness_score": score.awareness_score,
+                    "understanding_score": score.understanding_score,
+                    "coping_score": score.coping_score,
+                    "action_score": score.action_score,
+                    "total_score": score.total_score,
+                    "percentage": score.percentage
+                }
+                for score in session.pnm_scores
+            ]
+        
+        return PNMProfileResponse(
+            profile=profile,
+            suggestions=suggestions,
+            scores=scores
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Profile error: {str(e)}")
+
+@router.get("/conversation-state")
+async def get_conversation_state(request: Request):
+    """Get current conversation state for debugging"""
+    try:
+        # Extract session ID from header, fallback to default
+        session_id = request.headers.get("X-Session-Id", "default_session")
+        session_store = get_session_store(session_id)
+        session = session_store.get_session()
+        
+        return {
+            "session_id": session.session_id,
+            "current_qid": getattr(session, 'current_qid', None),
+            "current_pnm": getattr(session, 'current_pnm', None),
+            "current_term": getattr(session, 'current_term', None),
+            "followup_ptr": getattr(session, 'followup_ptr', None),
+            "evidence_count": getattr(session, 'evidence_count', {}),
+            "turn_index": getattr(session, 'turn_index', 0),
+            "asked_qids": getattr(session, 'asked_qids', []),
+            "pnm_scores_count": len(getattr(session, 'pnm_scores', []))
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"State error: {str(e)}")
+
+@router.post("/debug-session")
+async def debug_session(request: Request):
+    """Debug endpoint to check session information"""
+    try:
+        session_id = request.headers.get("X-Session-Id", "default_session")
+        session_store = get_session_store(session_id)
+        session = session_store.get_session()
+        
+        return {
+            "received_header": session_id,
+            "session_object_id": session.session_id,
+            "asked_qids": getattr(session, 'asked_qids', []),
+            "asked_count": len(getattr(session, 'asked_qids', [])),
+            "current_qid": getattr(session, 'current_qid', None)
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Debug error: {str(e)}")
+
+@router.get("/debug-question-bank")
+async def debug_question_bank():
+    """Debug endpoint to check question bank status"""
+    try:
+        questions = get_conversation_manager().question_bank.questions
+        available_questions = [q.id for q in questions]
+        
+        return {
+            "total_questions": len(questions),
+            "available_question_ids": available_questions,
+            "question_bank_path": get_conversation_manager().cfg.QUESTION_BANK_PATH,
+            "first_question_sample": {
+                "id": questions[0].id,
+                "pnm": questions[0].pnm,
+                "term": questions[0].term,
+                "main": questions[0].main[:100] + "..." if questions[0].main else None
+            } if questions else None
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Debug error: {str(e)}")

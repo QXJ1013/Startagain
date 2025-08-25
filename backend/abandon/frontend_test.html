@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Frontend API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: 0 auto; }
+        .test-section { margin-bottom: 30px; padding: 20px; border: 1px solid #ddd; border-radius: 8px; }
+        .success { color: green; }
+        .error { color: red; }
+        .response { background: #f5f5f5; padding: 10px; border-radius: 4px; white-space: pre-wrap; }
+        button { padding: 10px 20px; margin: 5px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>ALS Assistant Frontend API Test</h1>
+    
+    <div class="test-section">
+        <h2>1. Backend Health Check</h2>
+        <button onclick="testHealth()">Test Backend Health</button>
+        <div id="health-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>2. Start Conversation</h2>
+        <button onclick="testStartConversation()">Start New Conversation</button>
+        <div id="conversation-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>3. Send User Response</h2>
+        <input type="text" id="user-input" placeholder="Enter your response..." style="width: 300px; padding: 8px;">
+        <button onclick="testUserResponse()">Send Response</button>
+        <div id="response-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>4. Get PNM Profile</h2>
+        <button onclick="testPNMProfile()">Get Current Profile</button>
+        <div id="profile-result"></div>
+    </div>
+    
+    <div class="test-section">
+        <h2>5. Full Conversation Flow</h2>
+        <button onclick="testFullFlow()">Run Full Test Flow</button>
+        <div id="flow-result"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        const SESSION_ID = 'test-session-' + Date.now();
+        
+        function log(elementId, message, isError = false) {
+            const element = document.getElementById(elementId);
+            const timestamp = new Date().toLocaleTimeString();
+            const className = isError ? 'error' : 'success';
+            element.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+        }
+        
+        function logResponse(elementId, response) {
+            const element = document.getElementById(elementId);
+            element.innerHTML += `<div class="response">${JSON.stringify(response, null, 2)}</div>`;
+        }
+        
+        async function apiCall(path, options = {}) {
+            const response = await fetch(`${API_BASE}${path}`, {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-Session-Id': SESSION_ID,
+                    ...options.headers
+                },
+                ...options
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            return response.json();
+        }
+        
+        async function testHealth() {
+            const resultDiv = document.getElementById('health-result');
+            resultDiv.innerHTML = '';
+            
+            try {
+                const response = await apiCall('/health/readyz');
+                log('health-result', 'Backend health check passed ✓');
+                logResponse('health-result', response);
+            } catch (error) {
+                log('health-result', `Health check failed: ${error.message}`, true);
+            }
+        }
+        
+        async function testStartConversation() {
+            const resultDiv = document.getElementById('conversation-result');
+            resultDiv.innerHTML = '';
+            
+            try {
+                const response = await apiCall('/chat/conversation', {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+                
+                log('conversation-result', 'Conversation started successfully ✓');
+                logResponse('conversation-result', response);
+            } catch (error) {
+                log('conversation-result', `Conversation start failed: ${error.message}`, true);
+            }
+        }
+        
+        async function testUserResponse() {
+            const resultDiv = document.getElementById('response-result');
+            const userInput = document.getElementById('user-input').value;
+            resultDiv.innerHTML = '';
+            
+            if (!userInput.trim()) {
+                log('response-result', 'Please enter a response first', true);
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/chat/conversation', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_response: userInput
+                    })
+                });
+                
+                log('response-result', 'User response processed successfully ✓');
+                logResponse('response-result', response);
+            } catch (error) {
+                log('response-result', `User response failed: ${error.message}`, true);
+            }
+        }
+        
+        async function testPNMProfile() {
+            const resultDiv = document.getElementById('profile-result');
+            resultDiv.innerHTML = '';
+            
+            try {
+                const response = await apiCall('/chat/pnm-profile');
+                log('profile-result', 'PNM Profile retrieved successfully ✓');
+                logResponse('profile-result', response);
+            } catch (error) {
+                log('profile-result', `PNM Profile failed: ${error.message}`, true);
+            }
+        }
+        
+        async function testFullFlow() {
+            const resultDiv = document.getElementById('flow-result');
+            resultDiv.innerHTML = '';
+            
+            try {
+                // Step 1: Start conversation
+                log('flow-result', '1. Starting conversation...');
+                const startResponse = await apiCall('/chat/conversation', {
+                    method: 'POST',
+                    body: JSON.stringify({})
+                });
+                log('flow-result', `Question received: ${startResponse.question_type}`);
+                
+                // Step 2: Send first response
+                log('flow-result', '2. Sending first response...');
+                const response1 = await apiCall('/chat/conversation', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_response: "I have a basic emergency plan but it needs updating"
+                    })
+                });
+                log('flow-result', `Next question: ${response1.question_type}`);
+                
+                // Step 3: Send second response
+                log('flow-result', '3. Sending follow-up response...');
+                const response2 = await apiCall('/chat/conversation', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        user_response: "I review it monthly and practice with my family"
+                    })
+                });
+                log('flow-result', `Response processed: ${response2.evidence_threshold_met ? 'Threshold met' : 'More evidence needed'}`);
+                
+                // Step 4: Check PNM profile
+                log('flow-result', '4. Checking PNM profile...');
+                const profile = await apiCall('/chat/pnm-profile');
+                log('flow-result', `Profile status: ${profile.profile ? 'Data available' : 'No data yet'}`);
+                
+                log('flow-result', '✓ Full conversation flow completed successfully!');
+                
+            } catch (error) {
+                log('flow-result', `Full flow failed: ${error.message}`, true);
+            }
+        }
+        
+        // Auto-run health check on page load
+        window.onload = () => {
+            testHealth();
+        };
+    </script>
+</body>
+</html>

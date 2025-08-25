@@ -1,0 +1,18 @@
+# --- Core API stack (Pydantic v1 line for maximum compatibility) ---
+fastapi==0.95.2
+uvicorn[standard]==0.22.0
+pydantic==1.10.13
+python-dotenv>=1.0.0
+typing_extensions>=4.8.0
+
+# --- Retrieval ---
+pyahocorasick==2.0.0     # module name is 'ahocorasick'
+Whoosh==2.7.4            # BM25 sparse index (optional but recommended)
+
+# --- IBM watsonx / RAG ---
+ibm-watsonx-ai>=1.1.14
+ibm-cloud-sdk-core>=3.19.2
+requests>=2.31.0
+
+# --- Performance (optional but recommended by FastAPI) ---
+orjson>=3.9.15
