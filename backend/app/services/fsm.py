@@ -56,12 +56,13 @@ class DialogueFSM:
 
     def route_intent(self, user_text: str) -> Tuple[Optional[str], Optional[str]]:
         """
-        Route onto (pnm, term) via lexicon hits.
+        Route using AI-first approach for better semantic understanding.
         Enforce lock window: forbid cross-dimension change until lock expires.
         """
+        # ALWAYS try AI router first if available (AI-first approach)
         if self.ai_router:
             result = self.ai_router.route(user_text, self.session)
-            if result and result.confidence > 0.6:
+            if result and result.confidence > 0.4:  # Lower threshold for AI to maximize semantic understanding
                 # 保存 AI 路由元数据
                 self.session.keyword_pool = result.keywords or []
                 self.session.ai_confidence = result.confidence
@@ -77,10 +78,15 @@ class DialogueFSM:
                 self.session.save(self.store)
                 return (result.pnm, result.term)
         
-        # 降级到原有逻辑
+        # Only fallback to lexicon if AI completely failed
+        # This is now a last resort, not primary method
         hits = self.router.locate(user_text or "")
         if not hits:
-            return (self.session.current_pnm, self.session.current_term)
+            # If no route found at all, stay on current topic if exists
+            if self.session.current_pnm and self.session.current_term:
+                return (self.session.current_pnm, self.session.current_term)
+            # Otherwise return None to indicate no routing possible
+            return (None, None)
         
         term, pnm = hits[0]
         if self._within_lock_window(pnm):
@@ -137,6 +143,7 @@ class DialogueFSM:
                 "type": "main",
                 "text": item.main,
                 "followups": item.followups,
+                "options": item.options  # Include options for frontend
             }
 
         # ask followups
@@ -267,11 +274,23 @@ class DialogueFSM:
 
     def _score_current_term(self, item: QuestionItem) -> None:
         """
-        Score the current term using LLM scorer or a simple rule fallback.
+        Score the current term using enhanced LLM scorer with option awareness.
         """
         turns = self.store.list_turns(self.session.session_id)
         # heuristic evidence set: last (1 main + N followups) *2 to be safe
         evidence_ids = [t.get("id") for t in turns[-(2 + max(0, self.session.followup_ptr)):] if t.get("id")]
+        
+        # Extract selected option and question options from recent turns
+        selected_option = None
+        question_options = item.options  # Get options from question item
+        
+        # Look for selected option in recent user responses
+        for turn in reversed(turns[-5:]):  # Check last 5 turns
+            if turn.get("role") == "user" and turn.get("meta"):
+                meta = turn.get("meta", {})
+                if meta.get("selected_option"):
+                    selected_option = meta.get("selected_option")
+                    break
 
         if callable(score_term):
             out = score_term(
@@ -279,6 +298,8 @@ class DialogueFSM:
                 pnm=item.pnm,
                 term=item.term,
                 turns=turns,
+                question_options=question_options,
+                selected_option=selected_option
             )
             score = float(out.get("score_0_7", 3.0))
             rationale = out.get("rationale", "")

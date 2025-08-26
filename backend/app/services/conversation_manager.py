@@ -378,7 +378,7 @@ class ConversationManager:
         for q in self.question_bank.questions:
             question_dicts.append({
                 'id': q.id,
-                'Prompt_Main': q.prompt_main,
+                'Prompt_Main': q.main,  # Changed from q.prompt_main to q.main
                 'Primary_Need_Model': q.pnm,
                 'Term': q.term,
                 'options': q.options

@@ -122,6 +122,9 @@ class Storage:
         last_info_turn: int = -999,
         pnm_scores: Optional[List] = None,
         evidence_count: Optional[Dict] = None,
+        keyword_pool: Optional[List[str]] = None,  # AI routing keywords
+        ai_confidence: Optional[float] = None,  # AI routing confidence
+        routing_method: Optional[str] = None,  # Routing method used
     ) -> None:
         self.conn.execute(
             """

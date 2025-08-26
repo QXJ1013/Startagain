@@ -39,7 +39,7 @@
                     selected: isOptionSelected(option.value, message.multiSelect),
                     'multi-select': message.multiSelect 
                   }"
-                  @click="selectOption(option.value, message.multiSelect)"
+                  @click="selectOption(option, message.multiSelect)"
                 >
                   <span v-if="message.multiSelect" class="checkbox">
                     {{ isOptionSelected(option.value, true) ? '☑️' : '☐' }}
@@ -161,7 +161,7 @@ const sessionStore = useSessionStore()
 const chatStore = useChatStore()
 const userInput = ref('')
 const supplementaryText = ref('')
-const selectedOptions = ref<string[]>([])
+const selectedOptions = ref<{value: string, label: string}[]>([])
 const currentStage = ref('Processing diagnosis')
 const isLoading = ref(false)
 const error = ref('')
@@ -184,21 +184,21 @@ const hasSelection = computed(() => {
 // Methods
 function isOptionSelected(value: string, multiSelect: boolean): boolean {
   if (multiSelect) {
-    return selectedOptions.value.includes(value)
+    return selectedOptions.value.some(opt => opt.value === value)
   }
-  return selectedOptions.value[0] === value
+  return selectedOptions.value.length > 0 && selectedOptions.value[0].value === value
 }
 
-function selectOption(value: string, multiSelect: boolean) {
+function selectOption(option: {value: string, label: string}, multiSelect: boolean) {
   if (multiSelect) {
-    const index = selectedOptions.value.indexOf(value)
+    const index = selectedOptions.value.findIndex(opt => opt.value === option.value)
     if (index > -1) {
       selectedOptions.value.splice(index, 1)
     } else {
-      selectedOptions.value.push(value)
+      selectedOptions.value.push(option)
     }
   } else {
-    selectedOptions.value = [value]
+    selectedOptions.value = [option]
   }
 }
 
@@ -234,18 +234,22 @@ async function sendMessage() {
 async function submitSelection() {
   if (!hasSelection.value || isLoading.value) return
   
-  // Combine selected options with supplementary text
-  const selectedLabels = selectedOptions.value.join(' + ')
-  let responseText = selectedLabels
+  // Combine selected options with supplementary text - use labels for display, values for backend
+  const selectedLabels = selectedOptions.value.map(opt => opt.label).join(', ')
+  const selectedValues = selectedOptions.value.map(opt => opt.value).join(',')
+  
+  let displayText = selectedLabels
+  let submitText = selectedValues  // Send values to backend for processing
   
   if (supplementaryText.value.trim()) {
-    responseText += `\nAdditional details: ${supplementaryText.value.trim()}`
+    displayText += `\nAdditional details: ${supplementaryText.value.trim()}`
+    submitText += `\nAdditional details: ${supplementaryText.value.trim()}`
   }
   
-  // Add user message showing their selection
+  // Add user message showing their selection with full labels
   chatStore.addMessage({
     type: 'user',
-    content: responseText,
+    content: displayText,
     timestamp: new Date()
   })
   
@@ -253,7 +257,8 @@ async function submitSelection() {
   selectedOptions.value = []
   supplementaryText.value = ''
   
-  await processUserInput(responseText)
+  // Send the actual values to backend for proper processing
+  await processUserInput(submitText)
 }
 
 async function processUserInput(input: string) {

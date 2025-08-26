@@ -18,6 +18,7 @@ from app.services.question_bank import QuestionBank
 from app.services.session import SessionState
 from app.vendors.ibm_cloud import RAGQueryClient, LLMClient
 from app.utils.rerank import hybrid_fusion
+from app.services.enhanced_semantic_router import EnhancedSemanticRouter
 
 
 @dataclass
@@ -47,6 +48,9 @@ class AIEnhancedRouter:
         self.qb = question_bank
         self.enable_ai = enable_ai and self._check_ai_available()
         
+        # Initialize enhanced semantic router (always available)
+        self.semantic_router = EnhancedSemanticRouter()
+        
         # Initialize AI components if enabled
         if self.enable_ai:
             self.llm = LLMClient(
@@ -72,24 +76,26 @@ class AIEnhancedRouter:
         use_ai: Optional[bool] = None
     ) -> Optional[RoutingResult]:
         """
-        Main routing method with graceful fallbacks.
-        Priority: exact match > AI-enhanced semantic > basic semantic
+        Main routing method with AI-first approach.
+        Priority: AI-enhanced semantic > exact match > basic semantic
         """
         if not user_text:
             return None
             
-        # 1. Try exact lexicon match first (fastest, most reliable)
-        exact_result = self._try_exact_match(user_text)
-        if exact_result:
-            return exact_result
-            
-        # 2. If AI enabled, try enhanced routing
+        # 1. FIRST try AI-enhanced routing for best semantic understanding
         if (use_ai if use_ai is not None else self.enable_ai):
             enhanced_result = self._try_ai_enhanced_routing(user_text, session)
-            if enhanced_result and enhanced_result.confidence > 0.6:
+            if enhanced_result and enhanced_result.confidence > 0.5:  # Lower threshold for AI
                 return enhanced_result
                 
-        # 3. Fallback to basic semantic search
+        # 2. Fallback to exact lexicon match (for specific medical terms)
+        exact_result = self._try_exact_match(user_text)
+        if exact_result:
+            # Reduce confidence for lexicon matches to prefer AI
+            exact_result.confidence = min(exact_result.confidence * 0.8, 0.7)
+            return exact_result
+                
+        # 3. Last resort: basic semantic search
         return self._try_semantic_fallback(user_text)
     
     def _try_exact_match(self, user_text: str) -> Optional[RoutingResult]:
@@ -112,38 +118,64 @@ class AIEnhancedRouter:
     ) -> Optional[RoutingResult]:
         """
         AI-enhanced routing with keyword expansion and vector retrieval.
-        Keeps AI involvement minimal - only for keyword expansion.
+        Falls back to enhanced semantic routing if AI unavailable.
         """
-        try:
-            # 1. Expand keywords using AI
-            keywords = self._expand_keywords(user_text, session)
-            if not keywords:
-                keywords = [user_text]  # fallback to original
-                
-            # 2. Build enhanced query
-            enhanced_query = self._build_search_query(user_text, keywords)
-            
-            # 3. Vector search in question bank
-            question_candidates = self._search_questions(enhanced_query)
-            
-            # 4. Deterministic selection (no AI) - pick best scoring
-            if question_candidates:
-                best = self._select_best_deterministic(
-                    question_candidates,
-                    user_text,
-                    keywords
+        # First try enhanced semantic routing (always available)
+        semantic_result = self.semantic_router.route_semantic(user_text)
+        if semantic_result:
+            pnm, term, confidence, keywords = semantic_result
+            # If we have high confidence semantic match, use it directly
+            if confidence > 0.7:
+                return RoutingResult(
+                    pnm=pnm,
+                    term=term,
+                    confidence=confidence,
+                    method='enhanced_semantic',
+                    keywords=keywords
                 )
-                if best:
-                    return RoutingResult(
-                        pnm=best['pnm'],
-                        term=best['term'],
-                        confidence=best['score'],
-                        method='ai_enhanced',
-                        keywords=keywords
+        
+        # If AI is available, try AI-enhanced routing
+        if self.llm and self.llm.healthy():
+            try:
+                # 1. Expand keywords using AI
+                keywords = self._expand_keywords(user_text, session)
+                if not keywords:
+                    keywords = self.semantic_router.extract_keywords(user_text)  # Use semantic fallback
+                    
+                # 2. Build enhanced query
+                enhanced_query = self._build_search_query(user_text, keywords)
+                
+                # 3. Vector search in question bank
+                question_candidates = self._search_questions(enhanced_query)
+                
+                # 4. Deterministic selection (no AI) - pick best scoring
+                if question_candidates:
+                    best = self._select_best_deterministic(
+                        question_candidates,
+                        user_text,
+                        keywords
                     )
-        except Exception:
-            # Silently fallback if AI fails
-            pass
+                    if best:
+                        return RoutingResult(
+                            pnm=best['pnm'],
+                            term=best['term'],
+                            confidence=best['score'],
+                            method='ai_enhanced',
+                            keywords=keywords
+                        )
+            except Exception:
+                pass  # Fall through to semantic result
+        
+        # Return semantic result if available (even with lower confidence)
+        if semantic_result:
+            pnm, term, confidence, keywords = semantic_result
+            return RoutingResult(
+                pnm=pnm,
+                term=term,
+                confidence=confidence,
+                method='enhanced_semantic',
+                keywords=keywords
+            )
             
         return None
     

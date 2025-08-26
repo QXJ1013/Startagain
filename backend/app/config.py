@@ -49,7 +49,8 @@ class Settings(BaseSettings):
     SPACE_ID: str = ""
     PROJECT_ID: Optional[str] = None
 
-    ENABLE_SEMANTIC_BACKOFF: bool = True   # 先关闭语义兜底，纯词典触发最稳定
+    ENABLE_SEMANTIC_BACKOFF: bool = True   # 启用语义理解
+    ENABLE_AI_ENHANCEMENT: bool = True     # 启用AI增强路由
     BACKGROUND_VECTOR_INDEX_ID: str = ""     # knowledge base
     QUESTION_VECTOR_INDEX_ID: str = ""       # question bank
     VECTOR_INDEX_ID: str = ""                # legacy fallback (unused if both above provided)
