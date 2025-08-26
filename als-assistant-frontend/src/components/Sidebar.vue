@@ -3,6 +3,9 @@
     <div class="sidebar-header">
       <h1 class="logo">🧠 ALS Assistant</h1>
       <p class="subtitle">Self-Awareness Assessment</p>
+      <div v-if="authStore.user" class="user-info">
+        <span class="user-name">{{ authStore.user.display_name || authStore.user.email }}</span>
+      </div>
     </div>
     <nav>
       <RouterLink to="/chat" class="nav-link primary">
@@ -20,12 +23,30 @@
     </nav>
     
     <div class="sidebar-footer">
+      <button v-if="authStore.isAuthenticated" @click="handleLogout" class="logout-btn">
+        <span class="nav-icon">🚪</span>
+        <span>Logout</span>
+      </button>
       <div class="version">v2.0 - PNM Focus</div>
     </div>
   </aside>
 </template>
 
-<script setup lang="ts"></script>
+<script setup lang="ts">
+import { useAuthStore } from '../stores/auth'
+import { useRouter } from 'vue-router'
+import { useSessionStore } from '../stores/session'
+
+const authStore = useAuthStore()
+const router = useRouter()
+const sessionStore = useSessionStore()
+
+function handleLogout() {
+  authStore.logout()
+  sessionStore.resetSession()
+  router.push('/login')
+}
+</script>
 
 <style scoped>
 .sidebar {
@@ -100,9 +121,48 @@ nav {
   text-align: center;
 }
 
+.user-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+}
+
+.user-name {
+  font-size: 12px;
+  opacity: 0.9;
+  display: block;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
 .sidebar-footer {
   padding: 20px;
   border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.logout-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: rgba(255, 255, 255, 0.9);
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-bottom: 16px;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border-color: rgba(255, 255, 255, 0.3);
 }
 
 .version {

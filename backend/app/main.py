@@ -11,6 +11,8 @@ from app.config import get_settings
 from app.routers import chat as chat_router     
 from app.routers import health as health_router
 from app.routers import conversation as conversation_router
+from app.routers import auth as auth_router
+from app.routers import conversations as conversations_router
 
 # Optional warmup
 try:
@@ -36,8 +38,10 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health_router.router)
+    app.include_router(auth_router.router)  # Auth routes (no authentication required)
     app.include_router(chat_router.router)
     app.include_router(conversation_router.router)
+    app.include_router(conversations_router.router)  # Conversation history management
 
     @app.on_event("startup")
     async def _startup():

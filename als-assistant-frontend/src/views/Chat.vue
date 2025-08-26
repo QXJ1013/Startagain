@@ -1,5 +1,8 @@
 <template>
   <div class="chat">
+    <!-- Conversation History Component -->
+    <ConversationHistory />
+    
     <!-- Header -->
     <div class="chat-header">
       <h1>💬 ALS Assistant Chat</h1>
@@ -19,6 +22,21 @@
 
         <!-- Assistant Message -->
         <div v-else class="assistant-message">
+          <!-- Info Cards (displayed first) -->
+          <div v-if="message.infoCards" class="info-cards">
+            <div v-for="(card, cardIndex) in message.infoCards" :key="cardIndex" class="info-card">
+              <div class="card-title">{{ card.title }}</div>
+              <div class="card-content">
+                <div v-for="(bullet, bulletIndex) in card.bullets" :key="bulletIndex" class="card-bullet">
+                  {{ bullet }}
+                </div>
+              </div>
+              <div class="card-disclaimer">
+                {{ card.disclaimer || "This advice is based on your responses and internal resources. It does not constitute a diagnosis." }}
+              </div>
+            </div>
+          </div>
+          
           <!-- Transition Message -->
           <div v-if="message.transition" class="transition-message">
             {{ message.transition }}
@@ -57,21 +75,6 @@
                   rows="2"
                   class="supplement-input"
                 ></textarea>
-              </div>
-            </div>
-          </div>
-
-          <!-- Info Cards -->
-          <div v-if="message.infoCards" class="info-cards">
-            <div v-for="(card, cardIndex) in message.infoCards" :key="cardIndex" class="info-card">
-              <div class="card-title">{{ card.title }}</div>
-              <div class="card-content">
-                <div v-for="(bullet, bulletIndex) in card.bullets" :key="bulletIndex" class="card-bullet">
-                  {{ bullet }}
-                </div>
-              </div>
-              <div class="card-disclaimer">
-                {{ card.disclaimer || "This advice is based on your responses and internal resources. It does not constitute a diagnosis." }}
               </div>
             </div>
           </div>
@@ -154,17 +157,22 @@
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
 import { useSessionStore } from '../stores/session'
 import { useChatStore } from '../stores/chat'
-import { api } from '../services/api'
+import { api, conversationsApi } from '../services/api'
+import ConversationHistory from '../components/ConversationHistory.vue'
+import { useAuthStore } from '../stores/auth'
+import { useConversationStore } from '../stores/conversation'
 
 // State
 const sessionStore = useSessionStore()
 const chatStore = useChatStore()
+const authStore = useAuthStore()
+const conversationStore = useConversationStore()
 const userInput = ref('')
 const supplementaryText = ref('')
 const selectedOptions = ref<{value: string, label: string}[]>([])
 const currentStage = ref('Processing diagnosis')
 const isLoading = ref(false)
-const error = ref('')
+const error = ref<string | null>(null)
 const messagesContainer = ref<HTMLElement>()
 const hasInitialized = ref(false)
 
@@ -182,14 +190,14 @@ const hasSelection = computed(() => {
 })
 
 // Methods
-function isOptionSelected(value: string, multiSelect: boolean): boolean {
+function isOptionSelected(value: string, multiSelect: boolean = false): boolean {
   if (multiSelect) {
     return selectedOptions.value.some(opt => opt.value === value)
   }
   return selectedOptions.value.length > 0 && selectedOptions.value[0].value === value
 }
 
-function selectOption(option: {value: string, label: string}, multiSelect: boolean) {
+function selectOption(option: {value: string, label: string}, multiSelect: boolean = false) {
   if (multiSelect) {
     const index = selectedOptions.value.findIndex(opt => opt.value === option.value)
     if (index > -1) {
@@ -266,13 +274,24 @@ async function processUserInput(input: string) {
   error.value = ''
   
   try {
-    // Call the real backend API
-    const response = await api.getNextQuestion(sessionStore.sessionId, input)
+    // Save message to conversation if authenticated
+    if (authStore.isAuthenticated && conversationStore.activeConversation) {
+      await conversationsApi.addMessage(
+        authStore.token!,
+        conversationStore.activeConversation.id,
+        'user',
+        input,
+        {}
+      )
+    }
+    
+    // Call the real backend API with auth token
+    const response = await api.getNextQuestion(sessionStore.sessionId, input, undefined, authStore.token)
     
     if (response) {
       // Add assistant message with the backend response
       const assistantMessage = {
-        type: 'assistant',
+        type: 'assistant' as const,
         content: response.question_text,
         options: response.options || [],
         multiSelect: false, // Can be enhanced to support multi-select from backend
@@ -284,6 +303,35 @@ async function processUserInput(input: string) {
       
       chatStore.addMessage(assistantMessage)
       chatStore.incrementQuestionCount()
+      
+      // Save assistant message to conversation if authenticated
+      if (authStore.isAuthenticated && conversationStore.activeConversation) {
+        await conversationsApi.addMessage(
+          authStore.token!,
+          conversationStore.activeConversation.id,
+          'assistant',
+          response.question_text,
+          {
+            options: response.options,
+            allowTextInput: response.allow_text_input,
+            transition: response.transition_message,
+            infoCards: response.info_cards
+          }
+        )
+        
+        // Save info cards if present
+        if (response.info_cards && response.info_cards.length > 0) {
+          for (const card of response.info_cards) {
+            await conversationsApi.addInfoCard(
+              authStore.token!,
+              conversationStore.activeConversation.id,
+              'advice',
+              card
+            )
+          }
+        }
+      }
+      
       await scrollToBottom()
     }
     
@@ -305,11 +353,11 @@ async function startConversationWithInput(userMessage: string) {
   
   try {
     // Send the user's first message to backend which will route and return first question
-    const response = await api.getNextQuestion(sessionStore.sessionId, userMessage)
+    const response = await api.getNextQuestion(sessionStore.sessionId, userMessage, undefined, authStore.token)
     
     if (response) {
       const assistantMessage = {
-        type: 'assistant',
+        type: 'assistant' as const,
         content: response.question_text,
         options: response.options || [],
         multiSelect: false,
@@ -322,9 +370,37 @@ async function startConversationWithInput(userMessage: string) {
       chatStore.addMessage(assistantMessage)
       chatStore.incrementQuestionCount()
       
+      // Save assistant message to conversation if authenticated
+      if (authStore.isAuthenticated && conversationStore.activeConversation) {
+        await conversationsApi.addMessage(
+          authStore.token!,
+          conversationStore.activeConversation.id,
+          'assistant',
+          response.question_text,
+          {
+            options: response.options,
+            allowTextInput: response.allow_text_input,
+            transition: response.transition_message,
+            infoCards: response.info_cards
+          }
+        )
+        
+        // Save info cards if present
+        if (response.info_cards && response.info_cards.length > 0) {
+          for (const card of response.info_cards) {
+            await conversationsApi.addInfoCard(
+              authStore.token!,
+              conversationStore.activeConversation.id,
+              'advice',
+              card
+            )
+          }
+        }
+      }
+      
       // Update session state if provided
       if (response.current_pnm) {
-        sessionStore.setState(response.current_pnm, response.current_term, response.fsm_state || 'ROUTE')
+        sessionStore.setState(response.current_pnm, response.current_term || null, response.fsm_state || 'ROUTE')
       }
       
       await scrollToBottom()
@@ -336,59 +412,32 @@ async function startConversationWithInput(userMessage: string) {
   }
 }
 
-async function startConversation() {
-  // This is now only called when starting from Data page with dimension focus
-  messages.value = []
-  isLoading.value = true
-  
-  try {
-    const response = await api.getNextQuestion(sessionStore.sessionId)
-    
-    if (response) {
-      const assistantMessage = {
-        type: 'assistant',
-        content: response.question_text,
-        options: response.options || [],
-        multiSelect: false,
-        allowTextInput: response.allow_text_input,
-        transition: response.transition_message || null,
-        infoCards: response.info_cards || null,
-        timestamp: new Date()
-      }
-      
-      chatStore.addMessage(assistantMessage)
-    }
-  } catch (e: any) {
-    error.value = e.message || 'Failed to start conversation'
-  } finally {
-    isLoading.value = false
-  }
-  
-  await scrollToBottom()
-}
+// Removed unused function startConversation
 
-async function skipQuestion() {
-  if (isLoading.value) return
+// Skip current question - currently unused but may be needed for future functionality
+// async function skipQuestion() {
+//   if (isLoading.value) return
   
-  // Add user message indicating skip
-  chatStore.addMessage({
-    type: 'user',
-    content: 'Skip this question',
-    timestamp: new Date()
-  })
+//   // Add user message indicating skip
+//   chatStore.addMessage({
+//     type: 'user',
+//     content: 'Skip this question',
+//     timestamp: new Date()
+//   })
   
-  // Clear selections
-  selectedOptions.value = []
-  supplementaryText.value = ''
+//   // Clear selections
+//   selectedOptions.value = []
+//   supplementaryText.value = ''
   
-  // Process skip as user response
-  await processUserInput('skip')
-}
+//   // Process skip as user response
+//   await processUserInput('skip')
+// }
 
-function continueFromData() {
-  // This would be called from the data page
-  sessionStore.setError('This feature needs to be launched from the Data page')
-}
+// Function to continue from data page - currently unused
+// function continueFromData() {
+//   // This would be called from the data page
+//   sessionStore.setError('This feature needs to be launched from the Data page')
+// }
 
 async function scrollToBottom() {
   await nextTick()
@@ -406,6 +455,43 @@ watch(() => sessionStore.dimensionFocus, async (newDimension) => {
   }
 }, { immediate: true })
 
+// Load existing conversation
+async function loadExistingConversation(conversationId: string) {
+  isLoading.value = true
+  try {
+    const detail = await conversationStore.loadConversationDetail(authStore.token!, conversationId)
+    
+    // Load messages into chat store
+    if (detail.messages) {
+      detail.messages.forEach((msg: any) => {
+        chatStore.addMessage({
+          type: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.text,
+          options: msg.meta?.options || [],
+          multiSelect: msg.meta?.multiSelect || false,
+          allowTextInput: msg.meta?.allowTextInput || false,
+          transition: msg.meta?.transition || null,
+          infoCards: msg.meta?.infoCards || null,
+          timestamp: new Date(msg.created_at)
+        })
+      })
+    }
+    
+    // Update current stage
+    if (detail.conversation.dimension_name) {
+      currentStage.value = `${detail.conversation.dimension_name} Assessment`
+    } else if (detail.conversation.current_pnm) {
+      currentStage.value = detail.conversation.current_pnm
+    }
+    
+    await scrollToBottom()
+  } catch (e: any) {
+    error.value = `Failed to load conversation: ${e.message}`
+  } finally {
+    isLoading.value = false
+  }
+}
+
 // Start dimension-specific conversation
 async function startDimensionConversation(dimension: string) {
   // Start a new dimension-specific conversation
@@ -420,11 +506,11 @@ async function startDimensionConversation(dimension: string) {
   try {
     // Get the first question for this dimension from the backend
     // Pass the dimension focus to backend
-    const response = await api.getNextQuestion(sessionStore.sessionId, undefined, dimension)
+    const response = await api.getNextQuestion(sessionStore.sessionId, undefined, dimension, authStore.token)
     
     if (response) {
       const assistantMessage = {
-        type: 'assistant',
+        type: 'assistant' as const,
         content: response.question_text,
         options: response.options || [],
         multiSelect: false,
@@ -440,14 +526,14 @@ async function startDimensionConversation(dimension: string) {
       
       // Update session state
       if (response.current_pnm) {
-        sessionStore.setState(response.current_pnm, response.current_term, response.fsm_state || 'ROUTE')
+        sessionStore.setState(response.current_pnm, response.current_term || null, response.fsm_state || 'ROUTE')
       }
     }
   } catch (e: any) {
     error.value = e.message || 'Failed to start dimension conversation'
     // Fallback message
     chatStore.addMessage({
-      type: 'assistant',
+      type: 'assistant' as const,
       content: `Starting ${dimension} assessment. Please describe any issues or concerns related to this dimension.`,
       timestamp: new Date()
     })
@@ -459,25 +545,43 @@ async function startDimensionConversation(dimension: string) {
   await scrollToBottom()
 }
 
-onMounted(() => {
+onMounted(async () => {
+  // Check authentication
+  if (!authStore.isAuthenticated) {
+    error.value = 'Please login to use the assistant'
+    return
+  }
+  
+  // Load active conversation if exists
+  const activeConv = await conversationStore.fetchActiveConversation(authStore.token!)
+  
   // Check if there's a dimension focus on mount
   if (sessionStore.dimensionFocus && !hasInitialized.value) {
+    // Dimension-specific conversation is already created in Data.vue
     startDimensionConversation(sessionStore.dimensionFocus)
     sessionStore.setDimensionFocus(null)
+  } else if (activeConv) {
+    // Load existing active conversation
+    await loadExistingConversation(activeConv.id)
   } else if (chatStore.messages.length === 0) {
-    // Start a new general conversation
-    chatStore.startNewConversation('general')
-    
-    // Create fresh session for new conversation
-    sessionStore.resetSession()
-    
-    // Show welcome message
-    chatStore.addMessage({
-      type: 'assistant',
-      content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
-      options: [],
-      timestamp: new Date()
-    })
+    // Create new general conversation
+    try {
+      await conversationStore.createConversation(authStore.token!, 'general')
+      chatStore.startNewConversation('general')
+      
+      // Create fresh session for new conversation
+      sessionStore.resetSession()
+      
+      // Show welcome message
+      chatStore.addMessage({
+        type: 'assistant',
+        content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
+        options: [],
+        timestamp: new Date()
+      })
+    } catch (e: any) {
+      error.value = `Failed to create conversation: ${e.message}`
+    }
   }
   hasInitialized.value = true
 })

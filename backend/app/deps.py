@@ -4,9 +4,9 @@ from __future__ import annotations
 import json
 import logging
 import os
-from typing import Optional, Any
+from typing import Optional, Any, Dict
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Depends, Header
 
 from app.config import get_settings
 from app.services.storage import Storage
@@ -15,6 +15,7 @@ from app.services.lexicon_router import LexiconRouter
 # from app.services.info_provider import InfoProvider  # Old version moved to abandon
 from app.services.ai_router import AIEnhancedRouter
 from app.services.session import SessionState
+from app.services.auth import auth_service
 
 # Optional: warm checks
 try:
@@ -48,6 +49,30 @@ def get_storage() -> Storage:
         s = get_settings()
         _storage = Storage(db_path=s.DB_PATH, schema_path=s.SCHEMA_PATH)
     return _storage
+
+
+def get_current_user(
+    authorization: Optional[str] = Header(None),
+    storage: Storage = Depends(get_storage)
+) -> Dict[str, Any]:
+    """Extract and validate user from Authorization header"""
+    if not authorization:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Extract token from "Bearer <token>"
+    try:
+        scheme, token = authorization.split()
+        if scheme.lower() != "bearer":
+            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid authorization header format")
+    
+    # Validate token and get user
+    user = auth_service.get_current_user(storage, token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    
+    return user
 
 
 def get_question_bank() -> QuestionBank:
@@ -259,3 +284,10 @@ class SessionStore:
 def get_session_store(session_id: str = "default_session") -> SessionStore:
     """Get session store instance"""
     return SessionStore(session_id)
+
+
+def get_conversation_service():
+    """Get conversation service instance"""
+    from app.services.conversation_service import ConversationService
+    storage = get_storage()
+    return ConversationService(storage)

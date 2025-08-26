@@ -41,12 +41,16 @@
       <!-- Right: Recent Completed Terms -->
       <div class="recent-terms-section">
         <h3>Recently Completed Terms</h3>
-        <div class="terms-table">
+        <div class="terms-table" v-if="recentTerms.length > 0">
           <div v-for="term in recentTerms" :key="term.name" class="term-row">
             <span class="term-name">{{ term.name }}</span>
             <span class="term-score">{{ term.score }}/7</span>
             <span class="term-date">(Last: {{ term.lastDate }})</span>
           </div>
+        </div>
+        <div v-else class="empty-terms">
+          <p>No assessments completed yet.</p>
+          <p class="hint">Click on a dimension bar to start your first assessment.</p>
         </div>
       </div>
     </div>
@@ -65,6 +69,23 @@
       <div class="spinner"></div>
       <p>Loading data...</p>
     </div>
+
+    <!-- Interrupt Warning Dialog -->
+    <div v-if="conversationStore.showInterruptWarning" class="interrupt-dialog-overlay">
+      <div class="interrupt-dialog">
+        <h3>Active Conversation Warning</h3>
+        <p>You have an active conversation in progress. Starting a new assessment will interrupt it.</p>
+        <p class="conversation-title">Current: {{ conversationStore.activeConversation?.title || 'Untitled Conversation' }}</p>
+        <div class="dialog-actions">
+          <button @click="conversationStore.cancelInterrupt()" class="btn-cancel">
+            Continue Current
+          </button>
+          <button @click="conversationStore.confirmInterrupt()" class="btn-confirm">
+            Start New Assessment
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -73,9 +94,13 @@ import { ref, onMounted } from "vue";
 import { useSessionStore } from "../stores/session";
 import { useRouter } from "vue-router";
 import { api } from "../services/api";
+import { useAuthStore } from '../stores/auth';
+import { useConversationStore } from '../stores/conversation';
 
 const sessionStore = useSessionStore();
 const router = useRouter();
+const authStore = useAuthStore();
+const conversationStore = useConversationStore();
 const isLoading = ref(false);
 const hoveredDimension = ref<string | null>(null);
 
@@ -91,8 +116,15 @@ const eightDimensions = ref([
   { name: "Transcendence", score: 0 }
 ]);
 
+// Define type for recent term data
+interface RecentTerm {
+  name: string;
+  score: string;
+  lastDate: string;
+}
+
 // Recent completed terms - loaded from backend
-const recentTerms = ref([]);
+const recentTerms = ref<RecentTerm[]>([]);
 
 function showDimensionHover(dimensionName: string) {
   hoveredDimension.value = dimensionName;
@@ -104,14 +136,37 @@ function hideDimensionHover() {
 
 async function startDimensionChat(dimensionName: string) {
   try {
-    // Set dimension focus in session store
-    sessionStore.setDimensionFocus(dimensionName);
+    if (!authStore.isAuthenticated) {
+      sessionStore.setMessage('Please login to start assessment');
+      router.push('/login');
+      return;
+    }
+
+    // Check for active conversation and warn if needed
+    await conversationStore.checkAndWarnInterrupt(
+      authStore.token!,
+      async () => {
+        // Create new dimension-specific conversation
+        await conversationStore.createConversation(
+          authStore.token!,
+          'dimension_specific',
+          dimensionName,
+          `${dimensionName} Assessment`
+        );
+        
+        // Set dimension focus in session store
+        sessionStore.setDimensionFocus(dimensionName);
+        
+        // Navigate to Chat page
+        router.push('/chat');
+        
+        // Show notification
+        sessionStore.setMessage(`Starting ${dimensionName} assessment`);
+      }
+    );
     
-    // Navigate to Chat page which will pick up the dimension focus
-    router.push('/chat');
-    
-    // Show notification
-    sessionStore.setMessage(`Starting ${dimensionName} assessment`);
+    // If there's an active conversation, the warning will be shown
+    // The action will be executed if user confirms
   } catch (error) {
     console.error('Error starting dimension chat:', error);
     sessionStore.setMessage(`Error starting ${dimensionName} assessment`);
@@ -123,32 +178,48 @@ async function loadData() {
     isLoading.value = true;
     
     // Load PNM profile data which contains scores
-    const profileResponse = await api.getPNMProfile(sessionStore.sessionId);
+    const profileResponse = await api.getPNMProfile(sessionStore.sessionId, authStore.token);
     
     // Update dimensions with real scores from PNM profile
     if (profileResponse.profile) {
       // Map PNM profile dimensions to our 8 dimensions display
-      const pnmMapping = {
+      const pnmMapping: Record<string, string> = {
+        'Physiological': 'Physiological',
         'physiological': 'Physiological',
+        'Safety': 'Safety',
         'safety': 'Safety', 
+        'Love & Belonging': 'Love & Belonging',
         'love': 'Love & Belonging',
+        'Esteem': 'Esteem',
         'esteem': 'Esteem',
+        'Self-Actualisation': 'Self-Actualisation',
         'self_actualisation': 'Self-Actualisation',
+        'Cognitive': 'Cognitive',
         'cognitive': 'Cognitive',
+        'Aesthetic': 'Aesthetic',
         'aesthetic': 'Aesthetic',
+        'Transcendence': 'Transcendence',
         'transcendence': 'Transcendence'
       };
       
       // Update scores based on profile data
-      Object.keys(pnmMapping).forEach(pnmKey => {
-        const dimensionName = pnmMapping[pnmKey];
-        const dim = eightDimensions.value.find(d => d.name === dimensionName);
-        if (dim && profileResponse.profile[pnmKey]) {
-          // Convert percentage to 0-7 scale for display
-          const percentage = profileResponse.profile[pnmKey].percentage || 0;
-          dim.score = (percentage / 100) * 7;
-        }
-      });
+      // Iterate through actual profile keys instead of mapping keys
+      if (profileResponse.profile) {
+        Object.keys(profileResponse.profile).forEach(profileKey => {
+          if (profileKey === 'overall') return; // Skip overall stats
+          
+          // Find matching dimension (case-insensitive)
+          const dimensionName = pnmMapping[profileKey] || pnmMapping[profileKey.toLowerCase()];
+          if (dimensionName) {
+            const dim = eightDimensions.value.find(d => d.name === dimensionName);
+            if (dim && profileResponse.profile && profileResponse.profile[profileKey]) {
+              // Convert percentage to 0-7 scale for display
+              const percentage = profileResponse.profile[profileKey].percentage || 0;
+              dim.score = (percentage / 100) * 7;
+            }
+          }
+        });
+      }
     }
     
     // Update recent terms from PNM scores
@@ -168,26 +239,35 @@ async function loadData() {
           name: score.domain,
           score: (score.total_score || 0).toFixed(1),
           lastDate: 'Recent'
-        }));
+        })) as RecentTerm[];
     }
     
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error loading data:', error);
-    // Fallback to demo data if API fails
-    eightDimensions.value = [
-      { name: "Physiological", score: 4.5 },
-      { name: "Safety", score: 3.0 },
-      { name: "Love & Belonging", score: 2.5 },
-      { name: "Esteem", score: 2.0 },
-      { name: "Self-Actualisation", score: 1.5 },
-      { name: "Cognitive", score: 2.0 },
-      { name: "Aesthetic", score: 1.0 },
-      { name: "Transcendence", score: 1.0 }
-    ];
-    recentTerms.value = [
-      { name: "Emergency planning", score: "3", lastDate: "Today" },
-      { name: "Travel planning", score: "2", lastDate: "Yesterday" }
-    ];
+    console.log('Session ID:', sessionStore.sessionId);
+    
+    // If no data exists for this session, show empty state
+    if (error.response?.status === 404) {
+      // Keep dimensions at 0 for new sessions
+      eightDimensions.value.forEach(dim => dim.score = 0);
+      recentTerms.value = [];
+    } else {
+      // Fallback to demo data only for actual errors
+      eightDimensions.value = [
+        { name: "Physiological", score: 4.5 },
+        { name: "Safety", score: 3.0 },
+        { name: "Love & Belonging", score: 2.5 },
+        { name: "Esteem", score: 2.0 },
+        { name: "Self-Actualisation", score: 1.5 },
+        { name: "Cognitive", score: 2.0 },
+        { name: "Aesthetic", score: 1.0 },
+        { name: "Transcendence", score: 1.0 }
+      ];
+      recentTerms.value = [
+        { name: "Emergency planning", score: "3", lastDate: "Today" },
+        { name: "Travel planning", score: "2", lastDate: "Yesterday" }
+      ];
+    }
   } finally {
     isLoading.value = false;
   }
@@ -372,6 +452,23 @@ onMounted(() => {
   color: #6b7280;
 }
 
+/* Empty Terms State */
+.empty-terms {
+  text-align: center;
+  padding: 24px;
+  color: #6b7280;
+}
+
+.empty-terms p {
+  margin: 8px 0;
+}
+
+.empty-terms .hint {
+  font-size: 14px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
 /* Next Steps Section */
 .next-steps-section {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
@@ -431,6 +528,85 @@ onMounted(() => {
 @keyframes spin {
   0% { transform: rotate(0deg); }
   100% { transform: rotate(360deg); }
+}
+
+/* Interrupt Dialog */
+.interrupt-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.interrupt-dialog {
+  background: white;
+  border-radius: 12px;
+  padding: 24px;
+  max-width: 400px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+}
+
+.interrupt-dialog h3 {
+  color: #ef4444;
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.interrupt-dialog p {
+  color: #4b5563;
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.interrupt-dialog .conversation-title {
+  font-weight: 600;
+  color: #1f2937;
+  background: #f3f4f6;
+  padding: 8px 12px;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+  margin-top: 24px;
+}
+
+.dialog-actions button {
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  border: none;
+}
+
+.btn-cancel {
+  background: #e5e7eb;
+  color: #4b5563;
+}
+
+.btn-cancel:hover {
+  background: #d1d5db;
+}
+
+.btn-confirm {
+  background: #3b82f6;
+  color: white;
+}
+
+.btn-confirm:hover {
+  background: #2563eb;
 }
 
 /* Responsive Design */

@@ -70,10 +70,15 @@ class LexiconRouter:
         self.automaton = self._build_ac(self.lexicon)
         # backoff channels
         self.rag = RAGQueryClient()
-        self.bm25 = BM25Client(
-            bg_index_dir=self.cfg.BM25_BG_INDEX_DIR,
-            q_index_dir=self.cfg.BM25_Q_INDEX_DIR
-        )
+        # Only initialize BM25 if available
+        try:
+            from app.vendors.bm25 import BM25Client
+            self.bm25 = BM25Client(
+                bg_index_dir=self.cfg.BM25_BG_INDEX_DIR,
+                q_index_dir=self.cfg.BM25_Q_INDEX_DIR
+            )
+        except Exception:
+            self.bm25 = None
 
     # ---------- public ----------
 

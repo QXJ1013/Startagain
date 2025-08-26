@@ -4,9 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from typing import Optional, Dict, Any, List
 from pydantic import BaseModel
 
-from app.deps import get_session_store, SessionStore
+from app.deps import get_session_store, SessionStore, get_current_user, get_storage
 from app.services.conversation_manager import ConversationManager
 from app.services.storage import Storage
+from app.services.conversation_service import ConversationService
 
 router = APIRouter(prefix="/chat", tags=["conversation"])
 
@@ -44,15 +45,39 @@ def get_conversation_manager():
 @router.post("/conversation", response_model=ConversationResponse)
 async def handle_conversation(
     conv_request: ConversationRequest,
-    request: Request
+    request: Request,
+    current_user: dict = Depends(get_current_user),
+    storage: Storage = Depends(get_storage)
 ):
     """Handle conversation flow - get next question or process user response"""
     try:
-        # Extract session ID from header, fallback to default
-        session_id = request.headers.get("X-Session-Id", "default_session")
+        # Get or create conversation for user
+        conv_service = ConversationService(storage)
+        
+        # Determine conversation type
+        conv_type = "dimension_specific" if conv_request.dimension_focus else "general"
+        
+        # Get or create active conversation
+        conversation = conv_service.get_or_create_active_conversation(
+            user_id=current_user["id"],
+            conversation_type=conv_type,
+            dimension_name=conv_request.dimension_focus
+        )
+        
+        # Use conversation's session_id
+        session_id = conversation["session_id"]
+        conversation_id = conversation["id"]
+        
+        # Get session
         session_store = get_session_store(session_id)
         session = session_store.get_session()
-        storage = Storage()
+        
+        # Ensure session is associated with current user
+        storage.upsert_session(
+            session_id=session_id,
+            user_id=current_user["id"],
+            fsm_state=getattr(session, 'fsm_state', 'ROUTE')
+        )
         
         # Get next question in conversation flow
         response = get_conversation_manager().get_next_question(
@@ -64,6 +89,19 @@ async def handle_conversation(
         
         # Save session state after processing
         session_store.save_session()
+        
+        # Save info cards if present
+        if response.info_cards:
+            conv_service.save_info_card(
+                conversation_id=conversation_id,
+                session_id=session_id,
+                info_cards=response.info_cards,
+                pnm=getattr(session, 'current_pnm', None),
+                term=getattr(session, 'current_term', None)
+            )
+        
+        # Link any new turns to conversation
+        storage.link_turn_to_conversation(session_id, conversation_id)
         
         # Convert internal response to API response
         return ConversationResponse(
@@ -83,13 +121,21 @@ async def handle_conversation(
         raise HTTPException(status_code=500, detail=f"Conversation error: {str(e)}")
 
 @router.get("/pnm-profile", response_model=PNMProfileResponse)
-async def get_pnm_profile(request: Request):
+async def get_pnm_profile(request: Request, current_user: dict = Depends(get_current_user)):
     """Get current PNM awareness profile for the session"""
     try:
-        # Extract session ID from header, fallback to default
-        session_id = request.headers.get("X-Session-Id", "default_session")
+        # Extract session ID from header, fallback to user-specific session
+        session_id = request.headers.get("X-Session-Id", f"user_{current_user['id']}_default")
         session_store = get_session_store(session_id)
         session = session_store.get_session()
+        
+        # Ensure session is associated with current user
+        storage = Storage()
+        storage.upsert_session(
+            session_id=session_id,
+            user_id=current_user["id"],
+            fsm_state=getattr(session, 'fsm_state', 'ROUTE')
+        )
         
         # Get PNM profile from conversation manager
         profile = get_conversation_manager().get_pnm_awareness_profile(session)

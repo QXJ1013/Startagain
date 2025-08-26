@@ -33,6 +33,8 @@ def _ensure_dir(p: str) -> None:
 
 
 def _bg_schema():
+    if not index:
+        return None
     return Schema(
         id=ID(stored=True, unique=True),
         title=TEXT(stored=True, analyzer=StemmingAnalyzer()),
@@ -45,6 +47,8 @@ def _bg_schema():
 
 
 def _q_schema():
+    if not index:
+        return None
     return Schema(
         id=ID(stored=True, unique=True),
         pnm=TEXT(stored=True),
@@ -110,8 +114,14 @@ class BM25Client:
         cfg = get_settings()
         self.bg_dir = bg_index_dir or cfg.BM25_BG_INDEX_DIR
         self.q_dir = q_index_dir or cfg.BM25_Q_INDEX_DIR
-        self.bg = _Index(self.bg_dir, _bg_schema()) if self.bg_dir else None
-        self.q = _Index(self.q_dir, _q_schema()) if self.q_dir else None
+        
+        # Only create indices if whoosh is available
+        if index:
+            self.bg = _Index(self.bg_dir, _bg_schema()) if self.bg_dir and _bg_schema() else None
+            self.q = _Index(self.q_dir, _q_schema()) if self.q_dir and _q_schema() else None
+        else:
+            self.bg = None
+            self.q = None
 
     # ---------- health ----------
 

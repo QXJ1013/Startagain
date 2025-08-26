@@ -102,6 +102,41 @@ class Storage:
 
     def ping(self) -> None:
         self.conn.execute("SELECT 1").fetchone()
+    
+    # ---------- users ----------
+    
+    def create_user(self, user_id: str, email: str, password_hash: str, display_name: str) -> None:
+        """Create a new user"""
+        self.conn.execute(
+            """
+            INSERT INTO users (id, email, password_hash, display_name, created_at, is_active)
+            VALUES (?, ?, ?, ?, datetime('now'), 1)
+            """,
+            (user_id, email, password_hash, display_name)
+        )
+    
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """Get user by email"""
+        row = self.conn.execute(
+            "SELECT * FROM users WHERE email = ?",
+            (email,)
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+    
+    def get_user_by_id(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get user by ID"""
+        row = self.conn.execute(
+            "SELECT * FROM users WHERE id = ?",
+            (user_id,)
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+    
+    def update_user_last_login(self, user_id: str) -> None:
+        """Update user's last login time"""
+        self.conn.execute(
+            "UPDATE users SET last_login = datetime('now') WHERE id = ?",
+            (user_id,)
+        )
 
     # ---------- sessions ----------
 
@@ -352,3 +387,328 @@ class Storage:
             (session_id, pnm, term, turn_id, snippet, tag),
         )
         return int(cur.lastrowid)
+
+    # ---------- conversations ----------
+
+    def create_conversation(
+        self,
+        *,
+        conversation_id: str,
+        user_id: str,
+        session_id: str,
+        conversation_type: str = "general",
+        dimension_name: Optional[str] = None,
+        title: Optional[str] = None,
+    ) -> str:
+        """Create a new conversation"""
+        # Generate title if not provided
+        if not title:
+            # Count existing conversations for this user to generate title
+            count = self.conn.execute(
+                "SELECT COUNT(*) FROM conversations WHERE user_id = ?",
+                (user_id,)
+            ).fetchone()[0]
+            title = f"Record {count + 1}"
+        
+        self.conn.execute(
+            """
+            INSERT INTO conversations (
+                id, user_id, title, conversation_type, dimension_name, 
+                session_id, status, started_at, last_activity
+            )
+            VALUES (?, ?, ?, ?, ?, ?, 'active', CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+            """,
+            (conversation_id, user_id, title, conversation_type, dimension_name, session_id),
+        )
+        return conversation_id
+
+    def get_user_conversations(
+        self, 
+        user_id: str, 
+        status: Optional[str] = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get conversations for a user, ordered by last_activity"""
+        query = """
+            SELECT c.*, s.current_pnm, s.current_term, s.turn_index
+            FROM conversations c
+            LEFT JOIN sessions s ON c.session_id = s.session_id
+            WHERE c.user_id = ?
+        """
+        params = [user_id]
+        
+        if status:
+            query += " AND c.status = ?"
+            params.append(status)
+        
+        query += " ORDER BY c.last_activity DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        rows = self.conn.execute(query, params).fetchall()
+        return [_row_to_dict(row) for row in rows]
+
+    def get_conversation(self, conversation_id: str) -> Optional[Dict[str, Any]]:
+        """Get a single conversation by ID"""
+        row = self.conn.execute(
+            """
+            SELECT c.*, s.current_pnm, s.current_term, s.turn_index
+            FROM conversations c
+            LEFT JOIN sessions s ON c.session_id = s.session_id
+            WHERE c.id = ?
+            """,
+            (conversation_id,)
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+
+    def update_conversation(
+        self,
+        conversation_id: str,
+        **kwargs
+    ) -> None:
+        """Update conversation fields"""
+        allowed_fields = ['title', 'status', 'completed_at', 'summary', 'metadata']
+        updates = []
+        params = []
+        
+        for field in allowed_fields:
+            if field in kwargs:
+                updates.append(f"{field} = ?")
+                params.append(kwargs[field])
+        
+        if updates:
+            updates.append("last_activity = CURRENT_TIMESTAMP")
+            params.append(conversation_id)
+            
+            self.conn.execute(
+                f"UPDATE conversations SET {', '.join(updates)} WHERE id = ?",
+                params
+            )
+
+    def get_active_conversation(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get the user's active conversation"""
+        row = self.conn.execute(
+            """
+            SELECT c.*, s.current_pnm, s.current_term, s.turn_index
+            FROM conversations c
+            LEFT JOIN sessions s ON c.session_id = s.session_id
+            WHERE c.user_id = ? AND c.status = 'active'
+            ORDER BY c.last_activity DESC
+            LIMIT 1
+            """,
+            (user_id,)
+        ).fetchone()
+        return _row_to_dict(row) if row else None
+
+    def interrupt_conversation(self, conversation_id: str) -> None:
+        """Mark a conversation as interrupted"""
+        self.conn.execute(
+            """
+            UPDATE conversations 
+            SET status = 'interrupted', 
+                completed_at = CURRENT_TIMESTAMP,
+                last_activity = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (conversation_id,)
+        )
+
+    def complete_conversation(self, conversation_id: str, summary: Optional[str] = None) -> None:
+        """Mark a conversation as completed"""
+        self.conn.execute(
+            """
+            UPDATE conversations 
+            SET status = 'completed',
+                completed_at = CURRENT_TIMESTAMP,
+                summary = ?,
+                last_activity = CURRENT_TIMESTAMP
+            WHERE id = ?
+            """,
+            (summary, conversation_id)
+        )
+
+    def get_conversation_messages(
+        self, 
+        conversation_id: str,
+        limit: Optional[int] = None,
+        offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get all messages (turns) for a conversation"""
+        query = """
+            SELECT t.*
+            FROM turns t
+            WHERE t.conversation_id = ?
+            ORDER BY t.turn_index ASC
+        """
+        params = [conversation_id]
+        
+        if limit:
+            query += " LIMIT ? OFFSET ?"
+            params.extend([limit, offset])
+        
+        rows = self.conn.execute(query, params).fetchall()
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            d = _row_to_dict(r)
+            # Parse meta field
+            d["meta"] = _json_load(d.get("meta")) or {}
+            out.append(d)
+        return out
+
+    def save_info_card(
+        self,
+        conversation_id: str,
+        session_id: str,
+        card_data: Dict[str, Any],
+        turn_id: Optional[int] = None,
+        pnm: Optional[str] = None,
+        term: Optional[str] = None,
+    ) -> int:
+        """Save an info card to evidence_log"""
+        cur = self.conn.execute(
+            """
+            INSERT INTO evidence_log (
+                conversation_id, session_id, pnm, term, turn_id, 
+                snippet, tag, card_type, card_data, display_order
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                conversation_id, session_id, pnm, term, turn_id,
+                card_data.get('title', ''),  # Use title as snippet
+                'info_card',  # tag
+                card_data.get('type', 'info'),  # card_type
+                _json_dump(card_data),  # Full card data as JSON
+                card_data.get('order', 0)  # display_order
+            ),
+        )
+        return int(cur.lastrowid)
+
+    def get_conversation_info_cards(self, conversation_id: str) -> List[Dict[str, Any]]:
+        """Get all info cards for a conversation"""
+        rows = self.conn.execute(
+            """
+            SELECT * FROM evidence_log
+            WHERE conversation_id = ? AND tag = 'info_card'
+            ORDER BY display_order ASC, created_at ASC
+            """,
+            (conversation_id,)
+        ).fetchall()
+        
+        out: List[Dict[str, Any]] = []
+        for r in rows:
+            d = _row_to_dict(r)
+            # Parse card_data JSON
+            d["card_data"] = _json_load(d.get("card_data")) or {}
+            out.append(d)
+        return out
+
+    def link_turn_to_conversation(
+        self,
+        session_id: str,
+        conversation_id: str
+    ) -> None:
+        """Link all turns from a session to a conversation"""
+        self.conn.execute(
+            """
+            UPDATE turns 
+            SET conversation_id = ?
+            WHERE session_id = ? AND conversation_id IS NULL
+            """,
+            (conversation_id, session_id)
+        )
+
+    def get_user_preferences(self, user_id: str) -> Dict[str, Any]:
+        """Get user's conversation preferences"""
+        row = self.conn.execute(
+            "SELECT * FROM user_conversation_preferences WHERE user_id = ?",
+            (user_id,)
+        ).fetchone()
+        
+        if not row:
+            # Return defaults if no preferences exist
+            return {
+                "user_id": user_id,
+                "auto_title_format": "Record %d",
+                "max_active_conversations": 1,
+                "warn_on_interrupt": 1
+            }
+        
+        return _row_to_dict(row)
+
+    def upsert_user_preferences(
+        self,
+        user_id: str,
+        **kwargs
+    ) -> None:
+        """Update or insert user preferences"""
+        allowed_fields = ['auto_title_format', 'max_active_conversations', 'warn_on_interrupt']
+        
+        # Check if preferences exist
+        existing = self.conn.execute(
+            "SELECT 1 FROM user_conversation_preferences WHERE user_id = ?",
+            (user_id,)
+        ).fetchone()
+        
+        if existing:
+            # Update existing
+            updates = []
+            params = []
+            
+            for field in allowed_fields:
+                if field in kwargs:
+                    updates.append(f"{field} = ?")
+                    params.append(kwargs[field])
+            
+            if updates:
+                updates.append("updated_at = CURRENT_TIMESTAMP")
+                params.append(user_id)
+                
+                self.conn.execute(
+                    f"UPDATE user_conversation_preferences SET {', '.join(updates)} WHERE user_id = ?",
+                    params
+                )
+        else:
+            # Insert new
+            fields = ['user_id']
+            values = [user_id]
+            placeholders = ['?']
+            
+            for field in allowed_fields:
+                if field in kwargs:
+                    fields.append(field)
+                    values.append(kwargs[field])
+                    placeholders.append('?')
+            
+            self.conn.execute(
+                f"INSERT INTO user_conversation_preferences ({', '.join(fields)}) VALUES ({', '.join(placeholders)})",
+                values
+            )
+    
+    def increment_message_count(self, conversation_id: str):
+        """Increment message count for a conversation"""
+        self.conn.execute('''
+            UPDATE conversations 
+            SET message_count = message_count + 1,
+                last_activity = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (conversation_id,))
+        self.conn.commit()
+    
+    def increment_info_card_count(self, conversation_id: str):
+        """Increment info card count for a conversation"""
+        self.conn.execute('''
+            UPDATE conversations 
+            SET info_card_count = info_card_count + 1,
+                last_activity = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ''', (conversation_id,))
+        self.conn.commit()
+    
+    def get_message_count(self, session_id: str) -> int:
+        """Get message count for a session"""
+        cursor = self.conn.execute('''
+            SELECT COUNT(*) FROM turns WHERE session_id = ?
+        ''', (session_id,))
+        result = cursor.fetchone()
+        return result[0] if result else 0

@@ -10,14 +10,13 @@
 
     <!-- PNM Level Breakdown -->
     <div class="pnm-levels">
-      <div 
-        v-for="(level, key) in pnmData" 
-        :key="key"
-        class="pnm-level"
-        v-if="key !== 'overall'"
-      >
+      <template v-for="(level, levelKey) in pnmData" :key="levelKey">
+        <div 
+          v-if="levelKey !== 'overall'"
+          class="pnm-level"
+        >
         <div class="level-header">
-          <div class="level-name">{{ key }}</div>
+          <div class="level-name">{{ levelKey }}</div>
           <div class="level-score">{{ level.percentage.toFixed(1) }}%</div>
         </div>
         <div class="progress-bar">
@@ -31,6 +30,7 @@
         </div>
         <div class="level-description">{{ level.level }}</div>
       </div>
+      </template>
     </div>
 
     <!-- Detailed Scores -->

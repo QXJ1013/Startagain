@@ -85,15 +85,21 @@ class ConversationManager:
         log.info(f"Should route: {should_route}")
         
         if should_route:
-            self._route_initial_query(session, user_response, dimension_focus)
+            # When dimension_focus is provided without user_response, 
+            # create a synthetic message for routing
+            routing_input = user_response or f"I want to assess my {dimension_focus} dimension"
+            self._route_initial_query(session, routing_input, dimension_focus)
         
         # If user provided a response, process it
         if user_response:
             self._process_user_response(session, user_response, storage)
         
         # Determine what question to ask next
+        # Check if this is a dimension start (dimension_focus provided without user_response)
+        is_dimension_start = (dimension_focus is not None and not user_response)
+        
         if self._should_ask_main_question(session):
-            return self._get_main_question(session, storage, dimension_focus)
+            return self._get_main_question(session, storage, dimension_focus, is_dimension_start)
         elif self._should_ask_followup(session):
             return self._get_followup_question(session, storage)
         else:
@@ -191,8 +197,26 @@ class ConversationManager:
         log.info(f"_route_initial_query called with: user_response='{user_response}', dimension_focus='{dimension_focus}'")
         
         try:
-            # Use the new AI routing service
-            routing_result = AIRoutingService.route_query(user_response, dimension_focus)
+            # If dimension_focus is provided, use it directly for routing
+            if dimension_focus:
+                # Map dimension names to PNM levels
+                dimension_mapping = {
+                    'Physiological': 'Physiological',
+                    'Safety': 'Safety',
+                    'Love & Belonging': 'Love & Belonging',
+                    'Esteem': 'Esteem',
+                    'Self-Actualisation': 'Self-Actualisation',
+                    'Cognitive': 'Cognitive',
+                    'Aesthetic': 'Aesthetic',
+                    'Transcendence': 'Transcendence'
+                }
+                
+                pnm = dimension_mapping.get(dimension_focus, dimension_focus)
+                # Use AI routing to find best term for this dimension
+                routing_result = AIRoutingService.route_query(user_response, pnm)
+            else:
+                # Use the new AI routing service normally
+                routing_result = AIRoutingService.route_query(user_response, None)
             
             # Update session with routing results
             session.current_pnm = routing_result.pnm
@@ -248,7 +272,7 @@ class ConversationManager:
         return (session.followup_ptr < self.max_followups and 
                 not self._evidence_threshold_met(session))
     
-    def _get_main_question(self, session, storage=None, dimension_focus: Optional[str] = None) -> QuestionResponse:
+    def _get_main_question(self, session, storage=None, dimension_focus: Optional[str] = None, is_dimension_start: bool = False) -> QuestionResponse:
         """Get the next main question"""
         # Select next question from bank
         question_item = self._select_next_question(session)
@@ -260,10 +284,20 @@ class ConversationManager:
         info_cards = None
         evidence_threshold_met = False
         
-        # Generate info cards if:
+        # Generate info cards only if:
         # 1. Evidence threshold is met for current term, OR
         # 2. We're moving to a new term (term completion)
-        if (self._evidence_threshold_met(session) or self._is_term_changing(session, question_item)):
+        # BUT NOT when starting fresh from dimension focus or first question
+        
+        # Skip info cards if this is a dimension start OR the very first question
+        if is_dimension_start:
+            # Never show info cards when starting from dimension selection
+            info_cards = None
+        elif not hasattr(session, 'asked_qids') or len(session.asked_qids) == 0:
+            # Never show info cards on the very first question
+            info_cards = None
+        elif self._evidence_threshold_met(session) or self._is_term_changing(session, question_item):
+            # Show info cards when evidence threshold met or changing terms
             info_cards = self._generate_info_cards(session, storage)
             evidence_threshold_met = True
         
@@ -293,7 +327,7 @@ class ConversationManager:
         
         if not question_item or not question_item.followups:
             # No more followups, try main question
-            return self._get_main_question(session, storage)
+            return self._get_main_question(session, storage, None, False)
         
         # Get followup index
         followup_idx = session.followup_ptr if session.followup_ptr is not None else 0
@@ -331,14 +365,14 @@ class ConversationManager:
             info_cards = self._generate_info_cards(session, storage)
             
             # Move to next term or complete
-            next_question = self._get_main_question(session, storage)
+            next_question = self._get_main_question(session, storage, None, False)
             next_question.info_cards = info_cards
             next_question.evidence_threshold_met = True
             
             return next_question
         else:
             # Continue with more questions
-            return self._get_main_question(session, storage)
+            return self._get_main_question(session, storage, None, False)
     
     def _handle_term_completion(self, session, storage=None) -> QuestionResponse:
         """Handle completion of a term's questions"""
@@ -349,7 +383,7 @@ class ConversationManager:
         summary_msg = self._generate_term_summary(session)
         
         # Try to get next term question
-        next_question = self._get_main_question(session, storage)
+        next_question = self._get_main_question(session, storage, None, False)
         
         if next_question:
             next_question.info_cards = info_cards

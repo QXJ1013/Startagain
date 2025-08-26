@@ -25,7 +25,7 @@ from app.services.lexicon_router import LexiconRouter
 from app.services.info_provider_enhanced import EnhancedInfoProvider as InfoProvider
 
 from app.services.aggregator import aggregate_dimension_for_pnm
-from app.deps import get_storage, get_question_bank, get_lexicon_router, get_info_provider
+from app.deps import get_storage, get_question_bank, get_lexicon_router, get_info_provider, get_current_user
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["chat"])
@@ -145,7 +145,8 @@ def route_intent(
     storage: Storage = Depends(get_storage),
     qb: QuestionBank = Depends(get_question_bank),
     router_: LexiconRouter = Depends(get_lexicon_router),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Determine current (pnm, term) and respect lock window.
@@ -153,8 +154,17 @@ def route_intent(
     """
     state = _load_state(storage, session_id)
 
-    # Ensure session row exists (prevents FK failures on /answer)
+    # Ensure session row exists with user_id (prevents FK failures on /answer)
     storage.ensure_session(state.session_id, fsm_state=state.fsm_state or "ROUTE")
+    # Update session with user_id if not already set
+    storage.upsert_session(
+        session_id=state.session_id,
+        user_id=current_user["id"],
+        fsm_state=state.fsm_state or "ROUTE",
+        status="active",
+        current_pnm=state.current_pnm,
+        current_term=state.current_term
+    )
 
     fsm = _fsm(storage, qb, router_, state)
     pnm_before, term_before = state.current_pnm, state.current_term
@@ -197,7 +207,8 @@ def get_question(
     storage: Storage = Depends(get_storage),
     qb: QuestionBank = Depends(get_question_bank),
     router_: LexiconRouter = Depends(get_lexicon_router),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Get the next question for the current (pnm, term).
@@ -207,6 +218,11 @@ def get_question(
     # Guard: session row must exist (skip /route -> friendly 400)
     if not storage.has_session(state.session_id):
         raise HTTPException(status_code=400, detail="Route first: /chat/route must succeed before asking questions.")
+    
+    # Ensure session is associated with current user
+    session_data = storage.get_session(state.session_id)
+    if session_data and session_data.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Session belongs to another user")
 
     fsm = _fsm(storage, qb, router_, state)
     item = fsm.get_current_question()
@@ -226,7 +242,8 @@ def post_answer(
     qb: QuestionBank = Depends(get_question_bank),
     router_: LexiconRouter = Depends(get_lexicon_router),
     info: InfoProvider = Depends(get_info_provider),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Submit user's answer. FSM will:
@@ -239,9 +256,20 @@ def post_answer(
 
     # Guard: session row must exist
     if not storage.has_session(state.session_id):
-        storage.ensure_session(state.session_id, state=state.fsm_state or "ROUTE")
+        storage.ensure_session(state.session_id, fsm_state=state.fsm_state or "ROUTE")
+        # Update with user_id
+        storage.upsert_session(
+            session_id=state.session_id,
+            user_id=current_user["id"],
+            fsm_state=state.fsm_state or "ROUTE"
+        )
         if not storage.has_session(state.session_id):
             raise HTTPException(status_code=400, detail="Route first: /chat/route must succeed before answering.")
+    
+    # Ensure session is associated with current user
+    session_data = storage.get_session(state.session_id)
+    if session_data and session_data.get("user_id") != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Session belongs to another user")
 
     # Guard: must have an active question id (prevent answering without question)
     if not state.current_qid:
@@ -291,7 +319,8 @@ def post_answer(
 @router.get("/state", response_model=StateOut)
 def get_state(
     storage: Storage = Depends(get_storage),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     state = _load_state(storage, session_id)
     return StateOut(
@@ -312,7 +341,8 @@ def get_state(
 @router.get("/scores", response_model=ScoresOut)
 def get_scores(
     storage: Storage = Depends(get_storage),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Return all term scores and dimension scores for this session.
@@ -336,7 +366,8 @@ def finish(
     storage: Storage = Depends(get_storage),
     qb: QuestionBank = Depends(get_question_bank),
     router_: LexiconRouter = Depends(get_lexicon_router),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Commit dimension aggregation across all PNMs that have term scores.
@@ -389,7 +420,8 @@ def finish(
 @router.post("/resume", response_model=ResumeOut)
 def resume(
     storage: Storage = Depends(get_storage),
-    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id")
+    session_id: Optional[str] = Header(default=None, convert_underscores=False, alias="X-Session-Id"),
+    current_user: dict = Depends(get_current_user)
 ):
     """
     Return current state so frontend can continue the conversation flow.
