@@ -1,5 +1,9 @@
 # ALS Assistant Frontend
-
+todo:修复route bug，之前是用session传递。
+     conversation history 显示bug
+     改进dimension 跳转和维度打分bug（现在总会遍历所有问题库而不是只遍历同一个维度）
+     性能提升：打分效果不佳，知识库数据不足信息卡质量一般
+     
 现代化的Vue 3 + TypeScript前端应用，为ALS/MND患者提供自我意识评估和个性化对话体验。
 
 ## 🚀 技术栈
