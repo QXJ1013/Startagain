@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "additionalDirectories": [
+      "E:\\mnt\\e\\Downloads\\Startagain"
+    ],
+    "allow": [
+      "Bash(curl:*)"
+    ]
+  }
+}
