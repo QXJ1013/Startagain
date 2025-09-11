@@ -185,20 +185,17 @@ const isInDialogueMode = ref(false)
 
 // Use messages from chat store and transform for display
 const messages = computed(() => {
-  return chatStore.messages.map(msg => {
-    const metadata = msg.metadata || {}
-    return {
-      ...msg,
-      // Transform for backward compatibility with template
-      type: msg.role,
-      options: metadata.options || [],
-      multiSelect: metadata.multiSelect || false,
-      allowTextInput: metadata.allowTextInput || false,
-      transition: metadata.transition || null,
-      infoCards: metadata.infoCards || null,
-      isDialogue: metadata.isDialogue || false
-    }
-  })
+  return chatStore.messages.map(msg => ({
+    ...msg,
+    // Transform for backward compatibility with template
+    type: msg.role,
+    options: msg.metadata?.options || msg.options || [],
+    multiSelect: msg.metadata?.multiSelect || msg.multiSelect || false,
+    allowTextInput: msg.metadata?.allowTextInput || msg.allowTextInput || false,
+    transition: msg.metadata?.transition || msg.transition || null,
+    infoCards: msg.metadata?.infoCards || msg.infoCards || null,
+    isDialogue: msg.metadata?.isDialogue || msg.isDialogue || false
+  }))
 })
 
 // Computed
@@ -210,33 +207,6 @@ const hasCurrentQuestion = computed(() => {
 const hasSelection = computed(() => {
   return selectedOptions.value.length > 0
 })
-
-// Utility Functions
-function detectDialogueMode(response: any): boolean {
-  return response.dialogue_mode === true || response.should_continue_dialogue === true
-}
-
-function generateUniqueId(): number {
-  return Date.now() + Math.random() * 1000
-}
-
-function createAssistantMessage(response: any, isDialogue: boolean) {
-  return {
-    id: generateUniqueId(),
-    role: 'assistant' as const,
-    content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
-    type: 'response',
-    timestamp: new Date().toISOString(),
-    metadata: {
-      options: isDialogue ? [] : (response.options || []),
-      multiSelect: false,
-      allowTextInput: isDialogue ? true : response.allow_text_input,
-      transition: response.transition_message || null,
-      infoCards: response.info_cards || null,
-      isDialogue: isDialogue
-    }
-  }
-}
 
 // Methods
 function isOptionSelected(value: string, multiSelect: boolean = false): boolean {
@@ -272,15 +242,14 @@ async function sendMessage() {
   
   // Add user message
   chatStore.addMessage({
-    id: generateUniqueId(),
-    role: 'user',
+    type: 'user',
     content: messageText,
-    type: 'text',
-    timestamp: new Date().toISOString()
+    timestamp: new Date()
   })
   
-  // Check if we have an active conversation ID, otherwise start new conversation
-  if (!chatStore.currentConversationId && chatStore.conversationType === 'general_chat') {
+  // Check if this is the first real user message in this conversation
+  const userMessages = chatStore.messages.filter(m => m.type === 'user')
+  if (userMessages.length === 1 && chatStore.conversationType === 'general') {
     // This is the first user message, start conversation with routing
     await startConversationWithInput(messageText)
   } else {
@@ -306,11 +275,9 @@ async function submitSelection() {
   
   // Add user message showing their selection with full labels
   chatStore.addMessage({
-    id: generateUniqueId(),
-    role: 'user',
+    type: 'user',
     content: displayText,
-    type: 'answer',
-    timestamp: new Date().toISOString()
+    timestamp: new Date()
   })
   
   // Clear selections
@@ -326,15 +293,19 @@ async function processUserInput(input: string) {
   error.value = ''
   
   try {
-    // Get current conversation ID
-    const conversationId = chatStore.currentConversationId
-    if (!conversationId) {
-      console.error('No active conversation ID available')
-      throw new Error('Please start a new conversation first')
+    // Save message to conversation if authenticated
+    if (authStore.isAuthenticated && conversationStore.activeConversation) {
+      await conversationsApi.addMessage(
+        authStore.token!,
+        conversationStore.activeConversation.id,
+        'user',
+        input,
+        {}
+      )
     }
     
-    // Call the backend API with conversation ID
-    const response = await api.getNextQuestion(conversationId, input, undefined, authStore.token)
+    // Call the real backend API with auth token
+    const response = await api.getNextQuestion(sessionStore.sessionId, input, undefined, authStore.token)
     
     if (response) {
       // Check if this is a dialogue response (Policy system active)
@@ -343,19 +314,15 @@ async function processUserInput(input: string) {
       
       // Add assistant message with the backend response
       const assistantMessage = {
-        id: Date.now() + 1,
-        role: 'assistant' as const,
+        type: 'assistant' as const,
         content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
-        type: 'response',
-        timestamp: new Date().toISOString(),
-        metadata: {
-          options: isDialogue ? [] : (response.options || []),
-          multiSelect: false,
-          allowTextInput: isDialogue ? true : response.allow_text_input,
-          transition: response.transition_message || null,
-          infoCards: response.info_cards || null,
-          isDialogue: isDialogue
-        }
+        options: isDialogue ? [] : (response.options || []),
+        multiSelect: false,
+        allowTextInput: isDialogue ? true : response.allow_text_input,
+        transition: response.transition_message || null,
+        infoCards: response.info_cards || null,
+        isDialogue: isDialogue,
+        timestamp: new Date()
       }
       
       chatStore.addMessage(assistantMessage)
@@ -373,7 +340,8 @@ async function processUserInput(input: string) {
     }
     
   } catch (e: any) {
-    handleError(e, 'processing message')
+    error.value = e.message || 'Error processing message'
+    chatStore.setError(e.message || 'Error processing message')
   } finally {
     isLoading.value = false
     chatStore.setLoading(false)
@@ -385,19 +353,28 @@ async function startConversationWithInput(userMessage: string) {
   error.value = ''
   
   // Only reset session for brand new conversations
-  if (chatStore.conversationType === 'general_chat' && !sessionStore.currentPnm) {
+  if (chatStore.conversationType === 'general' && !sessionStore.currentPnm) {
     sessionStore.resetSession()
   }
   
   try {
-    // Use current conversation ID if available, fallback to session ID
-    const conversationId = chatStore.currentConversationId || sessionStore.sessionId
-    const response = await api.getNextQuestion(conversationId, userMessage, undefined, authStore.token)
+    // Send the user's first message to backend which will route and return first question
+    const response = await api.getNextQuestion(sessionStore.sessionId, userMessage, undefined, authStore.token)
     
     if (response) {
-      const isDialogue = detectDialogueMode(response)
+      const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
       
-      const assistantMessage = createAssistantMessage(response, isDialogue)
+      const assistantMessage = {
+        type: 'assistant' as const,
+        content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
+        options: isDialogue ? [] : (response.options || []),
+        multiSelect: false,
+        allowTextInput: isDialogue ? true : response.allow_text_input,
+        transition: response.transition_message || null,
+        infoCards: response.info_cards || null,
+        isDialogue: isDialogue,
+        timestamp: new Date()
+      }
       
       chatStore.addMessage(assistantMessage)
       
@@ -418,20 +395,40 @@ async function startConversationWithInput(userMessage: string) {
       await scrollToBottom()
     }
   } catch (e: any) {
-    handleError(e, 'processing message')
+    error.value = e.message || 'Error processing message'
+    chatStore.setError(e.message || 'Error processing message')
   } finally {
     isLoading.value = false
     chatStore.setLoading(false)
   }
 }
 
-// Utility function for handling API errors
-function handleError(e: any, context: string = 'operation') {
-  const errorMsg = e.message || `Error during ${context}`
-  error.value = errorMsg
-  chatStore.setError(errorMsg)
-  console.error(`[Chat.vue] Error in ${context}:`, e)
-}
+// Removed unused function startConversation
+
+// Skip current question - currently unused but may be needed for future functionality
+// async function skipQuestion() {
+//   if (isLoading.value) return
+  
+//   // Add user message indicating skip
+//   chatStore.addMessage({
+//     type: 'user',
+//     content: 'Skip this question',
+//     timestamp: new Date()
+//   })
+  
+//   // Clear selections
+//   selectedOptions.value = []
+//   supplementaryText.value = ''
+  
+//   // Process skip as user response
+//   await processUserInput('skip')
+// }
+
+// Function to continue from data page - currently unused
+// function continueFromData() {
+//   // This would be called from the data page
+//   sessionStore.setError('This feature needs to be launched from the Data page')
+// }
 
 async function scrollToBottom() {
   await nextTick()
@@ -447,35 +444,23 @@ async function loadExistingConversation(conversationId: string) {
   try {
     const detail = await conversationsApi.getConversationDetail(authStore.token!, conversationId)
     
-    // Set current conversation ID
-    chatStore.setCurrentConversation(conversationId)
-    
-    // Load messages if they exist
-    if (detail.messages && detail.messages.length > 0) {
-      // Clear existing messages first
-      chatStore.clearMessages()
-      
-      // Add each message from conversation history
-      detail.messages.forEach(msg => {
-        chatStore.addMessage({
-          id: msg.id || Date.now(),
-          role: msg.role,
-          content: msg.content,
-          type: msg.type || (msg.role === 'user' ? 'text' : 'response'),
-          timestamp: msg.timestamp || new Date().toISOString(),
-          metadata: msg.metadata
-        })
-      })
-    }
-    
-    // Update progress if assessment data available
-    if (detail.assessment_state?.current_pnm || detail.assessment_state?.current_term) {
-      chatStore.updateProgress({
-        current_pnm: detail.assessment_state.current_pnm,
-        current_term: detail.assessment_state.current_term,
-        fsm_state: detail.assessment_state.fsm_state || 'ROUTE'
-      })
-    }
+    // Load conversation data into chat store
+    chatStore.loadConversationData({
+      conversation: {
+        id: detail.id,
+        title: detail.title,
+        type: detail.type,
+        dimension: detail.dimension,
+        status: detail.status,
+        created_at: detail.created_at,
+        updated_at: detail.updated_at,
+        current_pnm: detail.assessment_state?.current_pnm,
+        current_term: detail.assessment_state?.current_term,
+        fsm_state: detail.assessment_state?.fsm_state
+      },
+      messages: detail.messages || [],
+      progress: detail.assessment_state
+    })
     
     // Update current stage
     if (detail.dimension) {
@@ -486,7 +471,8 @@ async function loadExistingConversation(conversationId: string) {
     
     await scrollToBottom()
   } catch (e: any) {
-    handleError(e, 'loading conversation')
+    error.value = `Failed to load conversation: ${e.message}`
+    chatStore.setError(e.message)
   } finally {
     isLoading.value = false
     chatStore.setLoading(false)
@@ -502,6 +488,42 @@ watch(() => sessionStore.dimensionFocus, async (newDimension) => {
   }
 }, { immediate: true })
 
+// Load existing conversation
+async function loadExistingConversation(conversationId: string) {
+  isLoading.value = true
+  try {
+    const detail = await conversationStore.loadConversationDetail(authStore.token!, conversationId)
+    
+    // Load messages into chat store
+    if (detail.messages) {
+      detail.messages.forEach((msg: any) => {
+        chatStore.addMessage({
+          type: msg.role === 'user' ? 'user' : 'assistant',
+          content: msg.text,
+          options: msg.meta?.options || [],
+          multiSelect: msg.meta?.multiSelect || false,
+          allowTextInput: msg.meta?.allowTextInput || false,
+          transition: msg.meta?.transition || null,
+          infoCards: msg.meta?.infoCards || null,
+          timestamp: new Date(msg.created_at)
+        })
+      })
+    }
+    
+    // Update current stage
+    if (detail.conversation.dimension_name) {
+      currentStage.value = `${detail.conversation.dimension_name} Assessment`
+    } else if (detail.conversation.current_pnm) {
+      currentStage.value = detail.conversation.current_pnm
+    }
+    
+    await scrollToBottom()
+  } catch (e: any) {
+    error.value = `Failed to load conversation: ${e.message}`
+  } finally {
+    isLoading.value = false
+  }
+}
 
 // Start dimension-specific conversation
 async function startDimensionConversation(dimension: string) {
@@ -512,9 +534,7 @@ async function startDimensionConversation(dimension: string) {
   sessionStore.resetSession()
   
   isLoading.value = true
-  if (!hasInitialized.value) {
-    hasInitialized.value = true
-  }
+  hasInitialized.value = true
   
   try {
     // Create new conversation for dimension
@@ -528,16 +548,27 @@ async function startDimensionConversation(dimension: string) {
     }
     
     // Get the first question for this dimension from the backend
-    const conversationId = chatStore.currentConversationId
-    if (!conversationId) {
-      throw new Error('No conversation ID available for dimension conversation')
-    }
+    const conversationId = chatStore.currentConversationId || 'temp-' + Date.now().toString()
     const response = await api.getNextQuestion(conversationId, '', dimension, authStore.token)
     
     if (response) {
-      const isDialogue = detectDialogueMode(response)
+      const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
       
-      const assistantMessage = createAssistantMessage(response, isDialogue)
+      const assistantMessage = {
+        id: Date.now() + 1,
+        role: 'assistant' as const,
+        content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
+        type: 'response',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          options: isDialogue ? [] : (response.options || []),
+          multiSelect: false,
+          allowTextInput: isDialogue ? true : response.allow_text_input,
+          transition: response.transition_message || null,
+          infoCards: response.info_cards || null,
+          isDialogue: isDialogue
+        }
+      }
       
       chatStore.addMessage(assistantMessage)
       currentStage.value = `${dimension} Assessment`
@@ -548,10 +579,10 @@ async function startDimensionConversation(dimension: string) {
       }
     }
   } catch (e: any) {
-    handleError(e, 'starting dimension conversation')
+    error.value = e.message || 'Failed to start dimension conversation'
     // Fallback message
     chatStore.addMessage({
-      id: generateUniqueId(),
+      id: Date.now(),
       role: 'assistant' as const,
       content: `Starting ${dimension} assessment. Please describe any issues or concerns related to this dimension.`,
       type: 'response',
@@ -575,44 +606,42 @@ onMounted(async () => {
   // Load active conversation if exists
   try {
     const activeConv = await conversationsApi.getActiveConversation(authStore.token!)
-    
-    // Check if there's a dimension focus on mount
-    if (sessionStore.dimensionFocus && !hasInitialized.value) {
-      // Start dimension-specific conversation
-      await startDimensionConversation(sessionStore.dimensionFocus)
-      sessionStore.setDimensionFocus(null)
-    } else if (activeConv) {
-      // Load existing active conversation
-      await loadExistingConversation(activeConv.id)
-    } else if (chatStore.messages.length === 0) {
-      // Create new general conversation
-      try {
-        const newConv = await conversationsApi.createConversation(authStore.token!, 'general_chat')
-        chatStore.startNewConversation('general_chat')
-        chatStore.setCurrentConversation(newConv.id)
-        
-        // Create fresh session for new conversation
-        sessionStore.resetSession()
-        
-        // Show welcome message
-        chatStore.addMessage({
-          id: generateUniqueId(),
-          role: 'assistant',
-          content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
-          type: 'response',
-          timestamp: new Date().toISOString()
-        })
-      } catch (e: any) {
-        handleError(e, 'creating new conversation')
-      }
+  
+  // Check if there's a dimension focus on mount
+  if (sessionStore.dimensionFocus && !hasInitialized.value) {
+    // Dimension-specific conversation is already created in Data.vue
+    startDimensionConversation(sessionStore.dimensionFocus)
+    sessionStore.setDimensionFocus(null)
+  } else if (activeConv) {
+    // Load existing active conversation
+    await loadExistingConversation(activeConv.id)
+  } else if (chatStore.messages.length === 0) {
+    // Create new general conversation
+    try {
+      const newConv = await conversationsApi.createConversation(authStore.token!, 'general_chat')
+      chatStore.startNewConversation('general_chat')
+      chatStore.setCurrentConversation(newConv.id)
+      
+      // Create fresh session for new conversation
+      sessionStore.resetSession()
+      
+      // Show welcome message
+      chatStore.addMessage({
+        id: Date.now(),
+        role: 'assistant',
+        content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
+        type: 'response',
+        timestamp: new Date().toISOString()
+      })
+    } catch (e: any) {
+      error.value = `Failed to create conversation: ${e.message}`
+      chatStore.setError(e.message)
     }
   } catch (e: any) {
     console.error('Error loading conversations:', e)
   }
-  
-  if (!hasInitialized.value) {
-    hasInitialized.value = true
   }
+  hasInitialized.value = true
 })
 
 onUnmounted(() => {
