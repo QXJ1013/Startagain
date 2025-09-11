@@ -1,0 +1,49 @@
+{
+  "conversation_settings": {
+    "pace": "adaptive",
+    "tone": "warm_professional",
+    "personalization": true,
+    "break_intervals": 10,
+    "summary_intervals": 5
+  },
+  "language_style": {
+    "avoid_clinical_jargon": true,
+    "use_simple_language": true,
+    "max_sentence_length": 20,
+    "active_voice": true,
+    "second_person": true
+  },
+  "empathy_rules": {
+    "acknowledge_difficulty": true,
+    "validate_feelings": true,
+    "offer_hope": true,
+    "avoid_toxic_positivity": true,
+    "respect_autonomy": true
+  },
+  "adaptive_features": {
+    "skip_irrelevant": true,
+    "adjust_depth": true,
+    "remember_context": true,
+    "detect_fatigue": true,
+    "offer_alternatives": true
+  },
+  "response_strategies": {
+    "severe_symptoms": {
+      "immediate_acknowledgment": true,
+      "suggest_urgent_care": true,
+      "provide_resources": true,
+      "follow_up_required": true
+    },
+    "emotional_distress": {
+      "empathetic_response": true,
+      "normalize_feelings": true,
+      "suggest_support": true,
+      "check_in_later": true
+    },
+    "positive_responses": {
+      "celebrate_strengths": true,
+      "encourage_maintenance": true,
+      "track_improvements": true
+    }
+  }
+}

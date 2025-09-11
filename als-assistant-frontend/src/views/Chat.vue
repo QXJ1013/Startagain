@@ -6,8 +6,16 @@
     <!-- Header -->
     <div class="chat-header">
       <h1>💬 ALS Assistant Chat</h1>
-      <div class="stage-indicator" v-if="currentStage">
-        <span class="stage-badge">{{ currentStage }}</span>
+      <div class="header-indicators">
+        <div class="mode-indicator" v-if="isInDialogueMode">
+          <span class="mode-badge dialogue">🗣️ Dialogue Mode (80%)</span>
+        </div>
+        <div class="mode-indicator" v-else>
+          <span class="mode-badge question">📋 Assessment Mode</span>
+        </div>
+        <div class="stage-indicator" v-if="currentStage">
+          <span class="stage-badge">{{ currentStage }}</span>
+        </div>
       </div>
     </div>
 
@@ -42,12 +50,12 @@
             {{ message.transition }}
           </div>
           
-          <!-- Question Content -->
-          <div class="question-content">
-            <div class="question-text">{{ message.content }}</div>
+          <!-- Dialogue or Question Content -->
+          <div class="question-content" :class="{ 'dialogue-mode': message.isDialogue }">
+            <div class="question-text" :class="{ 'dialogue-text': message.isDialogue }">{{ message.content }}</div>
             
-            <!-- Button Options -->
-            <div v-if="message.options && message.options.length" class="options-container">
+            <!-- Button Options (hide in dialogue mode) -->
+            <div v-if="!message.isDialogue && message.options && message.options.length" class="options-container">
               <div class="options-grid" :class="{ 'multi-select': message.multiSelect }">
                 <button 
                   v-for="option in message.options"
@@ -66,8 +74,8 @@
                 </button>
               </div>
               
-              <!-- Optional text input -->
-              <div v-if="message.allowTextInput" class="text-input-container">
+              <!-- Optional text input (always show in dialogue mode) -->
+              <div v-if="message.allowTextInput || message.isDialogue" class="text-input-container">
                 <div class="input-label">(Optional additional details)</div>
                 <textarea 
                   v-model="supplementaryText" 
@@ -160,13 +168,11 @@ import { useChatStore } from '../stores/chat'
 import { api, conversationsApi } from '../services/api'
 import ConversationHistory from '../components/ConversationHistory.vue'
 import { useAuthStore } from '../stores/auth'
-import { useConversationStore } from '../stores/conversation'
 
 // State
 const sessionStore = useSessionStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
-const conversationStore = useConversationStore()
 const userInput = ref('')
 const supplementaryText = ref('')
 const selectedOptions = ref<{value: string, label: string}[]>([])
@@ -175,19 +181,62 @@ const isLoading = ref(false)
 const error = ref<string | null>(null)
 const messagesContainer = ref<HTMLElement>()
 const hasInitialized = ref(false)
+const isInDialogueMode = ref(false)
 
-// Use messages from chat store
-const messages = computed(() => chatStore.messages)
+// Use messages from chat store and transform for display
+const messages = computed(() => {
+  return chatStore.messages.map(msg => {
+    const metadata = msg.metadata || {}
+    return {
+      ...msg,
+      // Transform for backward compatibility with template
+      type: msg.role,
+      options: metadata.options || [],
+      multiSelect: metadata.multiSelect || false,
+      allowTextInput: metadata.allowTextInput || false,
+      transition: metadata.transition || null,
+      infoCards: metadata.infoCards || null,
+      isDialogue: metadata.isDialogue || false
+    }
+  })
+})
 
 // Computed
 const hasCurrentQuestion = computed(() => {
   const lastMessage = messages.value[messages.value.length - 1]
-  return lastMessage && lastMessage.type === 'assistant' && lastMessage.options && lastMessage.options.length > 0
+  return lastMessage && lastMessage.role === 'assistant' && lastMessage.options && lastMessage.options.length > 0
 })
 
 const hasSelection = computed(() => {
   return selectedOptions.value.length > 0
 })
+
+// Utility Functions
+function detectDialogueMode(response: any): boolean {
+  return response.dialogue_mode === true || response.should_continue_dialogue === true
+}
+
+function generateUniqueId(): number {
+  return Date.now() + Math.random() * 1000
+}
+
+function createAssistantMessage(response: any, isDialogue: boolean) {
+  return {
+    id: generateUniqueId(),
+    role: 'assistant' as const,
+    content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
+    type: 'response',
+    timestamp: new Date().toISOString(),
+    metadata: {
+      options: isDialogue ? [] : (response.options || []),
+      multiSelect: false,
+      allowTextInput: isDialogue ? true : response.allow_text_input,
+      transition: response.transition_message || null,
+      infoCards: response.info_cards || null,
+      isDialogue: isDialogue
+    }
+  }
+}
 
 // Methods
 function isOptionSelected(value: string, multiSelect: boolean = false): boolean {
@@ -223,14 +272,15 @@ async function sendMessage() {
   
   // Add user message
   chatStore.addMessage({
-    type: 'user',
+    id: generateUniqueId(),
+    role: 'user',
     content: messageText,
-    timestamp: new Date()
+    type: 'text',
+    timestamp: new Date().toISOString()
   })
   
-  // Check if this is the first real user message in this conversation
-  const userMessages = chatStore.messages.filter(m => m.type === 'user')
-  if (userMessages.length === 1 && chatStore.conversationType === 'general') {
+  // Check if we have an active conversation ID, otherwise start new conversation
+  if (!chatStore.currentConversationId && chatStore.conversationType === 'general_chat') {
     // This is the first user message, start conversation with routing
     await startConversationWithInput(messageText)
   } else {
@@ -256,9 +306,11 @@ async function submitSelection() {
   
   // Add user message showing their selection with full labels
   chatStore.addMessage({
-    type: 'user',
+    id: generateUniqueId(),
+    role: 'user',
     content: displayText,
-    timestamp: new Date()
+    type: 'answer',
+    timestamp: new Date().toISOString()
   })
   
   // Clear selections
@@ -274,71 +326,57 @@ async function processUserInput(input: string) {
   error.value = ''
   
   try {
-    // Save message to conversation if authenticated
-    if (authStore.isAuthenticated && conversationStore.activeConversation) {
-      await conversationsApi.addMessage(
-        authStore.token!,
-        conversationStore.activeConversation.id,
-        'user',
-        input,
-        {}
-      )
+    // Get current conversation ID
+    const conversationId = chatStore.currentConversationId
+    if (!conversationId) {
+      console.error('No active conversation ID available')
+      throw new Error('Please start a new conversation first')
     }
     
-    // Call the real backend API with auth token
-    const response = await api.getNextQuestion(sessionStore.sessionId, input, undefined, authStore.token)
+    // Call the backend API with conversation ID
+    const response = await api.getNextQuestion(conversationId, input, undefined, authStore.token)
     
     if (response) {
+      // Check if this is a dialogue response (Policy system active)
+      const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
+      isInDialogueMode.value = isDialogue  // Update mode indicator
+      
       // Add assistant message with the backend response
       const assistantMessage = {
-        type: 'assistant' as const,
-        content: response.question_text,
-        options: response.options || [],
-        multiSelect: false, // Can be enhanced to support multi-select from backend
-        allowTextInput: response.allow_text_input,
-        transition: response.transition_message || null,
-        infoCards: response.info_cards || null,
-        timestamp: new Date()
+        id: Date.now() + 1,
+        role: 'assistant' as const,
+        content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
+        type: 'response',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          options: isDialogue ? [] : (response.options || []),
+          multiSelect: false,
+          allowTextInput: isDialogue ? true : response.allow_text_input,
+          transition: response.transition_message || null,
+          infoCards: response.info_cards || null,
+          isDialogue: isDialogue
+        }
       }
       
       chatStore.addMessage(assistantMessage)
-      chatStore.incrementQuestionCount()
       
-      // Save assistant message to conversation if authenticated
-      if (authStore.isAuthenticated && conversationStore.activeConversation) {
-        await conversationsApi.addMessage(
-          authStore.token!,
-          conversationStore.activeConversation.id,
-          'assistant',
-          response.question_text,
-          {
-            options: response.options,
-            allowTextInput: response.allow_text_input,
-            transition: response.transition_message,
-            infoCards: response.info_cards
-          }
-        )
-        
-        // Save info cards if present
-        if (response.info_cards && response.info_cards.length > 0) {
-          for (const card of response.info_cards) {
-            await conversationsApi.addInfoCard(
-              authStore.token!,
-              conversationStore.activeConversation.id,
-              'advice',
-              card
-            )
-          }
-        }
+      // Update progress if assessment data provided
+      if (response.current_pnm || response.current_term || response.fsm_state) {
+        chatStore.updateProgress({
+          current_pnm: response.current_pnm,
+          current_term: response.current_term,
+          fsm_state: response.fsm_state || 'ROUTE'
+        })
       }
       
       await scrollToBottom()
     }
     
   } catch (e: any) {
-    error.value = e.message || 'Error processing message'
+    handleError(e, 'processing message')
   } finally {
     isLoading.value = false
+    chatStore.setLoading(false)
   }
 }
 
@@ -347,58 +385,32 @@ async function startConversationWithInput(userMessage: string) {
   error.value = ''
   
   // Only reset session for brand new conversations
-  if (chatStore.conversationType === 'general' && !sessionStore.currentPnm) {
+  if (chatStore.conversationType === 'general_chat' && !sessionStore.currentPnm) {
     sessionStore.resetSession()
   }
   
   try {
-    // Send the user's first message to backend which will route and return first question
-    const response = await api.getNextQuestion(sessionStore.sessionId, userMessage, undefined, authStore.token)
+    // Use current conversation ID if available, fallback to session ID
+    const conversationId = chatStore.currentConversationId || sessionStore.sessionId
+    const response = await api.getNextQuestion(conversationId, userMessage, undefined, authStore.token)
     
     if (response) {
-      const assistantMessage = {
-        type: 'assistant' as const,
-        content: response.question_text,
-        options: response.options || [],
-        multiSelect: false,
-        allowTextInput: response.allow_text_input,
-        transition: response.transition_message || null,
-        infoCards: response.info_cards || null,
-        timestamp: new Date()
-      }
+      const isDialogue = detectDialogueMode(response)
+      
+      const assistantMessage = createAssistantMessage(response, isDialogue)
       
       chatStore.addMessage(assistantMessage)
-      chatStore.incrementQuestionCount()
       
-      // Save assistant message to conversation if authenticated
-      if (authStore.isAuthenticated && conversationStore.activeConversation) {
-        await conversationsApi.addMessage(
-          authStore.token!,
-          conversationStore.activeConversation.id,
-          'assistant',
-          response.question_text,
-          {
-            options: response.options,
-            allowTextInput: response.allow_text_input,
-            transition: response.transition_message,
-            infoCards: response.info_cards
-          }
-        )
-        
-        // Save info cards if present
-        if (response.info_cards && response.info_cards.length > 0) {
-          for (const card of response.info_cards) {
-            await conversationsApi.addInfoCard(
-              authStore.token!,
-              conversationStore.activeConversation.id,
-              'advice',
-              card
-            )
-          }
-        }
+      // Update progress if assessment data provided
+      if (response.current_pnm || response.current_term || response.fsm_state) {
+        chatStore.updateProgress({
+          current_pnm: response.current_pnm,
+          current_term: response.current_term,
+          fsm_state: response.fsm_state || 'ROUTE'
+        })
       }
       
-      // Update session state if provided
+      // Update session state if provided (legacy compatibility)
       if (response.current_pnm) {
         sessionStore.setState(response.current_pnm, response.current_term || null, response.fsm_state || 'ROUTE')
       }
@@ -406,43 +418,78 @@ async function startConversationWithInput(userMessage: string) {
       await scrollToBottom()
     }
   } catch (e: any) {
-    error.value = e.message || 'Error processing message'
+    handleError(e, 'processing message')
   } finally {
     isLoading.value = false
+    chatStore.setLoading(false)
   }
 }
 
-// Removed unused function startConversation
-
-// Skip current question - currently unused but may be needed for future functionality
-// async function skipQuestion() {
-//   if (isLoading.value) return
-  
-//   // Add user message indicating skip
-//   chatStore.addMessage({
-//     type: 'user',
-//     content: 'Skip this question',
-//     timestamp: new Date()
-//   })
-  
-//   // Clear selections
-//   selectedOptions.value = []
-//   supplementaryText.value = ''
-  
-//   // Process skip as user response
-//   await processUserInput('skip')
-// }
-
-// Function to continue from data page - currently unused
-// function continueFromData() {
-//   // This would be called from the data page
-//   sessionStore.setError('This feature needs to be launched from the Data page')
-// }
+// Utility function for handling API errors
+function handleError(e: any, context: string = 'operation') {
+  const errorMsg = e.message || `Error during ${context}`
+  error.value = errorMsg
+  chatStore.setError(errorMsg)
+  console.error(`[Chat.vue] Error in ${context}:`, e)
+}
 
 async function scrollToBottom() {
   await nextTick()
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
+  }
+}
+
+// Load existing conversation
+async function loadExistingConversation(conversationId: string) {
+  isLoading.value = true
+  chatStore.setLoading(true)
+  try {
+    const detail = await conversationsApi.getConversationDetail(authStore.token!, conversationId)
+    
+    // Set current conversation ID
+    chatStore.setCurrentConversation(conversationId)
+    
+    // Load messages if they exist
+    if (detail.messages && detail.messages.length > 0) {
+      // Clear existing messages first
+      chatStore.clearMessages()
+      
+      // Add each message from conversation history
+      detail.messages.forEach(msg => {
+        chatStore.addMessage({
+          id: msg.id || Date.now(),
+          role: msg.role,
+          content: msg.content,
+          type: msg.type || (msg.role === 'user' ? 'text' : 'response'),
+          timestamp: msg.timestamp || new Date().toISOString(),
+          metadata: msg.metadata
+        })
+      })
+    }
+    
+    // Update progress if assessment data available
+    if (detail.assessment_state?.current_pnm || detail.assessment_state?.current_term) {
+      chatStore.updateProgress({
+        current_pnm: detail.assessment_state.current_pnm,
+        current_term: detail.assessment_state.current_term,
+        fsm_state: detail.assessment_state.fsm_state || 'ROUTE'
+      })
+    }
+    
+    // Update current stage
+    if (detail.dimension) {
+      currentStage.value = `${detail.dimension} Assessment`
+    } else if (detail.assessment_state?.current_pnm) {
+      currentStage.value = detail.assessment_state.current_pnm
+    }
+    
+    await scrollToBottom()
+  } catch (e: any) {
+    handleError(e, 'loading conversation')
+  } finally {
+    isLoading.value = false
+    chatStore.setLoading(false)
   }
 }
 
@@ -455,42 +502,6 @@ watch(() => sessionStore.dimensionFocus, async (newDimension) => {
   }
 }, { immediate: true })
 
-// Load existing conversation
-async function loadExistingConversation(conversationId: string) {
-  isLoading.value = true
-  try {
-    const detail = await conversationStore.loadConversationDetail(authStore.token!, conversationId)
-    
-    // Load messages into chat store
-    if (detail.messages) {
-      detail.messages.forEach((msg: any) => {
-        chatStore.addMessage({
-          type: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.text,
-          options: msg.meta?.options || [],
-          multiSelect: msg.meta?.multiSelect || false,
-          allowTextInput: msg.meta?.allowTextInput || false,
-          transition: msg.meta?.transition || null,
-          infoCards: msg.meta?.infoCards || null,
-          timestamp: new Date(msg.created_at)
-        })
-      })
-    }
-    
-    // Update current stage
-    if (detail.conversation.dimension_name) {
-      currentStage.value = `${detail.conversation.dimension_name} Assessment`
-    } else if (detail.conversation.current_pnm) {
-      currentStage.value = detail.conversation.current_pnm
-    }
-    
-    await scrollToBottom()
-  } catch (e: any) {
-    error.value = `Failed to load conversation: ${e.message}`
-  } finally {
-    isLoading.value = false
-  }
-}
 
 // Start dimension-specific conversation
 async function startDimensionConversation(dimension: string) {
@@ -501,27 +512,34 @@ async function startDimensionConversation(dimension: string) {
   sessionStore.resetSession()
   
   isLoading.value = true
-  hasInitialized.value = true
+  if (!hasInitialized.value) {
+    hasInitialized.value = true
+  }
   
   try {
+    // Create new conversation for dimension
+    if (authStore.isAuthenticated) {
+      try {
+        const newConv = await conversationsApi.createConversation(authStore.token!, 'dimension', dimension)
+        chatStore.setCurrentConversation(newConv.id)
+      } catch (e: any) {
+        console.error('Failed to create dimension conversation:', e)
+      }
+    }
+    
     // Get the first question for this dimension from the backend
-    // Pass the dimension focus to backend
-    const response = await api.getNextQuestion(sessionStore.sessionId, undefined, dimension, authStore.token)
+    const conversationId = chatStore.currentConversationId
+    if (!conversationId) {
+      throw new Error('No conversation ID available for dimension conversation')
+    }
+    const response = await api.getNextQuestion(conversationId, '', dimension, authStore.token)
     
     if (response) {
-      const assistantMessage = {
-        type: 'assistant' as const,
-        content: response.question_text,
-        options: response.options || [],
-        multiSelect: false,
-        allowTextInput: response.allow_text_input,
-        transition: response.transition_message || null,
-        infoCards: response.info_cards || null,
-        timestamp: new Date()
-      }
+      const isDialogue = detectDialogueMode(response)
+      
+      const assistantMessage = createAssistantMessage(response, isDialogue)
       
       chatStore.addMessage(assistantMessage)
-      chatStore.incrementQuestionCount()
       currentStage.value = `${dimension} Assessment`
       
       // Update session state
@@ -530,12 +548,14 @@ async function startDimensionConversation(dimension: string) {
       }
     }
   } catch (e: any) {
-    error.value = e.message || 'Failed to start dimension conversation'
+    handleError(e, 'starting dimension conversation')
     // Fallback message
     chatStore.addMessage({
-      type: 'assistant' as const,
+      id: generateUniqueId(),
+      role: 'assistant' as const,
       content: `Starting ${dimension} assessment. Please describe any issues or concerns related to this dimension.`,
-      timestamp: new Date()
+      type: 'response',
+      timestamp: new Date().toISOString()
     })
     currentStage.value = `${dimension} Assessment`
   } finally {
@@ -553,37 +573,46 @@ onMounted(async () => {
   }
   
   // Load active conversation if exists
-  const activeConv = await conversationStore.fetchActiveConversation(authStore.token!)
-  
-  // Check if there's a dimension focus on mount
-  if (sessionStore.dimensionFocus && !hasInitialized.value) {
-    // Dimension-specific conversation is already created in Data.vue
-    startDimensionConversation(sessionStore.dimensionFocus)
-    sessionStore.setDimensionFocus(null)
-  } else if (activeConv) {
-    // Load existing active conversation
-    await loadExistingConversation(activeConv.id)
-  } else if (chatStore.messages.length === 0) {
-    // Create new general conversation
-    try {
-      await conversationStore.createConversation(authStore.token!, 'general')
-      chatStore.startNewConversation('general')
-      
-      // Create fresh session for new conversation
-      sessionStore.resetSession()
-      
-      // Show welcome message
-      chatStore.addMessage({
-        type: 'assistant',
-        content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
-        options: [],
-        timestamp: new Date()
-      })
-    } catch (e: any) {
-      error.value = `Failed to create conversation: ${e.message}`
+  try {
+    const activeConv = await conversationsApi.getActiveConversation(authStore.token!)
+    
+    // Check if there's a dimension focus on mount
+    if (sessionStore.dimensionFocus && !hasInitialized.value) {
+      // Start dimension-specific conversation
+      await startDimensionConversation(sessionStore.dimensionFocus)
+      sessionStore.setDimensionFocus(null)
+    } else if (activeConv) {
+      // Load existing active conversation
+      await loadExistingConversation(activeConv.id)
+    } else if (chatStore.messages.length === 0) {
+      // Create new general conversation
+      try {
+        const newConv = await conversationsApi.createConversation(authStore.token!, 'general_chat')
+        chatStore.startNewConversation('general_chat')
+        chatStore.setCurrentConversation(newConv.id)
+        
+        // Create fresh session for new conversation
+        sessionStore.resetSession()
+        
+        // Show welcome message
+        chatStore.addMessage({
+          id: generateUniqueId(),
+          role: 'assistant',
+          content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
+          type: 'response',
+          timestamp: new Date().toISOString()
+        })
+      } catch (e: any) {
+        handleError(e, 'creating new conversation')
+      }
     }
+  } catch (e: any) {
+    console.error('Error loading conversations:', e)
   }
-  hasInitialized.value = true
+  
+  if (!hasInitialized.value) {
+    hasInitialized.value = true
+  }
 })
 
 onUnmounted(() => {
@@ -613,6 +642,45 @@ onUnmounted(() => {
   margin: 0;
   font-size: 20px;
   color: #1f2937;
+}
+
+.header-indicators {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.mode-indicator {
+  display: flex;
+  align-items: center;
+}
+
+.mode-badge {
+  padding: 6px 12px;
+  border-radius: 18px;
+  font-size: 12px;
+  font-weight: 600;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+.mode-badge.dialogue {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+
+.mode-badge.question {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
 }
 
 .stage-indicator {
@@ -688,6 +756,25 @@ onUnmounted(() => {
   color: #1f2937;
   margin-bottom: 16px;
   line-height: 1.5;
+}
+
+/* Dialogue mode styles */
+.dialogue-mode {
+  background: linear-gradient(to right, #f0f9ff, #eff6ff);
+  border: 1px solid #93c5fd;
+}
+
+.dialogue-text {
+  font-size: 15px;
+  color: #1e40af;
+  font-style: normal;
+  margin-bottom: 8px;
+}
+
+.dialogue-mode .text-input-container {
+  margin-top: 12px;
+  border-top: 1px solid #dbeafe;
+  padding-top: 12px;
 }
 
 .options-container {

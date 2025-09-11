@@ -73,10 +73,6 @@ import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 import { useSessionStore } from '../stores/session'
-import { debugAuth } from '../utils/debug'
-
-// Run debug on mount
-debugAuth()
 
 const router = useRouter()
 const authStore = useAuthStore()

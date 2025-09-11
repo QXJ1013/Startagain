@@ -1,0 +1,110 @@
+# NLG (Natural Language Generation) Configuration
+# Controls the language generation and style settings
+
+nlg:
+  # Enable/disable NLG service
+  enabled: true
+  
+  # LLM model configuration
+  model:
+    id: "meta-llama/llama-3-3-70b-instruct"
+    max_new_tokens: 500
+    temperature: 0.3          # Creativity level (0.0-1.0)
+    top_p: 0.9
+    repetition_penalty: 1.1
+    
+  # Content types
+  content_types:
+    dialogue: "dialogue_response"
+    info_card: "information_card"
+    transition: "transition_message"
+    empathy: "empathy_response"
+    clarification: "clarification_request"
+    summary: "summary_statement"
+    
+  # Tone styles
+  tone_styles:
+    professional:
+      name: "professional"
+      description: "Medical professional tone"
+      temperature_adjustment: -0.1
+      
+    empathetic:
+      name: "empathetic"
+      description: "Caring and understanding tone"
+      temperature_adjustment: 0.1
+      
+    encouraging:
+      name: "encouraging"
+      description: "Supportive and motivating tone"
+      temperature_adjustment: 0.05
+      
+    informative:
+      name: "informative"
+      description: "Clear and educational tone"
+      temperature_adjustment: -0.05
+      
+    conversational:
+      name: "conversational"
+      description: "Friendly and casual tone"
+      temperature_adjustment: 0.15
+      
+  # Personalization settings
+  personalization:
+    enabled: true
+    factors:
+      - user_emotional_state
+      - conversation_history
+      - user_preferences
+      - cultural_context
+      
+  # Response templates (fallback when LLM unavailable)
+  fallback_templates:
+    dialogue:
+      professional: "Based on the information provided, {content}"
+      empathetic: "I understand this may be concerning. {content}"
+      encouraging: "You're doing great by seeking information. {content}"
+      
+    transition:
+      default: "Let's discuss {topic} now."
+      empathetic: "I'd like to understand more about your {topic}."
+      
+    clarification:
+      default: "Could you clarify {point}?"
+      empathetic: "I want to make sure I understand correctly. Could you explain {point}?"
+      
+  # Content enhancement rules
+  enhancement_rules:
+    remove_technical_jargon: true
+    add_empathy_phrases: true
+    simplify_medical_terms: true
+    personalize_pronouns: true
+    
+  # Target audience settings
+  audiences:
+    patient:
+      reading_level: "8th_grade"
+      use_medical_terms: false
+      empathy_level: "high"
+      
+    caregiver:
+      reading_level: "10th_grade"
+      use_medical_terms: true
+      empathy_level: "medium"
+      
+    professional:
+      reading_level: "college"
+      use_medical_terms: true
+      empathy_level: "low"
+      
+  # Quality thresholds
+  quality:
+    min_confidence: 0.7
+    max_retry_attempts: 2
+    fallback_on_error: true
+    
+  # Logging
+  logging:
+    log_generations: true
+    log_enhancements: false
+    level: "INFO"

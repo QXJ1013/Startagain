@@ -8,6 +8,7 @@ import json
 import re
 from typing import List, Dict, Optional, Tuple
 from dataclasses import dataclass
+from app.core.config_manager import config
 
 @dataclass
 class RoutingResult:
@@ -18,7 +19,7 @@ class RoutingResult:
     confidence: float
     method: str = "ai_keywords"
 
-class AIRoutingService:
+class AIRouter:
     """
     Simplified AI routing using keyword expansion and smart matching.
     This is a middle ground between full AI selection and simple keyword matching.
@@ -197,6 +198,13 @@ class AIRoutingService:
         """
         matches = []
         
+        # Load matching configuration
+        matching_config = config.get('question_selection.selection.matching', {})
+        min_word_overlap = matching_config.get('minimum_word_overlap', 2)
+        fuzzy_match = matching_config.get('fuzzy_match_enabled', True)
+        substring_match = matching_config.get('substring_match_enabled', True)
+        pnm_word_match = matching_config.get('pnm_word_match', True)
+        
         # Normalize search terms
         pnm_lower = pnm.lower() if pnm else ""
         term_lower = term.lower() if term else ""
@@ -206,24 +214,26 @@ class AIRoutingService:
             q_term = question.get('Term', '').lower()
             
             # Check for PNM match (flexible)
-            pnm_match = (
-                pnm_lower in q_pnm or 
-                q_pnm in pnm_lower or
-                (pnm_lower and q_pnm and any(w in q_pnm for w in pnm_lower.split()))
-            )
+            pnm_match = False
+            if substring_match:
+                pnm_match = pnm_lower in q_pnm or q_pnm in pnm_lower
+            
+            if not pnm_match and pnm_word_match and fuzzy_match:
+                pnm_match = (pnm_lower and q_pnm and any(w in q_pnm for w in pnm_lower.split()))
             
             # Check for term match (very flexible)
             term_match = False
             if term_lower and q_term:
                 # Direct substring match
-                term_match = (term_lower in q_term or q_term in term_lower)
+                if substring_match:
+                    term_match = (term_lower in q_term or q_term in term_lower)
                 
                 # Word overlap match
-                if not term_match:
+                if not term_match and fuzzy_match:
                     term_words = set(term_lower.split())
                     q_term_words = set(q_term.split())
                     overlap = term_words & q_term_words
-                    term_match = len(overlap) >= min(2, len(term_words), len(q_term_words))
+                    term_match = len(overlap) >= min(min_word_overlap, len(term_words), len(q_term_words))
             
             # Add to matches if both match or if PNM matches strongly
             if pnm_match and term_match:
@@ -240,6 +250,12 @@ class AIRoutingService:
         """
         score = 0.0
         
+        # Load scoring weights from config
+        weights = config.get('question_selection.selection.scoring.weights', {})
+        exact_match_weight = weights.get('keyword_exact_match', 2.0)
+        term_match_weight = weights.get('keyword_term_match', 1.0)
+        overlap_factor = weights.get('word_overlap_factor', 0.5)
+        
         # Get question text
         q_main = question.get('Prompt_Main', '').lower()
         q_term = question.get('Term', '').lower()
@@ -247,15 +263,15 @@ class AIRoutingService:
         # Check keyword matches in question
         for keyword in keywords:
             if keyword in q_main:
-                score += 2.0
+                score += exact_match_weight
             if keyword in q_term:
-                score += 1.0
+                score += term_match_weight
         
         # Check if question addresses the user's concern
         user_words = set(user_input.lower().split())
         q_words = set(q_main.split())
         overlap = len(user_words & q_words)
-        score += overlap * 0.5
+        score += overlap * overlap_factor
         
         return score
     

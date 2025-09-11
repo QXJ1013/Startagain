@@ -17,6 +17,11 @@ from app.vendors.ibm_cloud import RAGQueryClient, LLMClient
 from app.vendors.bm25 import BM25Client
 from app.utils.rerank import hybrid_fusion
 from app.utils.text import normalize_text, split_sentences, truncate_words
+# from app.services.nlg_service import NaturalLanguageGenerator, ContentContext, ContentType, ToneStyle
+from datetime import datetime
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -68,10 +73,13 @@ class EnhancedInfoProvider:
         self.bullets_per_card = int(getattr(self.cfg, "INFO_BULLETS_PER_CARD", 3))
         self.alpha = float(getattr(self.cfg, "HYBRID_ALPHA", 0.6))
         
+        # Initialize NLG service for enhanced content quality
+        # self.nlg = NaturalLanguageGenerator()
+        
     def maybe_provide_info(
         self,
         *,
-        session,
+        conversation,
         last_answer: str,
         current_pnm: Optional[str],
         current_term: Optional[str],
@@ -81,23 +89,38 @@ class EnhancedInfoProvider:
         Main entry point - provides contextual information cards.
         Enhanced with intelligent retrieval and generation.
         """
+        import logging
+        log = logging.getLogger(__name__)
+        log.info(f"maybe_provide_info called: enabled={self.enabled}, pnm={current_pnm}, term={current_term}")
+        
         if not self.enabled:
+            log.info("Info provider disabled")
             return []
             
-        # Check throttling
+        # Check throttling - simple approach using message count
+        if not conversation or len(conversation.messages) % 5 != 0:
+            # Only provide info every 5 messages to avoid spam
+            return []
         min_gap = int(getattr(self.cfg, "INFO_MIN_TURNS_INTERVAL", 2))
         if hasattr(session, "last_info_turn"):
-            if (session.turn_index - int(session.last_info_turn or -999)) < min_gap:
+            gap = session.turn_index - int(session.last_info_turn or -999)
+            log.info(f"Throttle check: turn_index={session.turn_index}, last_info_turn={session.last_info_turn}, gap={gap}, min_gap={min_gap}")
+            if gap < min_gap:
+                log.info(f"Throttled: gap {gap} < min_gap {min_gap}")
                 return []
                 
         # Build enhanced context
         context = self._build_context(session, last_answer, current_pnm, current_term, storage)
+        log.info(f"Context built: {bool(context)}")
         if not context:
+            log.info("No context built")
             return []
             
         # Retrieve relevant knowledge
         documents = self._retrieve_knowledge(context)
+        log.info(f"Retrieved {len(documents) if documents else 0} documents")
         if not documents:
+            log.info("No documents retrieved")
             return []
             
         # Generate information cards
@@ -126,35 +149,66 @@ class EnhancedInfoProvider:
         # Extract severity indicators from answer
         severity_indicators = self._extract_severity_indicators(last_answer)
         
-        # Get recent question history and user responses for better personalization
+        # Get comprehensive conversation history for better personalization
         question_history = []
         user_responses = []
+        repeated_concerns = {}  # Track recurring themes
+        symptom_progression = []  # Track how symptoms change
+        
         if storage and session.session_id:
             turns = storage.list_turns(session.session_id)
-            # Get conversation context
-            for turn in turns[-10:]:  # Look at more history for better context
+            
+            # Analyze ALL turns for patterns, not just recent ones
+            for idx, turn in enumerate(turns):
                 if turn.get('role') == 'assistant':
                     content = turn.get('content', '')
                     if content and '?' in content:
                         question_history.append(content)
                 elif turn.get('role') == 'user':
-                    content = turn.get('content', '')
+                    content = turn.get('content', '').lower()
                     if content and len(content) > 10:  # Meaningful responses only
                         user_responses.append(content)
+                        
+                        # Track recurring concerns
+                        concern_keywords = ['breathing', 'swallow', 'walk', 'sleep', 'talk', 
+                                          'fatigue', 'pain', 'anxiety', 'fall', 'choke']
+                        for keyword in concern_keywords:
+                            if keyword in content:
+                                if keyword not in repeated_concerns:
+                                    repeated_concerns[keyword] = []
+                                repeated_concerns[keyword].append(idx)
+                        
+                        # Track symptom progression words
+                        if any(word in content for word in ['worse', 'better', 'improving', 'declining']):
+                            symptom_progression.append({
+                                'turn': idx,
+                                'content': content[:100]
+                            })
+        
+        # Identify most concerning issues (mentioned 3+ times)
+        major_concerns = [k for k, v in repeated_concerns.items() if len(v) >= 3]
+        
+        # Determine conversation patterns
+        response_length_avg = sum(len(r) for r in user_responses) / max(len(user_responses), 1)
+        is_detailed_responder = response_length_avg > 50  # User gives detailed answers
         
         # Enhanced context with user response patterns
         enhanced_context = InfoContext(
             current_pnm=current_pnm,
             current_term=current_term,
             last_answer=last_answer,
-            question_history=question_history[-3:],
+            question_history=question_history[-5:],  # Keep more history
             severity_indicators=severity_indicators
         )
         
-        # Add personalization data
-        enhanced_context.user_responses = user_responses[-5:]  # Last 5 responses for pattern analysis
+        # Add comprehensive personalization data
+        enhanced_context.user_responses = user_responses[-10:]  # More responses for better patterns
         enhanced_context.session_stage = self._determine_session_stage(session, storage)
         enhanced_context.specific_mentions = self._extract_specific_mentions(last_answer)
+        enhanced_context.major_concerns = major_concerns  # New: recurring themes
+        enhanced_context.is_detailed_responder = is_detailed_responder  # New: response style
+        enhanced_context.symptom_changes = symptom_progression[-3:]  # New: progression tracking
+        enhanced_context.total_interactions = len(turns)  # New: conversation depth
         
         return enhanced_context
     
@@ -351,19 +405,22 @@ class EnhancedInfoProvider:
         context: InfoContext
     ) -> List[Dict[str, Any]]:
         """
-        Generate information cards from retrieved documents.
-        Uses LLM for intelligent extraction if available.
+        Generate enhanced information cards from retrieved documents.
+        Uses NLG service to improve RAG content quality and personalization.
         """
         cards = []
         
         for doc in documents[:self.max_cards]:
+            # First generate card content (existing logic)
             if self.llm and self.llm.healthy():
-                card = self._generate_card_with_llm(doc, context)
+                raw_card = self._generate_card_with_llm(doc, context)
             else:
-                card = self._generate_card_simple(doc, context)
-                
-            if card:
-                cards.append(card)
+                raw_card = self._generate_card_simple(doc, context)
+            
+            # Then enhance with NLG for better quality and personalization
+            if raw_card:
+                enhanced_card = self._enhance_card_with_nlg(raw_card, context)
+                cards.append(enhanced_card)
                 
         return cards
     
@@ -386,49 +443,105 @@ class EnhancedInfoProvider:
         if session_stage in ['detailed', 'comprehensive']:
             personalization_notes.append("This is an ongoing conversation - build on previous topics")
         
-        prompt = f"""You are a compassionate ALS/MND specialist nurse creating personalized, high-quality care information cards for patients and caregivers.
+        # Enhanced prompt with better structure and specificity
+        
+        # Analyze conversation history for patterns
+        user_responses = getattr(context, 'user_responses', [])
+        frequency_words = ['always', 'often', 'sometimes', 'rarely', 'never']
+        user_frequency = 'not specified'
+        for word in frequency_words:
+            if word in context.last_answer.lower():
+                user_frequency = word
+                break
+        
+        # Determine stage based on severity indicators
+        severity_level = 'moderate'
+        if context.severity_indicators:
+            high_count = sum(1 for s in context.severity_indicators if s.startswith('high:'))
+            if high_count >= 2:
+                severity_level = 'high'
+            elif any(s.startswith('low:') for s in context.severity_indicators):
+                severity_level = 'low'
+        
+        # Extract specific challenges from answer
+        challenges = []
+        if 'difficult' in context.last_answer.lower():
+            challenges.append('experiencing difficulty')
+        if 'can\'t' in context.last_answer.lower() or 'cannot' in context.last_answer.lower():
+            challenges.append('unable to perform')
+        if 'help' in context.last_answer.lower():
+            challenges.append('needs assistance')
+        
+        prompt = f"""You are an experienced ALS/MND specialist creating a personalized information card. Your goal is to provide IMMEDIATELY ACTIONABLE guidance that the patient can use TODAY.
 
-PATIENT CONTEXT:
-- Current area of concern: {context.current_term} ({context.current_pnm})
-- Patient's recent response: "{context.last_answer}"
-- Severity indicators: {', '.join(context.severity_indicators[:2]) if context.severity_indicators else 'moderate concern'}
-- Conversation depth: {session_stage}
-- Specific patient mentions: {', '.join(specific_mentions[:4]) if specific_mentions else 'general concerns'}
+PATIENT PROFILE:
+- Topic: {context.current_term} ({context.current_pnm} needs)
+- Their exact words: "{context.last_answer[:150]}"
+- Frequency/Pattern: {user_frequency}
+- Severity: {severity_level} priority
+- Key challenges: {', '.join(challenges) if challenges else 'managing symptoms'}
+- Specific mentions: {', '.join(specific_mentions[:3]) if specific_mentions else 'none'}
 
-EXPERT KNOWLEDGE SOURCE:
-{text[:2000]}
+CONVERSATION HISTORY INSIGHTS:
+- Session stage: {session_stage} (adjust detail level accordingly)
+- Previous questions: {len(context.question_history)} asked
+{f"- Recurring themes: {', '.join([q[:30] for q in context.question_history[-2:]])}" if context.question_history else ""}
 
-PERSONALIZATION CONTEXT:
-{chr(10).join(f"• {note}" for note in personalization_notes) if personalization_notes else "• Provide comprehensive but accessible guidance"}
+KNOWLEDGE BASE CONTENT:
+{text[:1500]}
 
-TASK: Create a comprehensive, practical information card that directly addresses this patient's specific situation and provides immediate value.
+CRITICAL INSTRUCTIONS:
 
-TITLE REQUIREMENTS:
-- 10-18 words that speak directly to their situation
-- Include specific patient details when mentioned (e.g., "at night", "when swallowing", "using walker")
-- Use encouraging, person-centered language (avoid clinical jargon)
-- Make it feel like personalized guidance, not generic advice
-- Examples: "Improving Nighttime Breathing Comfort with Positioning and Equipment"
-- Examples: "Safe Swallowing Strategies for Thin Liquids and Meal Planning"
+1. TITLE (15-20 words):
+   - Must include their SPECIFIC situation (e.g., if they said "at night", include "nighttime")
+   - Use their language level (simple if answers are brief, detailed if elaborate)
+   - Focus on the BENEFIT, not the problem
+   - Good: "Managing Breathing Comfort When Lying Down at Night"
+   - Bad: "Breathing Difficulties Information"
 
-INFORMATION BULLETS (exactly 4 comprehensive points):
-- Each bullet: 25-40 words, providing substantial actionable guidance
-- Start with encouraging, warm language ("You might find...", "A helpful approach is...", "Consider trying...")
-- Include specific steps, timeframes, or measurements when appropriate
-- Address both immediate relief and longer-term management
-- Reference specific patient details naturally when relevant
-- Provide clear "why this helps" context to build understanding
-- Balance being thorough with being reassuring and non-overwhelming
+2. FOUR BULLETS (each 30-40 words, MUST be different approaches):
+   
+   Bullet 1 - IMMEDIATE RELIEF (what to do RIGHT NOW):
+   - Start with action verb (Try, Position, Use)
+   - Include specific measurements/angles/times
+   - Explain WHY it helps in simple terms
+   
+   Bullet 2 - DAILY ROUTINE INTEGRATION:
+   - Connect to their mentioned daily patterns
+   - Provide a structured approach (morning/evening/before meals)
+   - Include frequency and duration
+   
+   Bullet 3 - EQUIPMENT/TECHNIQUE OPTIMIZATION:
+   - Suggest specific tools or adaptations
+   - Include both no-cost and equipment options
+   - Mention how to obtain or alternatives
+   
+   Bullet 4 - MONITORING & PROGRESSION:
+   - How to track if it's working
+   - When to adjust the approach
+   - Include caregiver involvement if severity is high
 
-QUALITY STANDARDS:
-- Each bullet must be genuinely helpful and actionable TODAY
-- Include practical details (timing, positioning, equipment, techniques)
-- Address both symptom management AND emotional support aspects
-- Use natural, conversational language that feels personal
-- Ensure content is ALS/MND-specific and evidence-based
+3. LANGUAGE RULES:
+   - Use "you" directly, be conversational
+   - Avoid medical jargon unless they used it first
+   - Include emotional reassurance naturally
+   - Acknowledge their specific situation
 
-OUTPUT FORMAT (JSON only, no explanations or markdown):
-{{"title": "Comprehensive title addressing their specific situation", "bullets": ["You might find that [detailed actionable strategy with specific steps and reasoning for their situation]...", "A helpful approach is [comprehensive technique with timing/method details that addresses their specific concerns]...", "Consider trying [practical intervention with clear instructions that builds on their mentioned details]...", "Many families discover [supportive strategy with both practical and emotional benefits for their specific circumstances]..."]}}"""
+4. BASED ON SEVERITY:
+   - Low: Focus on prevention and optimization
+   - Moderate: Balance management with adaptation
+   - High: Prioritize comfort and caregiver support
+
+OUTPUT FORMAT (JSON only):
+{{
+  "title": "[Specific, encouraging title with their context]",
+  "bullets": [
+    "[Action verb] [specific technique with measurement] because [simple explanation of benefit]",
+    "[Time-based routine] with [specific duration/frequency] to [clear outcome]",
+    "[Equipment/technique] using [specific item/method] which [practical benefit]",
+    "[Monitoring approach] by [specific indicator] and [adjustment strategy]"
+  ]
+}}"""
 
         try:
             response = self.llm.generate_json(prompt)
@@ -719,6 +832,63 @@ OUTPUT FORMAT (JSON only, no explanations or markdown):
             cleaned = cleaned[:57] + '...'
             
         return cleaned or "Tips for Managing ALS Symptoms"
+    
+    def _enhance_card_with_nlg(self, card: Dict[str, Any], context: InfoContext) -> Dict[str, Any]:
+        """
+        Enhance card content using NLG service for better language quality.
+        """
+        try:
+            # Build content context for NLG enhancement  
+            content_context = ContentContext(
+                user_input=f"Information about {context.current_term}",
+                current_pnm=context.current_pnm,
+                current_term=context.current_term,
+                user_emotional_state=getattr(context, 'user_emotional_state', 'neutral'),
+                target_audience="patient"
+            )
+            
+            # Add retrieved content if available
+            content_context.retrieved_content = card.get('content', '')
+            
+            # Add conversation history if available
+            if hasattr(context, 'question_history'):
+                content_context.conversation_history = context.question_history[-3:]
+            
+            # Enhance different parts of the card
+            enhanced_card = card.copy()
+            
+            # Enhance title if present
+            if "title" in card and card["title"]:
+                enhanced_title_result = self.nlg.enhance_rag_content(
+                    card["title"], 
+                    content_context,
+                    target_format="title"
+                )
+                enhanced_card["title"] = enhanced_title_result.generated_text
+            
+            # Enhance bullets content
+            if "bullets" in card and card["bullets"]:
+                enhanced_bullets = []
+                for bullet in card["bullets"]:
+                    enhanced_bullet_result = self.nlg.enhance_rag_content(
+                        bullet,
+                        content_context,
+                        target_format="bullet"
+                    )
+                    enhanced_bullets.append(enhanced_bullet_result.generated_text)
+                enhanced_card["bullets"] = enhanced_bullets
+            
+            # Add NLG metadata
+            enhanced_card["nlg_enhanced"] = True
+            enhanced_card["enhancement_timestamp"] = datetime.now().isoformat()
+            
+            return enhanced_card
+            
+        except Exception as e:
+            logger.error(f"NLG enhancement failed for card: {e}")
+            # Return original card if enhancement fails
+            card["nlg_enhanced"] = False
+            return card
 
     def _update_session_throttle(self, session, storage) -> None:
         """Update session with last info turn"""

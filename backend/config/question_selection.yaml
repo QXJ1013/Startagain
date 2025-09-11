@@ -1,0 +1,80 @@
+# Question Selection Configuration
+# All hardcoded values extracted from the codebase
+
+selection:
+  # Scoring weights for different matching strategies
+  # Adjusted for policy-based system where questions are rare but important
+  scoring:
+    weights:
+      # Keyword matching weights (reduced since questions are targeted)
+      keyword_exact_match: 1.5      # Weight when keyword matches in question main text
+      keyword_term_match: 0.8       # Weight when keyword matches in term
+      word_overlap_factor: 0.3      # Weight per overlapping word
+      
+      # Strategy weights for final score calculation
+      # Higher weights for intelligent selection since questions are infrequent
+      semantic_similarity: 4.0       # Weight for semantic matching strategy (increased)
+      context_relevance: 3.0        # Weight for context-aware strategy (increased)
+      keyword_matching: 0.5         # Weight for keyword matching strategy (reduced)
+    
+  # Matching configuration from AIRoutingService.find_matching_questions
+  matching:
+    minimum_word_overlap: 2        # Minimum overlapping words for term match
+    fuzzy_match_enabled: true      # Enable fuzzy substring matching
+    substring_match_enabled: true  # Enable substring matching for PNM/term
+    pnm_word_match: true          # Match individual words in PNM
+    
+  # Fallback strategies from ConversationManager._select_next_question
+  fallback:
+    strategy: "pnm_priority"      # Options: pnm_priority, random, sequential, any_available
+    max_attempts: 3               # Maximum fallback attempts
+    allow_cross_pnm: false        # Allow questions from different PNM in fallback
+    use_any_available: true       # Use any available question as last resort
+    
+  # Caching configuration (adjusted for policy-based system)
+  caching:
+    enabled: true
+    ttl_seconds: 600             # Reduced TTL since questions are infrequent (10 minutes)
+    max_size: 500                # Smaller cache since fewer questions asked
+    
+  # Strategy configuration (optimized for policy-based system)
+  strategies:
+    - name: "context"           # Context most important when questions are rare
+      enabled: true
+      priority: 1                # Highest priority
+      min_score: 0.5
+      history_depth: 10          # Look deeper into history since questions are infrequent
+      recent_focus_weight: 0.4  # Higher weight on recent context
+      concern_alignment_weight: 0.35
+      
+    - name: "semantic"
+      enabled: true              # Enable semantic matching for better understanding
+      priority: 2                
+      min_score: 0.5             # Higher threshold for quality
+      model: "all-MiniLM-L6-v2"
+      threshold: 0.4             # Minimum similarity threshold
+      
+    - name: "keyword"
+      enabled: true
+      priority: 3                # Lowest priority (fallback)
+      min_score: 0.2             # Lower threshold as fallback
+
+# Duplicate prevention configuration
+duplicate_prevention:
+  enabled: true                  # Enable strict duplicate prevention
+  check_by_id: true             # Check by question ID
+  check_by_text: true           # Also check by exact text match
+  log_violations: true          # Log when duplicates are prevented
+  
+# Logging configuration
+logging:
+  level: "INFO"                  # DEBUG, INFO, WARNING, ERROR
+  log_scores: true               # Log individual strategy scores
+  log_cache_hits: true           # Log cache hit/miss statistics
+  log_duplicates: true          # Log duplicate prevention actions
+
+# Performance tuning
+performance:
+  batch_size: 50                 # Process questions in batches
+  parallel_scoring: false        # Enable parallel scoring (future feature)
+  precompute_embeddings: true    # Precompute embeddings on startup

@@ -1,4 +1,4 @@
-# app/deps.py
+# app/deps.py - Document-based Dependencies
 from __future__ import annotations
 
 import json
@@ -9,12 +9,9 @@ from typing import Optional, Any, Dict
 from fastapi import FastAPI, HTTPException, Depends, Header
 
 from app.config import get_settings
-from app.services.storage import Storage
+from app.services.storage import DocumentStorage
 from app.services.question_bank import QuestionBank
-from app.services.lexicon_router import LexiconRouter
-# from app.services.info_provider import InfoProvider  # Old version moved to abandon
-from app.services.ai_router import AIEnhancedRouter
-from app.services.session import SessionState
+from app.services.ai_routing import AIRouter
 from app.services.auth import auth_service
 
 # Optional: warm checks
@@ -30,11 +27,10 @@ except Exception:  # pragma: no cover
 log = logging.getLogger(__name__)
 
 # ------------ singletons ------------
-_storage: Optional[Storage] = None
+_storage: Optional[DocumentStorage] = None
 _qb: Optional[QuestionBank] = None
-_router: Optional[LexiconRouter] = None
-_info: Optional[Any] = None  # Can be InfoProvider or EnhancedInfoProvider
-_ai_router: Optional[AIEnhancedRouter] = None
+_ai_router: Optional[AIRouter] = None
+_info: Optional[Any] = None  # Enhanced InfoProvider
 
 # For hot-reload of local JSONs (optional)
 _qb_mtime: Optional[float] = None
@@ -43,17 +39,19 @@ _lex_mtime: Optional[float] = None
 
 # ------------ DI providers (FastAPI Depends) ------------
 
-def get_storage() -> Storage:
+def get_storage() -> DocumentStorage:
     global _storage
     if _storage is None:
         s = get_settings()
-        _storage = Storage(db_path=s.DB_PATH, schema_path=s.SCHEMA_PATH)
+        # Use schema_v2.sql for document-based structure
+        schema_path = s.SCHEMA_PATH.replace('schema.sql', 'schema_v2.sql') if hasattr(s, 'SCHEMA_PATH') else None
+        _storage = DocumentStorage(db_path=s.DB_PATH, schema_path=schema_path)
     return _storage
 
 
 def get_current_user(
     authorization: Optional[str] = Header(None),
-    storage: Storage = Depends(get_storage)
+    storage: DocumentStorage = Depends(get_storage)
 ) -> Dict[str, Any]:
     """Extract and validate user from Authorization header"""
     if not authorization:
@@ -98,85 +96,61 @@ def get_question_bank() -> QuestionBank:
     return _qb
 
 
-def get_lexicon_router() -> LexiconRouter:
+def get_ai_router() -> AIRouter:
     """
-    Build the AC automaton from pnm_lexicon.json.
-    Supports hot-reload on file change.
+    Get AI router instance for semantic routing.
     """
-    global _router, _lex_mtime
-    s = get_settings()
-    path = s.PNM_LEXICON_PATH
+    global _ai_router
+    if _ai_router is None:
+        from app.services.ai_routing import AIRouter
+        _ai_router = AIRouter()
+    return _ai_router
 
-    if _router is None:
-        lex = _load_json(path)
-        _router = LexiconRouter(lexicon=lex)
-        _lex_mtime = _safe_mtime(path)
-        return _router
-
-    mt = _safe_mtime(path)
-    if mt and _lex_mtime and mt > _lex_mtime:
-        log.info("PNM lexicon changed on disk, rebuilding AC automaton: %s", path)
-        lex = _load_json(path)
-        _router = LexiconRouter(lexicon=lex)
-        _lex_mtime = mt
-    return _router
-
-
-# def get_info_provider() -> InfoProvider:
-#     global _info
-#     if _info is None:
-#         _info = InfoProvider()
-#     return _info
 
 def get_info_provider():
+    """Get enhanced info provider instance"""
     global _info
     if _info is None:
-        cfg = get_settings()
-        if getattr(cfg, 'USE_ENHANCED_INFO', True):
-            from app.services.info_provider_enhanced import EnhancedInfoProvider
-            _info = EnhancedInfoProvider()
-        else:
-            # Fallback: create a basic info provider interface
-            from app.services.info_provider_enhanced import EnhancedInfoProvider
-            _info = EnhancedInfoProvider()  # Use enhanced as default
+        from app.services.info_provider_enhanced import EnhancedInfoProvider
+        _info = EnhancedInfoProvider()
     return _info
+
+
 # ------------ app startup warmup ------------
 
 def warmup_dependencies(app: Optional[FastAPI] = None) -> None:
     """
-    Warm core dependencies at startup.
-    - Initialize DB & run schema
+    Warm core dependencies at startup for document-based system.
+    - Initialize document storage & run schema
     - Load question bank
-    - Build lexicon automaton
+    - Initialize AI router
     - Best-effort health checks for RAG/BM25 channels
     """
     s = get_settings()
 
-    # storage
+    # document storage
     st = get_storage()
     st.ping()
-    log.info("Storage ready at %s", s.DB_PATH)
+    log.info("Document storage ready at %s", s.DB_PATH)
 
     # question bank
     qb = get_question_bank()
-    # robust size detection for different QuestionBank implementations
-    n_items = _qb_size(qb) if hasattr(qb, "size") else len(qb)
+    n_items = _qb_size(qb)
     log.info("Question bank loaded: %d items", n_items)
 
-    # lexicon
-    lx = get_lexicon_router()
+    # AI router
     try:
-        # touch topics to ensure AC is ready
-        topics_total = 0
-        if hasattr(lx, "lexicon") and isinstance(lx.lexicon, dict):
-            for pnm in lx.lexicon.keys():
-                try:
-                    topics_total += len(lx.topics_for_pnm(pnm))
-                except Exception:
-                    pass
-        log.info("Lexicon router ready. Topics total (approx): %d", topics_total)
+        router = get_ai_router()
+        log.info("AI router initialized")
     except Exception as e:
-        log.warning("Lexicon warmup skipped: %s", e)
+        log.warning("AI router initialization failed: %s", e)
+
+    # Enhanced info provider
+    try:
+        info = get_info_provider()
+        log.info("Enhanced info provider ready")
+    except Exception as e:
+        log.warning("Info provider initialization failed: %s", e)
 
     # optional best-effort checks (do not fail startup)
     if RAGQueryClient is not None:
@@ -225,6 +199,7 @@ def _qb_size(qb) -> int:
     except Exception:
         return 0
 
+
 # ------------ helpers ------------
 
 def _safe_mtime(path: Optional[str]) -> Optional[float]:
@@ -245,49 +220,85 @@ def _load_json(path: Optional[str]) -> dict:
         return {}
 
 
-def get_ai_router() -> Optional[AIEnhancedRouter]:
-    global _ai_router
-    if _ai_router is None:
-        cfg = get_settings()
-        if getattr(cfg, 'ENABLE_AI_ENHANCEMENT', False):
-            _ai_router = AIEnhancedRouter(
-                lexicon_router=get_lexicon_router(),
-                question_bank=get_question_bank(),
-                enable_ai=True
-            )
-    return _ai_router
+# ------------ Simplified Conversation Helpers ------------
 
-
-# ------------ Session Store ------------
-
-class SessionStore:
-    """Session store for managing user sessions"""
-    
-    def __init__(self, session_id: str):
-        self.session_id = session_id
-        self._session_state = None
-    
-    def get_session(self) -> SessionState:
-        """Get or create session state"""
-        if self._session_state is None:
-            storage = get_storage()
-            self._session_state = SessionState.load(storage, self.session_id)
-        return self._session_state
-    
-    def save_session(self):
-        """Save current session state"""
-        if self._session_state:
-            storage = get_storage()
-            self._session_state.save(storage)
-
-
-def get_session_store(session_id: str = "default_session") -> SessionStore:
-    """Get session store instance"""
-    return SessionStore(session_id)
-
-
-def get_conversation_service():
-    """Get conversation service instance"""
-    from app.services.conversation_service import ConversationService
+def get_or_create_simple_conversation(user_id: str, conversation_id: str = None, dimension: str = None) -> str:
+    """Get existing conversation or create simple new one"""
     storage = get_storage()
-    return ConversationService(storage)
+    
+    if conversation_id:
+        conv = storage.get_conversation(conversation_id)
+        if conv and conv.user_id == user_id:
+            return conversation_id
+    
+    # Create new conversation
+    return create_simple_conversation(storage, user_id, "general_chat", dimension)
+
+
+# ------------ Health Check Utilities ------------
+
+def check_document_storage_health() -> Dict[str, Any]:
+    """Check document storage system health"""
+    try:
+        storage = get_storage()
+        is_healthy = storage.ping()
+        
+        # Get some basic stats
+        # Note: would need to implement these methods in DocumentStorage
+        return {
+            "status": "healthy" if is_healthy else "unhealthy",
+            "connection": is_healthy,
+            "storage_type": "document",
+            "schema_version": "v2"
+        }
+    except Exception as e:
+        return {
+            "status": "unhealthy",
+            "connection": False,
+            "error": str(e)
+        }
+
+
+def check_ai_services_health() -> Dict[str, Any]:
+    """Check AI services health"""
+    health = {
+        "question_bank": False,
+        "ai_router": False,
+        "info_provider": False
+    }
+    
+    try:
+        qb = get_question_bank()
+        health["question_bank"] = _qb_size(qb) > 0
+    except Exception:
+        pass
+    
+    try:
+        router = get_ai_router()
+        health["ai_router"] = True
+    except Exception:
+        pass
+    
+    try:
+        info = get_info_provider()
+        health["info_provider"] = True
+    except Exception:
+        pass
+    
+    return health
+
+
+# ------------ Simplified Conversation Management ------------
+
+def create_simple_conversation(storage: DocumentStorage, user_id: str, conversation_type: str = "general_chat", dimension: str = None) -> str:
+    """Create a simple conversation and return ID"""
+    title = f"{dimension} Assessment" if dimension else "General Chat"
+    
+    conversation = storage.create_conversation(
+        user_id=user_id,
+        type=conversation_type,
+        dimension=dimension,
+        title=title
+    )
+    
+    return conversation.id

@@ -1,0 +1,256 @@
+# System Configuration - Eliminates all hardcoded values
+# All thresholds, limits, and parameters in one place
+
+# Authentication & Security
+auth:
+  token_expire_minutes: 1440  # 24 hours
+  secret_key: "${SECRET_KEY}"  # From environment
+  algorithm: "HS256"
+  password_min_length: 6
+  max_login_attempts: 5
+  lockout_duration: 900  # 15 minutes
+
+# Scoring System Configuration
+scoring:
+  # Awareness levels (0-4 scale)
+  awareness_levels:
+    unaware: 0
+    vague: 1
+    aware: 2
+    understanding: 3
+    managing: 4
+  
+  # Evidence extraction thresholds
+  evidence:
+    min_count_for_scoring: 3
+    max_dialogue_turns: 5
+    confidence_threshold: 0.6
+    
+    # Evidence weights by severity
+    severity_weights:
+      severe: 4.5
+      moderate: 2.5
+      mild: 1.5
+    
+    # Score aggregation
+    aggregation:
+      max_weight: 0.7
+      avg_weight: 0.3
+      evidence_boost_threshold: 3
+      evidence_boost_factor: 1.2
+  
+  # Stage mapping thresholds
+  stage_thresholds: [1.0, 2.0, 3.0, 4.0, 5.0, 6.0]
+  stage_names:
+    - "Stage 0: Unaware"
+    - "Stage 1: Vague Awareness"
+    - "Stage 2: Aware"
+    - "Stage 3: Understanding"
+    - "Stage 4: Managing"
+    - "Stage 5: Advanced Management"
+    - "Stage 6: Comprehensive Understanding"
+
+# FSM & Dialogue Configuration  
+dialogue:
+  # Policy ratios
+  dialogue_ratio: 0.8  # 80% dialogue
+  question_ratio: 0.2  # 20% questions
+  
+  # Turn management
+  min_dialogue_turns: 2
+  max_consecutive_dialogue: 5
+  max_consecutive_questions: 2
+  
+  # Evidence collection
+  evidence_per_turn_limit: 2
+  evidence_score_threshold: 2.0
+  
+  # Dialogue quality
+  min_response_length: 50
+  max_response_length: 300
+  preferred_response_length: 150
+
+# AI Model Configuration
+ai_models:
+  # Default model settings
+  default_model: "meta-llama/llama-3-3-70b-instruct"
+  
+  # Generation parameters
+  temperature: 0.7
+  max_tokens: 500
+  top_p: 0.9
+  frequency_penalty: 0.3
+  presence_penalty: 0.3
+  
+  # Model-specific settings
+  models:
+    dialogue:
+      model_id: "meta-llama/llama-3-3-70b-instruct"
+      temperature: 0.7
+      max_tokens: 500
+    
+    scoring:
+      model_id: "meta-llama/llama-4-maverick-17b-128e-instruct-fp8"
+      temperature: 0.3
+      max_tokens: 200
+    
+    info_generation:
+      model_id: "meta-llama/llama-3-3-70b-instruct"
+      temperature: 0.5
+      max_tokens: 800
+
+# Information Provider Configuration
+info_provider:
+  # Throttling
+  min_turns_between_cards: 3
+  max_cards_per_session: 10
+  
+  # Card generation
+  bullets_per_card: 4
+  min_bullet_length: 20
+  max_bullet_length: 100
+  
+  # Relevance scoring
+  relevance_threshold: 0.6
+  diversity_weight: 0.3
+  recency_weight: 0.2
+  
+  # Hybrid search
+  lexical_weight: 0.6  # BM25
+  semantic_weight: 0.4  # Vector search
+  top_k: 8
+
+# Cache Configuration
+cache:
+  # In-memory cache
+  memory:
+    max_size: 1000
+    ttl_seconds: 300
+    
+  # Redis cache (if enabled)
+  redis:
+    enabled: false
+    ttl_seconds: 3600
+    max_connections: 10
+  
+  # Cache strategies by data type
+  strategies:
+    embeddings: 3600  # 1 hour
+    prompts: 1800     # 30 minutes
+    scores: 600       # 10 minutes
+    user_data: 300    # 5 minutes
+
+# Database Configuration
+database:
+  # Query limits
+  default_limit: 50
+  max_limit: 200
+  default_offset: 0
+  
+  # Connection pool
+  pool_size: 5
+  max_overflow: 10
+  pool_timeout: 30
+  
+  # Session management
+  max_active_sessions: 100
+  session_timeout: 3600
+  cleanup_interval: 600
+
+# Routing & Selection
+routing:
+  # Confidence thresholds
+  high_confidence: 0.8
+  medium_confidence: 0.5
+  low_confidence: 0.3
+  fallback_confidence: 0.1
+  
+  # Keyword matching
+  min_keyword_matches: 2
+  keyword_boost_factor: 1.5
+  
+  # Semantic matching
+  semantic_threshold: 0.3
+  semantic_top_k: 10
+  
+  # Selection scoring
+  scoring_weights:
+    relevance: 0.3
+    quality: 0.3
+    diversity: 0.2
+    recency: 0.2
+
+# Performance Monitoring
+monitoring:
+  # Metrics collection
+  metrics_enabled: true
+  metrics_interval: 60  # seconds
+  
+  # Performance thresholds
+  response_time_warning: 1000  # ms
+  response_time_critical: 3000  # ms
+  
+  # Quality thresholds
+  min_response_quality: 0.6
+  min_relevance_score: 0.5
+  min_empathy_score: 0.5
+  
+  # Alerting
+  alert_on_error_rate: 0.05  # 5%
+  alert_on_low_quality: true
+
+# Error Messages
+errors:
+  auth:
+    invalid_credentials: "Invalid email or password"
+    token_expired: "Your session has expired. Please log in again"
+    access_denied: "You don't have permission to access this resource"
+    account_locked: "Account temporarily locked due to multiple failed attempts"
+  
+  validation:
+    invalid_input: "Invalid input provided"
+    missing_field: "Required field missing: {field}"
+    invalid_format: "Invalid format for field: {field}"
+  
+  system:
+    internal_error: "An internal error occurred. Please try again later"
+    service_unavailable: "Service temporarily unavailable"
+    rate_limited: "Too many requests. Please wait before trying again"
+
+# Feature Flags
+features:
+  enable_ai_enhancement: true
+  enable_semantic_search: true
+  enable_caching: true
+  enable_metrics: true
+  enable_debug_logging: false
+  enable_a_b_testing: false
+
+# API Configuration
+api:
+  version: "2.0"
+  base_path: "/api"
+  rate_limit:
+    requests_per_minute: 60
+    requests_per_hour: 1000
+  
+  endpoints:
+    chat: "/chat"
+    conversations: "/conversations"
+    auth: "/auth"
+    health: "/health"
+
+# Logging Configuration
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file_path: "logs/app.log"
+  max_file_size: 10485760  # 10MB
+  backup_count: 5
+  
+  # Component-specific levels
+  components:
+    fsm: "INFO"
+    scoring: "INFO"
+    ai_router: "WARNING"
+    database: "WARNING"

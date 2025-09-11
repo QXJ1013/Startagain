@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     BUILD_VERSION: Optional[str] = None
 
     # ---------- server / CORS ----------
-    CORS_ORIGINS: List[str] = Field(default_factory=lambda: ["*"])  # set to explicit list in production
+    CORS_ORIGINS: List[str] = Field(default_factory=lambda: ["http://localhost:5173", "http://127.0.0.1:5173"])  # Production: set to your frontend URLs
     
     if PYDANTIC_V2:
         from pydantic import field_validator
@@ -49,8 +49,8 @@ class Settings(BaseSettings):
     SPACE_ID: str = ""
     PROJECT_ID: Optional[str] = None
 
-    ENABLE_SEMANTIC_BACKOFF: bool = True   # 启用语义理解
-    ENABLE_AI_ENHANCEMENT: bool = True     # 启用AI增强路由
+    ENABLE_SEMANTIC_BACKOFF: bool = True   # Enable semantic understanding
+    ENABLE_AI_ENHANCEMENT: bool = True     # Enable AI-enhanced routing
     BACKGROUND_VECTOR_INDEX_ID: str = ""     # knowledge base
     QUESTION_VECTOR_INDEX_ID: str = ""       # question bank
     VECTOR_INDEX_ID: str = ""                # legacy fallback (unused if both above provided)

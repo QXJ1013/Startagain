@@ -6,16 +6,16 @@ from typing import Optional
 from fastapi import APIRouter, HTTPException, Depends, Header
 from pydantic import BaseModel, EmailStr, Field
 
-from app.services.storage import Storage
+from app.deps import get_storage, get_current_user as get_auth_user
 from app.services.auth import auth_service
 
-router = APIRouter(prefix="/auth", tags=["Authentication"])
+router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 
 
 # Request/Response models
 class RegisterRequest(BaseModel):
     email: EmailStr
-    password: str = Field(..., min_length=6, description="Password must be at least 6 characters")
+    password: str = Field(..., min_length=8, description="Password must be at least 8 characters")
     display_name: Optional[str] = None
 
 
@@ -38,40 +38,14 @@ class UserResponse(BaseModel):
     display_name: str
 
 
-# Dependency to get storage
-def get_storage() -> Storage:
-    return Storage()
-
-
-# Dependency to get current user from token
-async def get_current_user(
-    authorization: Optional[str] = Header(None),
-    storage: Storage = Depends(get_storage)
-) -> dict:
-    """Extract and validate user from Authorization header"""
-    if not authorization:
-        raise HTTPException(status_code=401, detail="Not authenticated")
-    
-    # Extract token from "Bearer <token>"
-    try:
-        scheme, token = authorization.split()
-        if scheme.lower() != "bearer":
-            raise HTTPException(status_code=401, detail="Invalid authentication scheme")
-    except ValueError:
-        raise HTTPException(status_code=401, detail="Invalid authorization header format")
-    
-    # Validate token and get user
-    user = auth_service.get_current_user(storage, token)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
-    
-    return user
+# Use the centralized auth dependency
+# get_current_user is imported from deps.py
 
 
 @router.post("/register", response_model=AuthResponse)
 async def register(
     request: RegisterRequest,
-    storage: Storage = Depends(get_storage)
+    storage = Depends(get_storage)
 ):
     """Register a new user"""
     try:
@@ -94,7 +68,7 @@ async def register(
 @router.post("/login", response_model=AuthResponse)
 async def login(
     request: LoginRequest,
-    storage: Storage = Depends(get_storage)
+    storage = Depends(get_storage)
 ):
     """Login with email and password"""
     try:
@@ -115,7 +89,7 @@ async def login(
 
 
 @router.get("/me", response_model=UserResponse)
-async def get_me(current_user: dict = Depends(get_current_user)):
+async def get_me(current_user: dict = Depends(get_auth_user)):
     """Get current user information"""
     return UserResponse(
         user_id=current_user["id"],
@@ -125,6 +99,6 @@ async def get_me(current_user: dict = Depends(get_current_user)):
 
 
 @router.post("/verify")
-async def verify_token(current_user: dict = Depends(get_current_user)):
+async def verify_token(current_user: dict = Depends(get_auth_user)):
     """Verify if token is valid"""
     return {"valid": True, "user_id": current_user["id"]}

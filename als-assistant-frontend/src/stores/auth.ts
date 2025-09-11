@@ -1,7 +1,7 @@
 import { defineStore } from "pinia";
 import { useChatStore } from './chat';
 import { useSessionStore } from './session';
-import { useConversationStore } from './conversation';
+// Removed unused conversation store import
 
 interface User {
   id: string;
@@ -29,6 +29,9 @@ export const useAuthStore = defineStore("auth", {
   getters: {
     currentUser: (state) => state.user,
     authToken: (state) => state.token,
+    userId: (state) => state.user?.id || null,
+    userEmail: (state) => state.user?.email || null,
+    displayName: (state) => state.user?.display_name || null,
   },
 
   actions: {
@@ -37,7 +40,7 @@ export const useAuthStore = defineStore("auth", {
       this.error = null;
       
       try {
-        const url = `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/auth/login`;
+        const url = `${import.meta.env.VITE_API_BASE || ''}/api/auth/login`;
         console.log('[AUTH] Logging in at:', url);
         
         const response = await fetch(url, {
@@ -105,7 +108,7 @@ export const useAuthStore = defineStore("auth", {
       this.error = null;
       
       try {
-        const url = `${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/auth/register`;
+        const url = `${import.meta.env.VITE_API_BASE || ''}/api/auth/register`;
         console.log('[AUTH] Registering at:', url);
         console.log('[AUTH] Request body:', { email, password: '***', display_name: displayName || email.split('@')[0] });
         
@@ -179,7 +182,7 @@ export const useAuthStore = defineStore("auth", {
       if (!this.token) return null;
       
       try {
-        const response = await fetch(`${import.meta.env.VITE_API_BASE || 'http://localhost:8000'}/auth/me`, {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE || ''}/api/auth/me`, {
           headers: {
             'Authorization': `Bearer ${this.token}`
           }
@@ -225,11 +228,9 @@ export const useAuthStore = defineStore("auth", {
       // Clear chat and session stores if they exist
       const chatStore = useChatStore();
       const sessionStore = useSessionStore();
-      const conversationStore = useConversationStore();
       
       chatStore.clearMessages();
       sessionStore.resetSession();
-      conversationStore.clearAll();
     },
 
     async checkAuth() {

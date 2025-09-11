@@ -237,20 +237,7 @@ class QuestionBank:
                 log.debug(f"Returning PNM fallback: {item.id}")
                 return item
                 
-        # 4. SMART FALLBACK: Try other PNMs in a deterministic but varied order
-        log.warning(f"No questions found for PNM {pnm}, trying smart fallback")
-        
-        # Create a deterministic but varied order based on PNM hash
-        # This ensures different PNMs get different fallback questions
-        pnm_hash = hash(pnm.lower()) % len(self._items)
-        
-        # Start from a different position for each PNM
-        for offset in range(len(self._items)):
-            index = (pnm_hash + offset) % len(self._items)
-            item = self._items[index]
-            if item.id not in asked_ids:
-                log.debug(f"Smart fallback returning: {item.id} (offset {offset})")
-                return item
-                
-        log.error(f"No questions available at all! Total items: {len(self._items)}, asked: {len(asked_ids)}")
+        # 4. No cross-PNM fallback - stay within the current PNM
+        # This ensures we only ask questions relevant to the current dimension
+        log.warning(f"All questions for PNM {pnm} have been asked (total: {len(pnm_items)}, asked: {len([id for id in asked_ids if any(item.id == id for item in pnm_items)])})")
         return None

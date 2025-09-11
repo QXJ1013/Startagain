@@ -8,11 +8,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 
 # Routers
-from app.routers import chat as chat_router     
+from app.routers import chat_unified as chat_router     
 from app.routers import health as health_router
-from app.routers import conversation as conversation_router
 from app.routers import auth as auth_router
-from app.routers import conversations as conversations_router
 
 # Optional warmup
 try:
@@ -38,14 +36,18 @@ def create_app() -> FastAPI:
 
     # Include routers
     app.include_router(health_router.router)
-    app.include_router(auth_router.router)  # Auth routes (no authentication required)
-    app.include_router(chat_router.router)
-    app.include_router(conversation_router.router)
-    app.include_router(conversations_router.router)  # Conversation history management
+    app.include_router(auth_router.router)  # Auth routes with /api/auth prefix
+    app.include_router(chat_router.router)  # Unified simple conversation API
+    
+    # Add error handling middleware
+    from app.core.error_handler import error_handling_middleware
+    app.middleware("http")(error_handling_middleware)
 
     @app.on_event("startup")
     async def _startup():
-        
+        # Configure logging to handle multiprocessing issues
+        import logging
+        logging.getLogger("uvicorn.access").handlers.clear()
         pass
     @app.get("/", tags=["meta"])
     def root():

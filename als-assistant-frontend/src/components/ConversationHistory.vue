@@ -23,7 +23,7 @@
 
         <div class="panel-content">
           <!-- Loading State -->
-          <div v-if="conversationStore.loading" class="loading">
+          <div v-if="loading" class="loading">
             Loading conversations...
           </div>
 
@@ -79,18 +79,19 @@
                 
                 <div class="conv-meta">
                   <span class="conv-type">
-                    {{ conv.conversation_type === 'dimension_specific' ? 
-                       `Dimension: ${conv.dimension_name}` : 
-                       'General Assessment' }}
+                    {{ conv.type === 'dimension' ? 
+                       `Dimension: ${conv.dimension}` : 
+                       conv.type === 'assessment' ? 'Assessment' :
+                       'General Chat' }}
                   </span>
                   <span class="conv-date">
-                    {{ formatDate(conv.last_activity) }}
+                    {{ formatDate(conv.updated_at || conv.created_at || '') }}
                   </span>
                 </div>
                 
                 <div class="conv-stats">
-                  <span>{{ conv.message_count }} messages</span>
-                  <span v-if="conv.info_card_count > 0">
+                  <span>{{ conv.message_count || 0 }} messages</span>
+                  <span v-if="(conv.info_card_count || 0) > 0">
                     {{ conv.info_card_count }} info cards
                   </span>
                 </div>
@@ -110,16 +111,20 @@
             <div class="detail-content">
               <!-- Messages -->
               <div v-if="conversationDetail.messages.length > 0" class="messages-section">
-                <h5>Messages</h5>
+                <h5>Messages ({{ conversationDetail.messages.length }})</h5>
                 <div 
-                  v-for="msg in conversationDetail.messages" 
-                  :key="msg.id"
+                  v-for="(msg, idx) in conversationDetail.messages" 
+                  :key="msg.id || idx"
                   class="message-item"
                   :class="msg.role"
                 >
                   <div class="msg-role">{{ msg.role === 'user' ? 'You' : 'Assistant' }}</div>
-                  <div class="msg-text">{{ msg.text }}</div>
+                  <div class="msg-text">{{ msg.content || 'No content available' }}</div>
+                  <div class="msg-time" v-if="msg.timestamp">{{ new Date(msg.timestamp).toLocaleString() }}</div>
                 </div>
+              </div>
+              <div v-else class="empty-messages">
+                <p>No messages in this conversation yet</p>
               </div>
 
               <!-- Info Cards -->
@@ -147,81 +152,83 @@
       </div>
     </Transition>
 
-    <!-- Interrupt Warning Dialog -->
-    <Transition name="fade">
-      <div v-if="conversationStore.showInterruptWarning" class="interrupt-dialog-overlay">
-        <div class="interrupt-dialog">
-          <h3>Active Conversation Warning</h3>
-          <p>
-            You have an active conversation: 
-            <strong>{{ activeConvWarning?.title || 'Untitled' }}</strong>
-            with {{ activeConvWarning?.message_count || 0 }} messages.
-          </p>
-          <p>Starting a new conversation will interrupt the current one. Do you want to continue?</p>
-          
-          <div class="dialog-actions">
-            <button @click="conversationStore.cancelInterrupt()" class="btn-cancel">
-              Continue Current
-            </button>
-            <button @click="conversationStore.confirmInterrupt()" class="btn-confirm">
-              Start New
-            </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
+    <!-- Interrupt dialog functionality moved to Data.vue -->
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue';
-import { useConversationStore, type Conversation, type ConversationMessage, type ConversationInfoCard } from '../stores/conversation';
+import { ref, watch, nextTick } from 'vue';
 import { useAuthStore } from '../stores/auth';
+// Removed unused useChatStore import
+// import { conversationsApi } from '../services/api'; // Removed - endpoints no longer exist
 
-const conversationStore = useConversationStore();
 const authStore = useAuthStore();
+// Removed unused chatStore
 
 const showHistory = ref(false);
-const selectedConversation = ref<Conversation | null>(null);
+const selectedConversation = ref<any>(null);
 const editingId = ref<string | null>(null);
 const editingTitle = ref('');
+const conversations = ref<any[]>([]);
+const loading = ref(false);
 const conversationDetail = ref<{
-  messages: ConversationMessage[];
-  infoCards: ConversationInfoCard[];
+  messages: any[];
+  infoCards: any[];
 }>({
   messages: [],
   infoCards: []
 });
 
-const conversations = computed(() => conversationStore.sortedConversations);
-const activeConvWarning = computed(() => {
-  // This would be populated when warning is shown
-  return conversationStore.activeConversation;
-});
+// Removed unused activeConvWarning computed
 
 // Load conversations when panel opens
 watch(showHistory, async (isOpen) => {
   if (isOpen && authStore.token) {
-    await conversationStore.fetchConversations(authStore.token);
+    await fetchConversations();
   }
 });
 
 // Load conversation details when selected
 watch(selectedConversation, async (conv) => {
   if (conv && authStore.token) {
-    const detail = await conversationStore.loadConversationDetail(authStore.token, conv.id);
-    conversationDetail.value = {
-      messages: detail.messages || [],
-      infoCards: detail.info_cards || []
-    };
+    try {
+      // Note: Backend conversation endpoints were removed during simplification
+      // Using fallback behavior for now
+      console.log('Conversation history detail not available - backend endpoints removed');
+      conversationDetail.value = {
+        messages: [],
+        infoCards: []
+      };
+    } catch (error) {
+      console.error('Failed to load conversation detail:', error);
+      conversationDetail.value = {
+        messages: [],
+        infoCards: []
+      };
+    }
   }
 });
 
-function selectConversation(conv: Conversation) {
+// Add missing functions
+async function fetchConversations() {
+  loading.value = true;
+  try {
+    // Note: Backend conversation endpoints were removed during simplification
+    // Using empty conversation list for now
+    console.log('Conversation history not available - backend endpoints removed');
+    conversations.value = [];
+  } catch (error) {
+    console.error('Failed to fetch conversations:', error);
+  } finally {
+    loading.value = false;
+  }
+}
+
+function selectConversation(conv: any) {
   selectedConversation.value = conv;
 }
 
-function startEdit(conv: Conversation) {
+function startEdit(conv: any) {
   editingId.value = conv.id;
   editingTitle.value = conv.title || `Record ${conversations.value.indexOf(conv) + 1}`;
   nextTick(() => {
@@ -240,11 +247,18 @@ function cancelEdit() {
 
 async function saveTitle(conversationId: string) {
   if (editingTitle.value.trim() && authStore.token) {
-    await conversationStore.updateConversationTitle(
-      authStore.token,
-      conversationId,
-      editingTitle.value.trim()
-    );
+    try {
+      // Note: Backend conversation endpoints were removed during simplification
+      // Title editing not available for now
+      console.log('Conversation title editing not available - backend endpoints removed');
+      // Update local state
+      const conv = conversations.value.find(c => c.id === conversationId);
+      if (conv) {
+        conv.title = editingTitle.value.trim();
+      }
+    } catch (error) {
+      console.error('Failed to update conversation title:', error);
+    }
   }
   cancelEdit();
 }
@@ -271,7 +285,7 @@ function formatDate(dateStr: string) {
 .history-toggle-btn {
   position: fixed;
   top: 20px;
-  right: 20px;
+  right: 80px;  /* Moved left to avoid overlap with other icons */
   display: flex;
   align-items: center;
   gap: 8px;
@@ -283,7 +297,7 @@ function formatDate(dateStr: string) {
   font-size: 14px;
   color: #333;
   transition: all 0.3s ease;
-  z-index: 100;
+  z-index: 150;  /* Increased z-index to ensure visibility */
 }
 
 .history-toggle-btn:hover {
@@ -310,7 +324,7 @@ function formatDate(dateStr: string) {
   height: 100vh;
   background: white;
   box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-  z-index: 200;
+  z-index: 250;  /* Increased z-index */
   display: flex;
   flex-direction: column;
 }
@@ -487,7 +501,7 @@ function formatDate(dateStr: string) {
   height: 100vh;
   background: white;
   box-shadow: -2px 0 10px rgba(0,0,0,0.15);
-  z-index: 201;
+  z-index: 251;  /* Increased z-index */
   display: flex;
   flex-direction: column;
 }
@@ -547,6 +561,21 @@ function formatDate(dateStr: string) {
 .msg-text {
   font-size: 14px;
   line-height: 1.5;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.msg-time {
+  font-size: 11px;
+  color: #999;
+  margin-top: 4px;
+}
+
+.empty-messages {
+  padding: 40px 20px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 14px;
 }
 
 .saved-info-card {

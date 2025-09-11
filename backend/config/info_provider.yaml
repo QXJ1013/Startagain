@@ -1,0 +1,159 @@
+# Information Provider Configuration
+# Controls the generation and retrieval of information cards
+
+info_provider:
+  # Enable/disable information provider
+  enabled: true
+  
+  # Retrieval configuration
+  retrieval:
+    top_k: 6                    # Number of documents to retrieve
+    max_cards: 2                 # Maximum cards to generate
+    bullets_per_card: 3          # Bullets per information card
+    hybrid_alpha: 0.4            # Balance between vector (60%) and lexical (40%) search
+    
+  # LLM configuration for card generation
+  llm:
+    model_id: "meta-llama/llama-3-3-70b-instruct"
+    max_new_tokens: 2000
+    temperature: 0.2             # Lower for consistent output
+    top_p: 0.9
+    repetition_penalty: 1.1
+    
+  # Throttling configuration
+  throttling:
+    min_turns_interval: 2        # Minimum turns between info cards
+    
+  # Evidence and severity indicators
+  severity:
+    high_indicators:
+      - "emergency"
+      - "severe"
+      - "cannot"
+      - "unable"
+      - "fallen"
+      - "choke"
+      - "breathless"
+    medium_indicators:
+      - "difficult"
+      - "trouble"
+      - "sometimes"
+      - "help"
+      - "struggle"
+    low_indicators:
+      - "minor"
+      - "slight"
+      - "occasional"
+      - "manageable"
+      
+  # Session stages based on turn count
+  session_stages:
+    initial:
+      max_turns: 2
+      description: "Getting started"
+    exploring:
+      min_turns: 3
+      max_turns: 5
+      description: "Understanding needs"
+    detailed:
+      min_turns: 6
+      max_turns: 10
+      description: "Gathering details"
+    comprehensive:
+      min_turns: 11
+      description: "Deep conversation"
+      
+  # Concern tracking keywords
+  concern_keywords:
+    - "breathing"
+    - "swallow"
+    - "walk"
+    - "sleep"
+    - "talk"
+    - "fatigue"
+    - "pain"
+    - "anxiety"
+    - "fall"
+    - "choke"
+    
+  # Concern thresholds
+  concern_thresholds:
+    major_concern_mentions: 3    # Times mentioned to be considered major
+    detailed_responder_length: 50  # Character count for detailed responses
+    
+  # Equipment and aids patterns (for extraction)
+  equipment_patterns:
+    - "wheelchair"
+    - "walker"
+    - "cane"
+    - "rollator"
+    - "cpap"
+    - "bipap"
+    - "ventilator"
+    - "feeding tube"
+    - "peg"
+    
+  # Priority patterns for actionable content
+  priority_patterns:
+    - "you can"
+    - "try to"
+    - "consider"
+    - "ask your"
+    - "speak with"
+    - "use"
+    - "avoid"
+    - "ensure"
+    - "maintain"
+    - "practice"
+    - "helpful"
+    - "effective"
+    - "important"
+    - "recommended"
+    
+  # ALS-related keywords for validation
+  als_keywords:
+    - "breathing"
+    - "swallow"
+    - "mobility"
+    - "speech"
+    - "hand"
+    - "walk"
+    - "eat"
+    - "position"
+    - "device"
+    - "equipment"
+    - "therapy"
+    - "care"
+    - "support"
+    
+  # Content quality settings
+  quality:
+    min_bullet_length: 20        # Minimum characters per bullet
+    max_bullet_length: 200       # Maximum characters per bullet
+    min_bullet_words: 8          # Minimum words per bullet
+    max_bullet_words: 45         # Maximum words per bullet
+    min_quality_bullets: 2       # Minimum bullets for card
+    max_title_length: 70         # Maximum title length
+    
+  # Fallback templates for common topics
+  fallback_templates:
+    breathing:
+      - "Consider discussing breathing support options with your respiratory therapist."
+      - "Many people find that positioning with extra pillows helps improve comfort during sleep."
+      - "Regular monitoring of breathing patterns can help your care team adjust treatments."
+      - "Gentle breathing exercises may help maintain respiratory muscle strength when appropriate."
+    swallowing:
+      - "Work with a speech-language pathologist to assess safe swallowing strategies."
+      - "Consider modifying food textures and liquid consistency based on professional guidance."
+      - "Many families find meal planning and preparation techniques help ensure proper nutrition."
+      - "Regular swallowing evaluations can help adjust strategies as needs change."
+    mobility:
+      - "Physical therapy can help maintain strength and develop adaptive movement strategies."
+      - "Consider mobility aids and equipment that can support independence and safety."
+      - "Many people find that pacing activities throughout the day helps manage energy."
+      - "Home modifications may improve accessibility and reduce fall risk."
+    default:
+      - "Consider discussing {term} management with your ALS care team."
+      - "Many people find that working with specialists helps develop effective strategies for {term}."
+      - "Regular monitoring and adjustment of approaches can help optimize {term} management."
+      - "Support groups and resources may provide valuable insights for managing {term}."

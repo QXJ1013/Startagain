@@ -22,6 +22,11 @@ export const useSessionStore = defineStore("session", {
     error: null as string | null,
     dimensionFocus: null as string | null,
     message: null as string | null,
+    dimensionTestSession: null as {
+      sessionId: string;
+      dimension: string;
+      startedAt: Date;
+    } | null,
   }),
   actions: {
     setState(pnm: string | null, term: string | null, fsm: string) {
@@ -41,6 +46,16 @@ export const useSessionStore = defineStore("session", {
         }, 3000);
       }
     },
+    setDimensionTest(sessionId: string, dimension: string) {
+      this.dimensionTestSession = {
+        sessionId,
+        dimension,
+        startedAt: new Date()
+      };
+    },
+    clearDimensionTest() {
+      this.dimensionTestSession = null;
+    },
     resetSession() {
       // Create a new session ID
       const newSid = (crypto && "randomUUID" in crypto) ? crypto.randomUUID() :
@@ -55,6 +70,7 @@ export const useSessionStore = defineStore("session", {
       this.dimensionFocus = null;
       this.error = null;
       this.message = null;
+      this.dimensionTestSession = null;
     },
   }
 });

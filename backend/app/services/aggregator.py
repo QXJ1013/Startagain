@@ -15,7 +15,7 @@ Backward-compatible helpers:
 """
 
 from app.config import get_settings
-from .scoring import DimensionScorer, DimensionScore
+# from .scoring import DimensionScorer, DimensionScore  # Removed - scoring.py deleted
 
 
 @dataclass

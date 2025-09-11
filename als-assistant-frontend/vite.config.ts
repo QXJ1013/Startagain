@@ -7,7 +7,24 @@ export default defineConfig({
   server: {
     host: 'localhost',
     port: 5173,
-    strictPort: false
+    strictPort: true,
+    proxy: {
+      '/api': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/auth': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      },
+      '/chat': {
+        target: 'http://localhost:8000',
+        changeOrigin: true,
+        secure: false
+      }
+    }
   },
   define: {
     // Suppress certain console warnings

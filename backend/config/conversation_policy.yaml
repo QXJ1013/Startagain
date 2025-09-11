@@ -1,0 +1,100 @@
+# Conversation Policy Configuration
+# Controls the decision-making for dialogue vs questions
+
+policy:
+  # Action type probabilities (should sum to ~1.0)
+  action_probabilities:
+    dialogue: 0.8          # Natural dialogue probability (main mode)
+    question: 0.2          # Structured question probability (occasional)
+    combined: 0.3          # Combined flow probability
+    
+  # Continuous interaction thresholds
+  interaction_limits:
+    max_continuous_dialogue: 4    # Max consecutive dialogue turns before variety
+    max_continuous_questions: 2   # Max consecutive questions before switching
+    min_turns_before_question: 2  # Minimum dialogue before first question
+    
+  # User state thresholds
+  user_thresholds:
+    low_confidence: 0.4          # Below this, user needs clarification
+    high_engagement: 0.7         # Above this, user is ready for questions
+    min_response_length: 3       # Minimum words for engaged response
+    clarity_threshold: 0.6       # Minimum clarity for structured questions
+    
+  # Evidence collection thresholds
+  evidence_thresholds:
+    urgency_threshold: 3         # Below this evidence count is urgent
+    sufficiency_threshold: 5    # Above this evidence is sufficient
+    coverage_threshold: 0.6     # Dimension coverage threshold
+    
+  # Emotional state handling
+  emotional_responses:
+    anxious:
+      dialogue_weight_boost: 0.3    # Increase dialogue when anxious
+      question_weight_penalty: 0.2  # Decrease questions when anxious
+    confused:
+      clarifying_weight_boost: 0.25
+      structured_weight_penalty: 0.15
+    resistant:
+      dialogue_weight_boost: 0.4
+      question_weight_penalty: 0.3
+    positive:
+      question_weight_boost: 0.2
+      combined_weight_boost: 0.15
+      
+  # Strategy selection rules
+  strategy_rules:
+    empathetic:
+      triggers: ["anxious", "scared", "worried"]
+      priority: 1
+    clarifying:
+      min_clarity: 0.4
+      priority: 2
+    exploratory:
+      min_engagement: 0.7
+      priority: 3
+    guiding:
+      default: true
+      priority: 4
+      
+  # Weight adjustments for different conditions
+  weight_adjustments:
+    # Dialogue weight adjustments
+    dialogue:
+      needs_support: 0.3         # When user needs emotional support
+      high_engagement: 0.2       # When user is engaged
+      low_clarity: 0.25          # When response unclear
+      question_fatigue: 0.4      # After too many questions
+      dialogue_fatigue: -0.3     # After too much dialogue
+      
+    # Question weight adjustments  
+    question:
+      ready_for_questions: 0.3   # When user is ready
+      needs_support: -0.2        # Reduce when support needed
+      evidence_urgent: 0.4       # When evidence collection urgent
+      needs_structured_data: 0.3 # When structured data needed
+      coverage_low: 0.2          # When dimension coverage low
+      
+    # Combined flow adjustments
+    combined:
+      balanced_flow: 0.2         # When balance is good
+      good_user_state: 0.15      # When engagement and clarity good
+      
+  # Prompt templates
+  dialogue_prompts:
+    exploratory: "Tell me more about {term}. How does this affect your daily life?"
+    empathetic: "I understand this might be concerning. Would you like to share how you're feeling?"
+    clarifying: "I want to better understand what you mentioned. Could you describe it in more detail?"
+    guiding: "Based on what you've shared, I'd like to understand more about {term}."
+    default: "Please tell me more about this."
+    
+  transition_prompts:
+    to_question: "Thank you for sharing. To better understand your {term} situation, I'd like to ask you a few specific questions."
+    to_dialogue: "Before we continue with questions, let's talk more about how you're feeling."
+    to_information: "Based on what you've told me, I have some information that might be helpful."
+    
+  # Logging and monitoring
+  logging:
+    log_decisions: true
+    log_weights: true
+    decision_level: "INFO"     # DEBUG, INFO, WARNING, ERROR

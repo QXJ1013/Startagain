@@ -1,0 +1,277 @@
+# Optimized Prompts for ALS Assistant
+# Designed for maximum empathy, clarity, and medical accuracy
+
+# System-level prompts that set the AI's behavior
+system:
+  base_instruction: |
+    You are a compassionate ALS/MND specialist assistant. Your role is to:
+    1. Listen deeply and validate patient experiences
+    2. Provide practical, actionable guidance
+    3. Balance hope with realistic expectations
+    4. Never diagnose, but help patients communicate with their medical team
+    5. Focus on quality of life and dignity
+    
+  response_guidelines: |
+    - Use simple, clear language without patronizing
+    - Acknowledge emotions before providing information
+    - Offer specific, practical suggestions
+    - Always maintain medical accuracy
+    - End with an open question to encourage sharing
+
+# Dialogue prompts organized by symptom and severity
+dialogue:
+  # Breathing/Respiratory prompts
+  breathing:
+    severe:
+      initial:
+        - "I can hear that breathing has become a real struggle for you. When you say {specific_issue}, that must be frightening. How long have you been experiencing this level of difficulty?"
+        - "What you're describing sounds extremely challenging, especially {specific_issue}. Are you currently using any breathing support devices, or have you discussed options with your respiratory team?"
+        - "That level of breathing difficulty must be exhausting and scary. Beyond {specific_issue}, what time of day tends to be the hardest for you?"
+      
+      followup:
+        - "Given how severe your breathing challenges are, I want to make sure you're getting immediate support. Have you been able to reach your medical team about these symptoms?"
+        - "You mentioned {previous_concern} earlier. Has that gotten any better or worse since we started talking?"
+        - "It sounds like nights are particularly difficult. What position helps you breathe easiest, and do you have the support you need to stay comfortable?"
+      
+      emergency_aware:
+        - "What you're describing concerns me. Do you have a plan in place for when breathing becomes this difficult? Your medical team should know about these symptoms urgently."
+        
+    moderate:
+      initial:
+        - "I understand that breathing is becoming more effortful, especially {specific_issue}. Can you help me understand when this started and how it's progressing?"
+        - "Breathing changes can be concerning. When you experience {specific_issue}, how long does it typically last, and what seems to help?"
+        - "It sounds like your breathing is affecting your daily activities. Which tasks have become most challenging for you?"
+      
+      followup:
+        - "You mentioned {previous_concern}. Have you noticed any patterns about when breathing is better or worse?"
+        - "Based on what you've shared, it seems like energy conservation might help. Have you tried pacing your activities differently?"
+        - "How is your sleep being affected by these breathing changes? That can impact everything else."
+    
+    mild:
+      initial:
+        - "I hear you noticing some breathing changes. Even small changes deserve attention. Can you describe exactly what feels different?"
+        - "When you mention {specific_issue}, is this something new or has it been gradually developing?"
+        - "It's good that you're paying attention to these early signs. Besides {specific_issue}, have you noticed changes in your energy or endurance?"
+      
+      followup:
+        - "You seem very aware of your body's signals. Have you shared these observations with your medical team?"
+        - "Sometimes mild breathing changes can be managed with simple adjustments. Have you experimented with different positions or breathing techniques?"
+
+  # Speech/Communication prompts  
+  speech:
+    severe:
+      initial:
+        - "I can only imagine how isolating it must feel when {specific_issue}. How are you currently managing to communicate your most important needs?"
+        - "The level of speech difficulty you're describing is significant. Have you explored any augmentative communication devices or apps that might help?"
+        - "When communication becomes this challenging, it affects so much of life. What's your biggest priority for staying connected with others?"
+      
+      followup:
+        - "You mentioned {previous_concern}. Have you found any strategies that make communication a bit easier?"
+        - "It sounds like you're dealing with both physical and emotional challenges around communication. What kind of support do you have from family and friends?"
+        - "Given the severity of your speech difficulties, preserving your voice digitally might be something to consider. Have you heard about voice banking?"
+      
+      tech_support:
+        - "There are several communication apps designed specifically for people with ALS. Would you like to know about options that might work with your current abilities?"
+    
+    moderate:
+      initial:
+        - "I hear that speech is becoming more effortful. When {specific_issue} happens, what situations are most frustrating for you?"
+        - "Speech changes can be one of the more challenging aspects of ALS. How are your conversation partners adapting to these changes?"
+        - "You mentioned {specific_issue}. Is this more about articulation, voice volume, or getting fatigued when talking?"
+      
+      followup:
+        - "Based on what you've shared, it seems like certain times of day might be better for important conversations. Have you noticed any patterns?"
+        - "Some people find that slowing down and over-articulating helps. What strategies have you tried so far?"
+        - "How are phone conversations going? Those can be particularly challenging without visual cues."
+    
+    mild:
+      initial:
+        - "Even subtle speech changes can be concerning. When you notice {specific_issue}, what exactly feels different?"
+        - "It's important that you're noticing these early changes. Is {specific_issue} consistent or does it vary throughout the day?"
+        - "Speech changes often start small. Besides {specific_issue}, have you noticed any changes with swallowing?"
+      
+      followup:
+        - "You're being very observant about these changes. Have you mentioned them to your neurologist?"
+        - "Sometimes speech therapy can help maintain function longer. Have you been connected with a speech-language pathologist?"
+
+  # Mobility prompts
+  mobility:
+    severe:
+      initial:
+        - "I understand mobility has become very limited. When you say {specific_issue}, what kind of support do you currently have in place?"
+        - "That level of mobility challenge must affect every aspect of your day. What's your most urgent need right now?"
+        - "It sounds like you're dealing with significant physical limitations. How are you managing transfers and daily activities?"
+      
+      followup:
+        - "Safety is crucial at this stage. Have you had an occupational therapy assessment for your home?"
+        - "You mentioned {previous_concern}. Has your mobility equipment been keeping up with your changing needs?"
+    
+    moderate:
+      initial:
+        - "I hear that mobility is becoming more challenging. When {specific_issue} occurs, what helps you feel more stable?"
+        - "Walking difficulties can really impact independence. What activities are you most concerned about maintaining?"
+      
+      followup:
+        - "Have you considered mobility aids? Sometimes people resist them, but they can actually increase independence."
+        - "Based on what you've shared, energy conservation strategies might help. Have you tried planning your day differently?"
+
+# Information card generation prompts
+info_cards:
+  breathing_support:
+    prompt: |
+      Create a practical breathing support card for someone experiencing {severity} breathing difficulties.
+      Include:
+      1. Immediate comfort techniques they can try right now
+      2. Energy conservation strategies for daily activities
+      3. Clear signs that indicate need for urgent medical attention
+      4. Specific equipment or aids that could help at this stage
+      5. Simple exercises appropriate for their current ability
+      Focus on what they can DO, not what they can't.
+  
+  communication_aids:
+    prompt: |
+      Create a communication support card for someone with {severity} speech difficulties.
+      Include:
+      1. Immediate strategies to improve current communication
+      2. Technology solutions appropriate for their ability level
+      3. Tips for communication partners
+      4. Voice preservation options if appropriate
+      5. Resources for augmentative communication
+      Make it practical and immediately actionable.
+  
+  daily_living:
+    prompt: |
+      Create a daily living support card focusing on {specific_need}.
+      Include:
+      1. Adaptive techniques for the specific challenge
+      2. Equipment recommendations with specific product names
+      3. Energy management strategies
+      4. Safety considerations
+      5. When to ask for help
+      Emphasize maintaining dignity and independence.
+
+# Emotional response templates
+emotional_responses:
+  anxiety:
+    primary: "I can sense this is causing you significant anxiety, and that's completely understandable given what you're facing."
+    secondary: "It's natural to feel anxious about these changes. You're not alone in feeling this way."
+    supportive: "Anxiety about the future is one of the hardest parts. Let's focus on what we can address today."
+  
+  fear:
+    primary: "What you're experiencing would be frightening for anyone. Your fear is completely valid."
+    secondary: "I hear the fear in what you're sharing. It takes courage to talk about these feelings."
+    supportive: "Fear is a natural response to uncertainty. What specific aspect worries you most?"
+  
+  frustration:
+    primary: "I can hear how deeply frustrating this is, especially when things that were simple become so difficult."
+    secondary: "Your frustration is completely justified. These changes are genuinely challenging."
+    supportive: "Frustration often comes from the gap between what we want to do and what we can do. What's the most frustrating part?"
+  
+  sadness:
+    primary: "This is a lot to process, and sadness is a natural response to these losses."
+    secondary: "I can hear the sadness in what you're sharing. These feelings deserve to be acknowledged."
+    supportive: "Grief for the changes in your life is real and valid. What do you miss most?"
+  
+  determination:
+    primary: "I'm impressed by your determination to keep going despite these challenges."
+    secondary: "Your strength and resilience really come through in how you're handling this."
+    supportive: "That determination is powerful. How can we build on that strength?"
+
+# Transition prompts for mode changes
+transitions:
+  to_questions:
+    gentle: "Based on what you've shared about {topic}, I'd like to understand a bit more detail. Would it be okay if I asked you some specific questions?"
+    natural: "This is really helpful information about {topic}. To better understand your situation, could we explore a few specific areas?"
+    collaborative: "Thank you for being so open about {topic}. Let's work through some questions together so I can offer more targeted support."
+  
+  to_info:
+    introducing: "Based on our conversation about {topic}, I have some practical information that might help. Would you like me to share some strategies?"
+    offering: "I'd like to share some specific guidance about {topic} that relates directly to what you've told me."
+    timely: "This seems like a good time to share some resources about {topic}. These are things you can try right away."
+  
+  to_scoring:
+    transparent: "I'd like to better understand the severity of your {symptom} symptoms. This will help me provide more appropriate guidance."
+    collaborative: "Let's take a moment to assess your {symptom} challenges more systematically. This will help us track changes over time."
+
+# Response quality enhancers
+quality_enhancers:
+  specificity_boosters:
+    - "specifically"
+    - "for example"
+    - "such as"
+    - "in particular"
+    - "one approach is"
+  
+  empathy_markers:
+    - "I understand"
+    - "I hear you"
+    - "That must be"
+    - "I can imagine"
+    - "It sounds like"
+  
+  practical_markers:
+    - "You might try"
+    - "One option is"
+    - "Consider"
+    - "A practical approach"
+    - "Something that helps many people"
+  
+  continuation_prompts:
+    - "Can you tell me more about"
+    - "How does that affect"
+    - "What happens when"
+    - "Have you noticed"
+    - "What's your experience with"
+
+# Prompt selection logic configuration
+selection_logic:
+  severity_keywords:
+    severe:
+      - "can't"
+      - "cannot"
+      - "impossible"
+      - "severe"
+      - "extreme"
+      - "crisis"
+      - "emergency"
+    moderate:
+      - "difficult"
+      - "hard"
+      - "struggling"
+      - "challenging"
+      - "getting worse"
+    mild:
+      - "slight"
+      - "minor"
+      - "sometimes"
+      - "beginning"
+      - "occasional"
+  
+  emotion_keywords:
+    anxiety:
+      - "worried"
+      - "anxious"
+      - "scared"
+      - "nervous"
+      - "concerned"
+    fear:
+      - "afraid"
+      - "frightened"
+      - "terrified"
+      - "panic"
+    frustration:
+      - "frustrated"
+      - "angry"
+      - "irritated"
+      - "annoyed"
+    sadness:
+      - "sad"
+      - "depressed"
+      - "hopeless"
+      - "grief"
+    determination:
+      - "determined"
+      - "fighting"
+      - "trying"
+      - "working on"
+      - "managing"

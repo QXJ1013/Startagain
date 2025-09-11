@@ -1,382 +1,297 @@
-# app/services/fsm.py
-from __future__ import annotations
+# app/services/fsm.py - Simplified Document-based Conversation FSM
 """
-Deterministic dialogue FSM for the ALS assistant (fixed & enhanced).
-
-- Enforce evidence threshold: only score when enough follow-ups or exhausted.
-- Lock window: prevent cross-dimension switching for N turns after routing.
-- NEXT: pick next unscored term in the same dimension before leaving.
-- Dimension aggregation: simple mean fallback after each term scoring.
-
-States:
-ROUTE -> ASK_MAIN -> ASK_FOLLOWUPS -> SCORE_TERM -> NEXT -> (ASK_MAIN | ROUTE)
+Simplified FSM for document-based conversations.
+States: ROUTE -> ASK -> PROCESS -> SCORE -> CONTINUE
 """
 
-from typing import Dict, List, Optional, Tuple
-from app.services.ai_router import create_ai_router
+import logging
+from typing import Dict, List, Optional, Any
+from datetime import datetime
 
-from app.config import get_settings
-from app.services.question_bank import QuestionBank, QuestionItem
-from app.services.lexicon_router import LexiconRouter
-from app.services.session import SessionState
-from app.services.storage import Storage
-from app.config import get_settings
-from app.services.term_scorer import score_term
-from app.services.aggregator import Aggregator, AggregationConfig
+from app.services.storage import DocumentStorage, ConversationDocument, ConversationMessage
+from app.services.question_bank import QuestionBank
+from app.services.ai_routing import AIRouter
+from app.services.pnm_scoring import PNMScoringEngine, PNMScore
 
+log = logging.getLogger(__name__)
 
-class DialogueFSM:
+class ConversationFSM:
+    """Simplified Document-based Finite State Machine"""
+    
     def __init__(
         self,
-        store: Storage,
+        storage: DocumentStorage,
         qb: QuestionBank,
-        router: LexiconRouter,
-        session: SessionState,
+        ai_router: AIRouter,
+        conversation: ConversationDocument
     ):
-        self.store = store
+        self.storage = storage
         self.qb = qb
-        self.router = router
-        self.session = session
-        self.cfg = get_settings()
-        self.ai_router = None
-        if getattr(self.cfg, 'ENABLE_AI_ENHANCEMENT', False):
-            self.ai_router = create_ai_router(router, qb)
-
-        self.cfg = get_settings()
-
-    # ---------------- Routing ----------------
-
-    def _within_lock_window(self, new_pnm: str) -> bool:
-        """Return True if cross-dimension switch is disallowed by lock window."""
-        if not self.session.current_pnm:
-            return False
-        if new_pnm.lower() == self.session.current_pnm.lower():
-            return False  # same dimension is allowed
-        return self.session.turn_index < int(self.session.lock_until_turn or 0)
-
-    def route_intent(self, user_text: str) -> Tuple[Optional[str], Optional[str]]:
-        """
-        Route using AI-first approach for better semantic understanding.
-        Enforce lock window: forbid cross-dimension change until lock expires.
-        """
-        # ALWAYS try AI router first if available (AI-first approach)
-        if self.ai_router:
-            result = self.ai_router.route(user_text, self.session)
-            if result and result.confidence > 0.4:  # Lower threshold for AI to maximize semantic understanding
-                # 保存 AI 路由元数据
-                self.session.keyword_pool = result.keywords or []
-                self.session.ai_confidence = result.confidence
-                self.session.routing_method = result.method
-                
-                # 检查锁定窗口
-                if self._within_lock_window(result.pnm):
-                    return (self.session.current_pnm, self.session.current_term)
-                
-                # 应用新路由
-                self.session.reset_for_new_term(result.pnm, result.term)
-                self.session.lock_until_turn = self.session.turn_index + self.cfg.LOCK_WINDOW_TURNS
-                self.session.save(self.store)
-                return (result.pnm, result.term)
+        self.ai_router = ai_router
+        self.conversation = conversation
+        self.scoring_engine = PNMScoringEngine()
         
-        # Only fallback to lexicon if AI completely failed
-        # This is now a last resort, not primary method
-        hits = self.router.locate(user_text or "")
-        if not hits:
-            # If no route found at all, stay on current topic if exists
-            if self.session.current_pnm and self.session.current_term:
-                return (self.session.current_pnm, self.session.current_term)
-            # Otherwise return None to indicate no routing possible
-            return (None, None)
+        # Simplified configuration
+        self.evidence_threshold = 3
+        self.max_questions_per_term = 5
         
-        term, pnm = hits[0]
-        if self._within_lock_window(pnm):
-            return (self.session.current_pnm, self.session.current_term)
-        
-        self.session.reset_for_new_term(pnm=pnm, term=term)
-        self.session.lock_until_turn = self.session.turn_index + self.cfg.LOCK_WINDOW_TURNS
-        self.session.save(self.store)
-        return (pnm, term)
-
-    # ---------------- Questions ----------------
-
-    def get_current_question(self) -> Optional[Dict]:
-        """
-        Return next question to ask (main or next follow-up).
-        """
-        import logging
-        log = logging.getLogger(__name__)
-        
-        log.warning(f"FSM get_current_question: pnm={self.session.current_pnm}, term={self.session.current_term}, fsm_state={self.session.fsm_state}")
-        
-        if not self.session.current_pnm or not self.session.current_term:
-            log.warning("FSM: No current PNM/term, returning None")
-            return None
-
-        item = self.qb.choose_for_term(
-            pnm=self.session.current_pnm,
-            term=self.session.current_term,
-            asked_ids=self.session.asked_qids,
+    def get_current_state(self) -> str:
+        """Get current FSM state"""
+        return self.conversation.assessment_state.get('fsm_state', 'ROUTE')
+    
+    def set_state(self, state: str):
+        """Update FSM state"""
+        self.conversation = self.storage.update_assessment_state(
+            conversation_id=self.conversation.id,
+            fsm_state=state
         )
-        if not item:
-            # Try cross-PNM fallback when no questions exist for this PNM
-            # The question bank's smart fallback will handle this automatically
-            log.warning(f"FSM: No questions found for PNM {self.session.current_pnm}, trying fallback with dummy term")
-            item = self.qb.choose_for_term(
-                pnm=self.session.current_pnm,  # Keep the original PNM for hash-based diversity
-                term="NonExistentFallbackTerm",  # Use a term that definitely doesn't exist to trigger fallback
-                asked_ids=self.session.asked_qids,
-            )
-        if not item:
-            log.warning("FSM: No item chosen even after fallback, returning None")
-            return None
+    
+    def get_turn_index(self) -> int:
+        """Get current turn index"""
+        return len(self.conversation.messages)
+    
+    def process_user_input(self, user_input: str) -> Dict[str, Any]:
+        """
+        Main FSM processing method - simplified for document approach
+        """
+        current_state = self.get_current_state()
         
-        log.warning(f"FSM: Chosen item {item.id}, fsm_state={self.session.fsm_state}")
-
-        # ask main
-        if self.session.fsm_state == "ASK_MAIN":
-            self.session.mark_question_asked(item.id)
-            self.session.current_qid = item.id  # Set current question ID
-            self.session.fsm_state = "ASK_FOLLOWUPS"
-            self.session.save(self.store)  # Save after all changes
-            return {
-                "id": item.id,
-                "type": "main",
-                "text": item.main,
-                "followups": item.followups,
-                "options": item.options  # Include options for frontend
-            }
-
-        # ask followups
-        if self.session.fsm_state == "ASK_FOLLOWUPS":
-            idx = self.session.followup_ptr
-            if idx < len(item.followups):
-                if idx >= self.cfg.MAX_FOLLOWUPS_PER_TERM:
-                    return None
-                
-                # Handle both string and object followup formats
-                followup_item = item.followups[idx]
-                if isinstance(followup_item, str):
-                    q_text = followup_item
-                elif isinstance(followup_item, dict):
-                    q_text = followup_item.get("text", "No followup text available")
-                else:
-                    q_text = str(followup_item)
-                
-                qid = f"{item.id}#fu{idx+1}"
-                self.session.mark_question_asked(qid)
-                self.session.current_qid = qid  # Set current question ID
-                self.session.followup_ptr += 1
-                
-                # Debug logging
-                import logging
-                log = logging.getLogger(__name__)
-                log.warning(f"FSM: Before save - current_qid={self.session.current_qid}, followup_ptr={self.session.followup_ptr}")
-                
-                self.session.save(self.store)  # Save after all changes
-                
-                log.warning(f"FSM: After save - current_qid={self.session.current_qid}")
-                
-                return {"id": qid, "type": "followup", "text": q_text}
-
-        return None
-
-    # ---------------- Answers & Transitions ----------------
-
-    def receive_answer(self, user_text: str, meta: Optional[Dict] = None) -> str:
-        """
-        Persist the user answer as a turn, then decide next transition.
-        Returns one of: 'followup' | 'scored' | 'main' | 'done'
-        """
-        # persist user's turn (named args to avoid param order mistakes)
-        turn_idx = self.session.next_turn_index()
-        self.store.add_turn(
-            session_id=self.session.session_id,
-            turn_index=turn_idx,
-            role="user",
-            content=user_text,
-            meta=meta or {},
-        )
-
-        # If there is no active item, fall back to ROUTE
-        item = self.qb.choose_for_term(
-            pnm=self.session.current_pnm or "",
-            term=self.session.current_term or "",
-            asked_ids=self.session.asked_qids,
-        )
-        if not item:
-            self.session.fsm_state = "ROUTE"
-            self.session.save(self.store)
-            return "done"
-
-        # From ROUTE -> prepare to ask main next
-        if self.session.fsm_state == "ROUTE":
-            self.session.fsm_state = "ASK_MAIN"
-            self.session.save(self.store)
-            return "main"
-
-        # In ASK_FOLLOWUPS: check evidence threshold
-        if self.session.fsm_state == "ASK_FOLLOWUPS":
-            asked_followups = self.session.followup_ptr
-            need = max(0, int(self.cfg.EVIDENCE_MIN_FUP or 0))
-            more_available = asked_followups < len(item.followups)
-            under_cap = asked_followups < self.cfg.MAX_FOLLOWUPS_PER_TERM
-
-            if asked_followups < need and more_available and under_cap:
-                return "followup"
-
-            # move to scoring
-            self.session.fsm_state = "SCORE_TERM"
-            self.session.save(self.store)
-
-        # SCORE_TERM
-        if self.session.fsm_state == "SCORE_TERM":
-            self._score_current_term(item=item)
-            self.session.fsm_state = "NEXT"
-            self.session.save(self.store)
-            # Optional: aggregate dimension after each term
-            self._aggregate_dimension_if_possible(self.session.current_pnm)
-            return "scored"
-
-        # NEXT: pick another term within the same PNM
-        if self.session.fsm_state == "NEXT":
-            next_term = self._pick_next_term_same_pnm()
-            if next_term:
-                self.session.reset_for_new_term(self.session.current_pnm or "", next_term)
-                self.session.lock_until_turn = self.session.turn_index + self.cfg.LOCK_WINDOW_TURNS
-                self.session.save(self.store)
-                return "main"
-            self.session.fsm_state = "ROUTE"
-            self.session.save(self.store)
-            return "done"
-
-        return "done"
-
-    # ---------------- Helpers ----------------
-
-    def _pick_next_term_same_pnm(self) -> Optional[str]:
-        """
-        Choose next unscored term from the same PNM (lexicon order).
-        Avoid the current term and any term already scored in DB.
-        """
-        if not self.session.current_pnm:
-            return None
-        all_terms = self.router.topics_for_pnm(self.session.current_pnm)
-
-        # terms already scored for this session/pnm
-        scored_rows = self.store.list_term_scores(self.session.session_id, pnm=self.session.current_pnm)
-        scored_terms = {r.get("term", "").lower() for r in scored_rows if r.get("term")}
-
-        banned = { (self.session.current_term or "").lower() } | scored_terms
-        for t in all_terms:
-            if t.lower() not in banned:
-                return t
-        return None
-
-    def _score_current_term(self, item: QuestionItem) -> None:
-        """
-        Score the current term using enhanced LLM scorer with option awareness.
-        """
-        turns = self.store.list_turns(self.session.session_id)
-        # heuristic evidence set: last (1 main + N followups) *2 to be safe
-        evidence_ids = [t.get("id") for t in turns[-(2 + max(0, self.session.followup_ptr)):] if t.get("id")]
+        # Add user message
+        if user_input.strip():
+            self._add_user_message(user_input)
         
-        # Extract selected option and question options from recent turns
-        selected_option = None
-        question_options = item.options  # Get options from question item
-        
-        # Look for selected option in recent user responses
-        for turn in reversed(turns[-5:]):  # Check last 5 turns
-            if turn.get("role") == "user" and turn.get("meta"):
-                meta = turn.get("meta", {})
-                if meta.get("selected_option"):
-                    selected_option = meta.get("selected_option")
-                    break
-
-        if callable(score_term):
-            out = score_term(
-                session_id=self.session.session_id,
-                pnm=item.pnm,
-                term=item.term,
-                turns=turns,
-                question_options=question_options,
-                selected_option=selected_option
-            )
-            score = float(out.get("score_0_7", 3.0))
-            rationale = out.get("rationale", "")
-            ev_ids = out.get("evidence_turn_ids", evidence_ids) or []
-            method_version = out.get("method_version", "term_scorer_llm_v1")
+        # Process based on current state
+        if current_state == 'ROUTE':
+            return self._handle_routing(user_input)
+        elif current_state == 'ASK':
+            return self._handle_question_response(user_input)
+        elif current_state == 'PROCESS':
+            return self._handle_processing()
+        elif current_state == 'SCORE':
+            return self._handle_scoring(user_input)
         else:
-            score = 3.0
-            rationale = "Fallback rule: insufficient configured scorer; default mid-level."
-            ev_ids = evidence_ids or []
-            method_version = "term_scorer_fallback_v1"
-
-        self.store.upsert_term_score(
-            session_id=self.session.session_id,
-            pnm=item.pnm,
-            term=item.term,
-            score_0_7=score,
-            rationale=rationale,
-            evidence_turn_ids=ev_ids,
-            status="complete",
-            method_version=method_version,
+            return self._handle_continue()
+    
+    def _add_user_message(self, user_input: str):
+        """Add user message to conversation"""
+        message = ConversationMessage(
+            id=len(self.conversation.messages) + 1,
+            role='user',
+            content=user_input,
+            type='text'
         )
-
-    def _aggregate_dimension_if_possible(self, pnm: Optional[str]) -> None:
-        """Aggregate into dimension score after each term score (simple mean fallback)."""
-        if not pnm:
-            return
-        rows = self.store.list_term_scores(self.session.session_id, pnm=pnm)
-        if not rows:
-            return
-
-        # simple mean fallback (Aggregator optional)
-        vals = [float(r.get("score_0_7") or 0.0) for r in rows]
-        score = sum(vals) / max(1, len(vals))
-        coverage = min(1.0, len(rows) / 5.0)  # crude coverage proxy
-        self.store.upsert_dimension_score(
-            session_id=self.session.session_id,
-            pnm=pnm,
-            score_0_7=score,
-            coverage_ratio=coverage,
-            method_version="agg_mean_fallback_v1",
-        )
-
-    # -------- Public helper for API: dimension result --------
-
-    def dimension_result(self, pnm: str) -> Dict:
-        """
-        Build a structured result for one dimension:
-        {
-          "pnm": "...",
-          "score_0_7": float or None,
-          "term_scores": [{term, score_0_7, rationale, evidence_turn_ids}, ...],
-          "uncovered_terms": [...],
-          "next_steps": []
-        }
-        """
-        trows = self.store.list_term_scores(self.session.session_id, pnm=pnm)
-        term_scores = [
-            {
-                "term": r.get("term"),
-                "score_0_7": r.get("score_0_7"),
-                "rationale": r.get("rationale"),
-                "evidence_turn_ids": r.get("evidence_turn_ids"),
-            }
-            for r in trows
-        ]
-
-        drow = self.store.get_dimension_score(self.session.session_id, pnm)
-        dim_score = float(drow["score_0_7"]) if drow and drow.get("score_0_7") is not None else None
-
-        all_terms = set(self.router.topics_for_pnm(pnm))
-        covered = set([r.get("term") for r in trows if r.get("term")])
-        uncovered = sorted(list(all_terms - covered))
-
+        self.storage.add_message(self.conversation.id, message)
+        self.conversation.messages.append(message)
+    
+    def _handle_routing(self, user_input: str) -> Dict[str, Any]:
+        """Handle initial routing to PNM dimension"""
+        try:
+            # Simple routing based on keywords using correct method name
+            routing_result = self.ai_router.route_query(user_input)
+            pnm = routing_result.pnm
+            term = routing_result.term
+            
+            # Update conversation state
+            self.storage.update_assessment_state(
+                conversation_id=self.conversation.id,
+                current_pnm=pnm,
+                current_term=term,
+                fsm_state='ASK'
+            )
+            
+            return self._get_next_question(pnm, term)
+            
+        except Exception as e:
+            log.warning(f"Routing failed: {e}, using default")
+            return self._get_default_question()
+    
+    def _handle_question_response(self, user_input: str) -> Dict[str, Any]:
+        """Handle response to assessment question"""
+        current_pnm = self.conversation.assessment_state.get('current_pnm')
+        current_term = self.conversation.assessment_state.get('current_term')
+        
+        # Count user responses for this term
+        user_messages = [m for m in self.conversation.messages if m.role == 'user']
+        responses_for_term = len(user_messages)
+        
+        # Check if we should score
+        if responses_for_term >= self.evidence_threshold:
+            return self._handle_scoring(user_input)
+        else:
+            # Continue asking questions
+            return self._get_next_question(current_pnm, current_term)
+    
+    def _handle_scoring(self, user_input: str) -> Dict[str, Any]:
+        """Handle scoring for current term"""
+        current_pnm = self.conversation.assessment_state.get('current_pnm')
+        current_term = self.conversation.assessment_state.get('current_term')
+        
+        try:
+            # Get user messages for this term
+            user_messages = [m.content for m in self.conversation.messages if m.role == 'user']
+            combined_text = ' '.join(user_messages[-3:])  # Use last 3 responses
+            
+            # Generate score using the correct method name
+            score = self.scoring_engine.score_response(
+                user_response=combined_text,
+                pnm_level=current_pnm,
+                domain=current_term
+            )
+            
+            # Save score to document
+            self._save_score(current_pnm, current_term, score)
+            
+            # Check if PNM dimension is complete
+            if self._is_pnm_complete(current_pnm):
+                return self._complete_pnm(current_pnm)
+            else:
+                return self._move_to_next_term(current_pnm)
+                
+        except Exception as e:
+            log.error(f"Scoring error: {e}")
+            return self._handle_continue()
+    
+    def _handle_processing(self) -> Dict[str, Any]:
+        """Handle processing state"""
+        self.set_state('ASK')
+        return self._handle_continue()
+    
+    def _handle_continue(self) -> Dict[str, Any]:
+        """Handle continuation or completion"""
+        current_pnm = self.conversation.assessment_state.get('current_pnm')
+        current_term = self.conversation.assessment_state.get('current_term')
+        
+        if current_pnm and current_term:
+            return self._get_next_question(current_pnm, current_term)
+        else:
+            return self._get_default_question()
+    
+    def _get_next_question(self, pnm: str, term: str) -> Dict[str, Any]:
+        """Get next question for PNM/term"""
+        try:
+            # Get already asked question IDs from conversation messages  
+            asked_qids = []
+            for msg in self.conversation.messages:
+                if msg.role == 'assistant' and hasattr(msg, 'question_id'):
+                    asked_qids.append(msg.question_id)
+            
+            # Choose next question using the correct method
+            question_item = self.qb.choose_for_term(pnm, term, asked_qids)
+            
+            if question_item:
+                options = []
+                if question_item.options:
+                    options = [
+                        {'value': opt.get('id', opt.get('value', str(i))), 
+                         'label': opt.get('label', opt.get('text', str(opt)))} 
+                        for i, opt in enumerate(question_item.options)
+                    ]
+                
+                return {
+                    'question_text': question_item.main,
+                    'question_type': 'assessment',
+                    'options': options,
+                    'current_pnm': pnm,
+                    'current_term': term,
+                    'question_id': question_item.id,
+                    'next_state': 'ask_question'
+                }
+        except Exception as e:
+            log.warning(f"Question retrieval failed: {e}")
+        
+        return self._get_default_question()
+    
+    def _get_default_question(self) -> Dict[str, Any]:
+        """Get default fallback question"""
         return {
-            "pnm": pnm,
-            "score_0_7": dim_score,
-            "term_scores": term_scores,
-            "uncovered_terms": uncovered,
-            "next_steps": [],
+            'question_text': 'How has ALS been affecting your daily activities?',
+            'question_type': 'general',
+            'options': [
+                {'value': 'minimal', 'label': 'Minimal impact'},
+                {'value': 'moderate', 'label': 'Moderate impact'},
+                {'value': 'significant', 'label': 'Significant impact'},
+                {'value': 'severe', 'label': 'Severe impact'}
+            ],
+            'next_state': 'continue'
         }
+    
+    def _save_score(self, pnm: str, term: str, score: PNMScore):
+        """Save score to conversation document"""
+        if 'scores' not in self.conversation.assessment_state:
+            self.conversation.assessment_state['scores'] = {}
+        
+        if pnm not in self.conversation.assessment_state['scores']:
+            self.conversation.assessment_state['scores'][pnm] = {}
+        
+        self.conversation.assessment_state['scores'][pnm][term] = {
+            'total_score': score.total_score,
+            'awareness_score': score.awareness_score,
+            'understanding_score': score.understanding_score,
+            'coping_score': score.coping_score,
+            'action_score': score.action_score,
+            'percentage': score.percentage,
+            'timestamp': datetime.now().isoformat(),
+            'status': 'completed'
+        }
+        
+        # Also save to index table for quick queries
+        self.storage.add_score(self.conversation.id, pnm, term, score.total_score)
+        
+        # Update conversation
+        self.storage.update_conversation(self.conversation)
+    
+    def _is_pnm_complete(self, pnm: str) -> bool:
+        """Check if PNM dimension assessment is complete"""
+        scores = self.conversation.assessment_state.get('scores', {})
+        pnm_scores = scores.get(pnm, {})
+        
+        # Simple completion check - has at least one scored term
+        return len(pnm_scores) >= 1
+    
+    def _complete_pnm(self, pnm: str) -> Dict[str, Any]:
+        """Complete PNM dimension assessment"""
+        # Calculate dimension aggregate score
+        scores = self.conversation.assessment_state.get('scores', {})
+        pnm_scores = scores.get(pnm, {})
+        
+        if pnm_scores:
+            avg_score = sum(term_data['total_score'] for term_data in pnm_scores.values()) / len(pnm_scores)
+            avg_percentage = sum(term_data['percentage'] for term_data in pnm_scores.values()) / len(pnm_scores)
+        else:
+            avg_score = 0
+            avg_percentage = 0
+        
+        return {
+            'question_text': f'Thank you for completing the {pnm} assessment. Your overall score: {avg_percentage:.1f}%',
+            'question_type': 'completion',
+            'options': [
+                {'value': 'continue', 'label': 'Continue to next area'},
+                {'value': 'review', 'label': 'Review my results'},
+                {'value': 'finish', 'label': 'Finish assessment'}
+            ],
+            'next_state': 'completed',
+            'pnm_completed': pnm,
+            'pnm_score': avg_percentage
+        }
+    
+    def _move_to_next_term(self, pnm: str) -> Dict[str, Any]:
+        """Move to next term in current PNM"""
+        # For simplicity, complete the PNM after one term
+        return self._complete_pnm(pnm)
+    
+    def generate_info_cards(self, pnm: str = None) -> List[Dict[str, Any]]:
+        """Generate info cards based on current conversation state"""
+        cards = []
+        
+        if pnm:
+            cards.append({
+                'title': f'{pnm} Support Information',
+                'bullets': [
+                    f'Understanding {pnm.lower()} needs is important for ALS care',
+                    'Consider discussing these areas with your healthcare team',
+                    'Support groups can provide valuable insights and assistance'
+                ],
+                'source': 'ALS Assistant'
+            })
+        
+        return cards

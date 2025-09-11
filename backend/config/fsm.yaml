@@ -1,0 +1,70 @@
+# FSM (Finite State Machine) Configuration
+# Controls the state transitions and flow logic
+
+fsm:
+  # State definitions
+  states:
+    initial: "ROUTE"
+    question_main: "ASK_MAIN"
+    question_followup: "ASK_FOLLOWUPS"
+    score_term: "SCORE_TERM"
+    next_action: "NEXT"
+    route: "ROUTE"
+    welcome: "WELCOME"
+    dialogue: "DIALOGUE"
+    complete: "COMPLETE"
+    
+  # State transitions
+  transitions:
+    ROUTE:
+      next_state: "ASK_MAIN"
+      conditions:
+        - has_pnm_and_term: true
+      
+    ASK_MAIN:
+      next_state: "ASK_FOLLOWUPS"
+      actions:
+        - mark_question_asked
+        - save_session
+        
+    ASK_FOLLOWUPS:
+      next_states:
+        evidence_met: "SCORE_TERM"
+        followups_remain: "ASK_FOLLOWUPS"
+        no_followups: "SCORE_TERM"
+      
+    SCORE_TERM:
+      next_state: "NEXT"
+      actions:
+        - calculate_scores
+        - save_scores
+        
+    NEXT:
+      next_states:
+        continue_term: "ASK_MAIN"
+        new_term: "ROUTE"
+        complete: "COMPLETE"
+        
+  # Evidence thresholds
+  evidence:
+    threshold: 3              # Number of evidence pieces before scoring
+    max_followups: 3         # Maximum followup questions per main question
+    min_confidence: 0.6      # Minimum confidence to continue
+    
+  # Question formatting
+  question_format:
+    main_id_template: "{question_id}"
+    followup_id_template: "{question_id}#fu{index}"
+    
+  # Default messages
+  default_messages:
+    no_question_available: "Let me help you with that."
+    no_followup_text: "Could you tell me more about that?"
+    transition: "Let's move on to discuss {term}."
+    completion: "Thank you for providing this information."
+    
+  # Logging
+  logging:
+    log_state_changes: true
+    log_transitions: true
+    level: "INFO"

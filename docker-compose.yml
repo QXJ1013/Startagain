@@ -1,0 +1,57 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: als-backend
+    ports:
+      - "8002:8002"
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=sqlite:///app/data/als.db
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:-your-secret-key-change-in-production}
+      - IBM_WATSON_API_KEY=${IBM_WATSON_API_KEY}
+      - IBM_WATSON_URL=${IBM_WATSON_URL}
+    volumes:
+      - ./backend/app/data:/app/app/data
+      - backend-cache:/app/backend/cache
+    networks:
+      - als-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  frontend:
+    build:
+      context: ./als-assistant-frontend
+      dockerfile: Dockerfile
+    container_name: als-frontend
+    ports:
+      - "80:80"
+    environment:
+      - VITE_API_BASE=http://backend:8002
+    depends_on:
+      - backend
+    networks:
+      - als-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+networks:
+  als-network:
+    driver: bridge
+
+volumes:
+  backend-cache:
+    driver: local

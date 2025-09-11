@@ -1,0 +1,2953 @@
+[
+  {
+    "id": "PROMPT-001",
+    "topic": "Advance care directives - Continue/discontinue treatment",
+    "patterns": [
+      "Advance care directives",
+      "Continue/discontinue treatment"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Would you like to share your wishes about continuing or stopping medical treatments if your condition changes significantly?",
+    "Prompt_Followup1": {
+      "question": "Have you documented these wishes in an advance care directive or discussed them with anyone?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Which factors are most important to you when deciding whether to continue treatment or stop treatment?",
+      "type": "multiple",
+      "options": [
+        "Maintaining quality of life and comfort",
+        "Living as long as possible",
+        "Not being a burden to family",
+        "Financial considerations",
+        "Personal values or beliefs",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "What additional support or information would help you feel more confident about these decisions?",
+      "type": "multiple",
+      "options": [
+        "More information on treatment options",
+        "Advice or guidance from your doctors",
+        "Emotional or counseling support",
+        "Talking with others who have faced similar decisions",
+        "I feel I have enough support",
+        "Other"
+      ]
+    },
+    "class": "Advance care directives",
+    "subclass": "Continue/discontinue treatment"
+  },
+  {
+    "id": "PROMPT-002",
+    "topic": "Advance care directives - Decision makers",
+    "patterns": [
+      "Advance care directives",
+      "Decision makers"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Who would you want to make medical decisions on your behalf if you were unable to communicate?(options: My spouse/partner; My parent(s); My child/children; Another family member; A close friend; A healthcare professional; I haven’t chosen anyone yet)",
+    "Prompt_Followup1": {
+      "question": "Have you formally designated this person (for example, with legal paperwork or by informing your doctor)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Does this person fully understand your wishes and values regarding your care?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you feel comfortable with this choice of decision-maker, or are there any concerns you'd like to discuss?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Advance care directives",
+    "subclass": "Decision makers"
+  },
+  {
+    "id": "PROMPT-003",
+    "topic": "End of life considerations - Wishes",
+    "patterns": [
+      "End of life considerations",
+      "Wishes"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Have you expressed any specific wishes for how you want things handled as you approach end-of-life?",
+    "Prompt_Followup1": {
+      "question": "Have you written down or shared these end-of-life wishes with your family or healthcare team?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "What is most important to you for your comfort or peace during that time (for example, certain treatments or being at home)?(Being cared for at home if possible; Effective pain and symptom management; Having loved ones present; Avoiding aggressive medical interventions; Receiving all possible life-prolonging treatments; Spiritual or religious support; Other)",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any help or more information to plan for these wishes?",
+      "type": "multiple",
+      "options": [
+        "Information about end-of-life care options",
+        "Assistance from healthcare professionals in planning",
+        "Help communicating or documenting my wishes",
+        "Emotional support for coping with these plans",
+        "I don’t need additional help",
+        "Other"
+      ]
+    },
+    "class": "End of life considerations",
+    "subclass": "Wishes"
+  },
+  {
+    "id": "PROMPT-004",
+    "topic": "End of life considerations - Location",
+    "patterns": [
+      "End of life considerations",
+      "Location"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Are you aware of any legal or medical requirements in your country or region that could affect your care planning (e.g., advanced directives, power of attorney)?",
+    "Prompt_Followup1": {
+      "question": "Have you completed any country-specific legal forms or documents required for healthcare decisions?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Which of the following legal arrangements do you have in place, as required or recommended in your region?（Power of attorney; Advance care directive; Will/Testament; None; Not sure）",
+      "type": "multiple",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you feel confident that your current care plans align with your local legal and medical regulations?（type：rating）1 (Not confident) – 5 (Fully confident)",
+      "type": "rating",
+      "options": [
+        "1",
+        "2",
+        "3",
+        "4",
+        "5"
+      ]
+    },
+    "class": "End of life considerations",
+    "subclass": "Location"
+  },
+  {
+    "id": "PROMPT-005",
+    "topic": "Estates - Location",
+    "patterns": [
+      "Estates",
+      "Location"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Have you made any arrangements for managing your estate or financial affairs for the future?",
+    "Prompt_Followup1": {
+      "question": "Do you have a plan or will in place to handle your assets and property?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Is there someone you trust who knows about your plans for your estate?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any assistance or information on arranging your estate or handling financial matters?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Estates",
+    "subclass": "Location"
+  },
+  {
+    "id": "PROMPT-006",
+    "topic": "Wills - nan",
+    "patterns": [
+      "Wills"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Do you currently have a will, or have you thought about creating one?(type: multiple, options: Yes, I already have a will; No, but I’ve been considering creating one; No, I don’t have a will and haven’t thought about it much)",
+    "Prompt_Followup1": {
+      "question": "Does your will clearly reflect your current wishes (for example, distribution of belongings or care of dependents)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you discussed your will or wishes with those who would be affected (such as family members or an executor)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any help or resources to set up or update your will?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Wills",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-007",
+    "topic": "Power of attorney - nan",
+    "patterns": [
+      "Power of attorney"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Have you designated a power of attorney to help manage your affairs if you can't manage them yourself?",
+    "Prompt_Followup1": {
+      "question": "Is this person aware of and prepared for the responsibility of making decisions for you if needed?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Does your power of attorney cover both financial and health care decisions, or only one of those areas?",
+      "type": "multiple",
+      "options": [
+        "Yes – I have POA for both financial and health decisions",
+        "I have only a financial POA",
+        "I have only a health-care POA",
+        "I haven’t set up a POA yet",
+        "Not sure"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Do you feel you need more information or assistance in setting up a power of attorney?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Power of attorney",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-008",
+    "topic": "Confidentiality & privacy - nan",
+    "patterns": [
+      "Confidentiality & privacy"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Are there any personal or medical information privacy concerns you have that we should be aware of?",
+    "Prompt_Followup1": {
+      "question": "Have you set any specific preferences for who can access your medical information or updates about your condition?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Is there any information you feel uncomfortable sharing with certain people or in certain settings?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like help understanding how your information is kept private or setting boundaries around who gets updates?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Confidentiality & privacy",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-009",
+    "topic": "Employment - Payroll",
+    "patterns": [
+      "Employment",
+      "Payroll"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Are there any issues or changes with your employment payroll or income that you are concerned about due to your condition?",
+    "Prompt_Followup1": {
+      "question": "Have you been able to manage any necessary paperwork or adjustments to your payroll (such as sick leave or disability payments)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you need any assistance understanding your pay, benefits, or any compensation you might be entitled to?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Is there someone at work (like HR) or outside of work helping you handle financial or payroll matters related to your illness?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Employment",
+    "subclass": "Payroll"
+  },
+  {
+    "id": "PROMPT-010",
+    "topic": "Employment - Safeguarding for discrimination",
+    "patterns": [
+      "Employment",
+      "Safeguarding for discrimination"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Have you experienced or are you worried about any discrimination at work because of your ALS/MND?(type: multiple, options: Yes, I have experienced discrimination; Not yet, but I am worried it might happen; No, I have not experienced or worried about discrimination)",
+    "Prompt_Followup1": {
+      "question": "If you're comfortable sharing, What kinds of accommodations or support has your employer provided for you, if any?",
+      "type": "multiple",
+      "options": [
+        "Flexible work hours or remote work",
+        "Adjusted workload or duties",
+        "Accessibility modifications at the workplace",
+        "Extra breaks or medical leave accommodations",
+        "None of the above/No support provided",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do you know your rights at work regarding disability and discrimination, or would you like more information on that?",
+      "type": "multiple",
+      "options": [
+        "Yes, I’m aware of my workplace disability rights",
+        "I know some, but I would like more information",
+        "No, I’m not aware and need more info"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any help you need in addressing workplace discrimination or advocating for fair treatment?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Employment",
+    "subclass": "Safeguarding for discrimination"
+  },
+  {
+    "id": "PROMPT-011",
+    "topic": "Finances - Budgeting",
+    "patterns": [
+      "Finances",
+      "Budgeting"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "How are you managing day-to-day finances and budgeting in light of any changes from your illness?(type: multiple, options: I handle finances on my own without much trouble; I handle finances but it has become more challenging; I have a family member/friend helping me manage finances; I have delegated most financial tasks to someone else)",
+    "Prompt_Followup1": {
+      "question": "Have you noticed any new expenses or financial challenges that you're trying to budget for",
+      "type": "multiple",
+      "options": [
+        "Increased medical or care expenses",
+        "Costs for home modifications/accessibility",
+        "Loss of income or work-related earnings",
+        "Additional transportation or travel costs",
+        "No significant new expenses",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have someone you trust assisting you with bills or financial planning?",
+      "type": "multiple",
+      "options": [
+        "Yes, a family member helps with finances",
+        "Yes, a professional advisor helps",
+        "No, I manage my finances by myself",
+        "No, and I might need help"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any advice or resources on financial planning or budgeting with regard to your situation?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Finances",
+    "subclass": "Budgeting"
+  },
+  {
+    "id": "PROMPT-012",
+    "topic": "Finances - Banking",
+    "patterns": [
+      "Finances",
+      "Banking"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Do you have the necessary arrangements to manage your banking needs as your condition changes?",
+    "Prompt_Followup1": {
+      "question": "Have you set up joint accounts or given someone trusted access in case you need help managing your money?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are you comfortable using online banking and finance tools, or do you find them difficult to use?",
+      "type": "multiple",
+      "options": [
+        "Yes – I can use online banking comfortably",
+        "I manage but with some difficulty",
+        "No – I find online banking too difficult",
+        "I don’t use online banking at all"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any support you feel you need to ensure your finances are handled securely according to your wishes",
+      "type": "multiple",
+      "options": [
+        "Help with legal/financial advice for security",
+        "Setting up automatic payments or monitoring",
+        "Regular check-ins on finances by a trusted person",
+        "I feel my financial management is fine",
+        "Other"
+      ]
+    },
+    "class": "Finances",
+    "subclass": "Banking"
+  },
+  {
+    "id": "PROMPT-013",
+    "topic": "Finances - Trusts",
+    "patterns": [
+      "Finances",
+      "Trusts"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Have you set up any trusts or similar financial arrangements for your assets or loved ones?",
+    "Prompt_Followup1": {
+      "question": "What are your main goals for setting up a trust or similar arrangement?",
+      "type": "multiple",
+      "options": [
+        "To provide financial support for family/loved ones",
+        "To ensure assets are managed over time (avoid mismanagement",
+        "To reduce taxes or legal complications for heirs",
+        "To contribute to a charity or cause",
+        "Not sure yet/No specific goal"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have a lawyer or financial advisor helping you with creating a trust or long-term financial plans?",
+      "type": "multiple",
+      "options": [
+        "Yes, I have professional legal/financial advice",
+        "I only have informal advice from family/friends",
+        "No, I don’t have any advisor",
+        "Not applicable (no trust planning yet"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like more information or support regarding trusts or long-term financial planning?",
+      "type": "multiple",
+      "options": [
+        "Yes",
+        "No"
+      ]
+    },
+    "class": "Finances",
+    "subclass": "Trusts"
+  },
+  {
+    "id": "PROMPT-014",
+    "topic": "Finances - Risk management",
+    "patterns": [
+      "Finances",
+      "Risk management"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Are there any financial risks or uncertainties related to your condition that you’re trying to plan for?",
+    "Prompt_Followup1": {
+      "question": "Have you taken any steps to safeguard your finances (for example, creating an emergency fund or getting financial advice about savings/investments)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "What specific aspect of your financial future worries you the most?",
+      "type": "multiple",
+      "options": [
+        "The cost of long-term care or medical treatment",
+        "Losing my income or financial security",
+        "The financial impact on my family",
+        "Not having enough savings for the future",
+        "I’m not specifically worried about finances",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would connecting with a financial advisor or support service be helpful for you to manage these risks?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Finances",
+    "subclass": "Risk management"
+  },
+  {
+    "id": "PROMPT-015",
+    "topic": "Insurance - Life insurance",
+    "patterns": [
+      "Insurance",
+      "Life insurance"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Do you currently have life insurance, or are you considering getting life insurance given your diagnosis? (type: multiple, options: Yes, I have life insurance; No, but I am considering getting life insurance; No, I don’t have life insurance and am not considering it)",
+    "Prompt_Followup1": {
+      "question": "If you have life insurance, do you feel the coverage is enough to meet your future goals for supporting your family or other needs?",
+      "type": "multiple",
+      "options": [
+        "Yes, my life insurance coverage is sufficient",
+        "No, I’m concerned it might not be enough",
+        "I’m not sure about my coverage details",
+        "I do not have life insurance"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you encountered any difficulties getting or updating insurance due to your condition?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any help reviewing your insurance options or understanding how your policy works?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Insurance",
+    "subclass": "Life insurance"
+  },
+  {
+    "id": "PROMPT-016",
+    "topic": "Benefits - nan",
+    "patterns": [
+      "Benefits"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Are you accessing any disability benefits or other support programs to help with costs or care?",
+    "Prompt_Followup1": {
+      "question": "Have you checked if you're eligible for government or community support services for people with ALS/MND?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you need any help applying for benefits or understanding what support you're entitled to?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Is the support you receive sufficient for your needs, or are there gaps that concern you?",
+      "type": "multiple",
+      "options": [
+        "Yes – the support I get is sufficient",
+        "No – there are still unmet needs/gaps",
+        "I’m not receiving any external support"
+      ]
+    },
+    "class": "Benefits",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-017",
+    "topic": "Care - Family caregivers",
+    "patterns": [
+      "Care",
+      "Family caregivers"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "Which family members are involved in caring for you, and how well is that arrangement working for you? (type: multiple, options: My spouse/partner is a caregiver and it’s going well; My spouse/partner helps but it’s been challenging at times; My children/other family help and it’s going well; My children/other family help but it’s been challenging; I primarily have professional caregivers, not family; I don’t have family caregivers)",
+    "Prompt_Followup1": {
+      "question": "Is your family caregiving setup working well overall for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are your family caregivers getting the information or training they need to care for you properly",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you or your family caregivers need any extra support or respite breaks to help manage the caregiving duties?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Care",
+    "subclass": "Family caregivers"
+  },
+  {
+    "id": "PROMPT-018",
+    "topic": "Care - Paid caregivers",
+    "patterns": [
+      "Care",
+      "Paid caregivers"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Do you have professional or paid caregivers assisting you, and how do you feel about the care they're providing? (type: multiple, options: Yes, I have professional caregivers and I’m satisfied with their care; Yes, I have professional caregivers but I have some concerns; No, I do not have any paid professional caregivers)",
+    "Prompt_Followup1": {
+      "question": "Are the paid caregivers available at the times you need them and doing the tasks you need help with?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Is there anything you wish could be improved or changed about the professional care you're receiving?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need help finding, hiring, or funding additional caregiving support if needed?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Care",
+    "subclass": "Paid caregivers"
+  },
+  {
+    "id": "PROMPT-019",
+    "topic": "Care - Subsidies",
+    "patterns": [
+      "Care",
+      "Subsidies"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Are you receiving any financial subsidies or support to help cover care or equipment costs?",
+    "Prompt_Followup1": {
+      "question": "Have you applied for any caregiver allowances or grants that help pay for care services or medical needs?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Is the financial support you’re getting enough to cover your care needs, or are there still costs not covered?",
+      "type": "multiple",
+      "options": [
+        "Yes – the support covers my needs",
+        "No – there are still significant out-of-pocket costs",
+        "I’m not receiving any financial support"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any assistance in finding or applying for subsidy programs or financial aid for care?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Care",
+    "subclass": "Subsidies"
+  },
+  {
+    "id": "PROMPT-020",
+    "topic": "Care - Home care",
+    "patterns": [
+      "Care",
+      "Home care"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Do you currently receive home care services, and are they meeting your needs?(type: multiple, options: Yes – I receive home care and it meets my needs; Yes – I receive home care but it does not fully meet my needs; No – I do not receive any home care services)",
+    "Prompt_Followup1": {
+      "question": "How often do you receive help at home from home care services?",
+      "type": "multiple",
+      "options": [
+        "Multiple times a day",
+        "About once a day",
+        "A few times a week",
+        "About once a week",
+        "Less than once a week",
+        "Never"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Which tasks at home are not covered by your current home care support?",
+      "type": "multiple",
+      "options": [
+        "Personal care tasks (bathing, dressing, toileting",
+        "Mobility or transfer assistance",
+        "Household chores (cleaning, cooking",
+        "Medical/nursing tasks (medications, therapy",
+        "Companionship or supervision",
+        "None – all tasks are covered",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like help with any of the following regarding your home care?",
+      "type": "multiple",
+      "options": [
+        "Arranging more home care support (more hours/services",
+        "Adjusting the care schedule to better fit your routine",
+        "No additional help needed"
+      ]
+    },
+    "class": "Care",
+    "subclass": "Home care"
+  },
+  {
+    "id": "PROMPT-021",
+    "topic": "Care - Long term care",
+    "patterns": [
+      "Care",
+      "Long term care"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Have you thought about or planned for long-term care options, such as nursing care or a care facility, for the future?",
+    "Prompt_Followup1": {
+      "question": "If you have considered long-term care, do you have a preferred facility or arrangement in mind?",
+      "type": "multiple",
+      "options": [
+        "Staying at home with nursing support",
+        "A specific nursing home or care facility",
+        "Hospice or palliative care facility when needed",
+        "I’m not sure about the arrangement yet",
+        "I haven’t considered long-term care options"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "What concerns or questions do you have about moving to a long-term care facility or getting long-term nursing support?",
+      "type": "multiple",
+      "options": [
+        "The cost of long-term care",
+        "Quality of care at a facility",
+        "Losing the comfort/independence of home",
+        "Emotional impact on family",
+        "Uncertainty about choosing a good facility",
+        "I don’t have major concerns",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like more information on long-term care services or help with visiting/evaluating any facilities?",
+      "type": "multiple",
+      "options": [
+        "Yes – information about long-term care options",
+        "Yes – help arranging visits to assess facilities",
+        "No – not at this time"
+      ]
+    },
+    "class": "Care",
+    "subclass": "Long term care"
+  },
+  {
+    "id": "PROMPT-022",
+    "topic": "Caregivers - Training",
+    "patterns": [
+      "Caregivers",
+      "Training"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Have your caregivers (family or professional) received any formal training to help care for someone with ALS/MND?",
+    "Prompt_Followup1": {
+      "question": "Do you feel your caregivers would benefit from learning specific skills (like using equipment or communication devices)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are there resources or training programs you wish your caregivers had access to?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like assistance finding training or educational materials for your caregivers?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Caregivers",
+    "subclass": "Training"
+  },
+  {
+    "id": "PROMPT-023",
+    "topic": "Caregivers - Time management",
+    "patterns": [
+      "Caregivers",
+      "Time management"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": " How are your caregivers managing their time between caregiving and their other responsibilities? (type: multiple, options: They balance caregiving and other duties well; They sometimes struggle to balance everything; They often feel overwhelmed by the caregiving responsibilities; I’m not sure how they are managing)",
+    "Prompt_Followup1": {
+      "question": "Do your caregivers ever express feeling overwhelmed or unable to balance care with work or personal time?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you considered any strategies to help ease the time burden on your caregivers, like a schedule or additional help?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would connecting with a support service or respite care provider help your caregivers manage their time and stress?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Caregivers",
+    "subclass": "Time management"
+  },
+  {
+    "id": "PROMPT-024",
+    "topic": "Caregivers - Young caregivers",
+    "patterns": [
+      "Caregivers",
+      "Young caregivers"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are any of your caregivers younger family members (like children or teenagers), and if so, how are they coping with their role? (type: multiple, options: Yes – I have young caregivers and they seem to be coping well; Yes – I have young caregivers and I feel they are struggling; No – I do not have young family members acting as caregivers)",
+    "Prompt_Followup1": {
+      "question": "What tasks are your younger caregivers helping you with?",
+      "type": "multiple",
+      "options": [
+        "Personal care tasks (feeding, dressing, etc.",
+        "Physical assistance (lifting or moving you",
+        "Household chores or errands",
+        "Providing companionship or emotional support",
+        "Other tasks",
+        "They are not involved in caregiving tasks"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "What concerns do you have about your young caregivers’ situation?",
+      "type": "multiple",
+      "options": [
+        "I worry some tasks may be too difficult or inappropriate for them",
+        "I’m concerned they don’t have enough emotional support",
+        "I don’t have major concerns – they seem to be managing",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like assistance in finding resources or support groups for young caregivers to help them not feel alone in this?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Caregivers",
+    "subclass": "Young caregivers"
+  },
+  {
+    "id": "PROMPT-025",
+    "topic": "Emergency preparedness - nan",
+    "patterns": [
+      "Emergency preparedness"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Do you have a plan for emergencies (like a sudden health issue or natural disaster) that covers your needs?",
+    "Prompt_Followup1": {
+      "question": "Have you discussed emergency plans with your family or caregivers, like what to do and who to call in a crisis?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have emergency supplies or information readily available (for example, a medical ID, backup power for equipment, etc.)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any help you need to better prepare for emergencies, such as creating an emergency plan or kit tailored to your condition?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Emergency preparedness",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-026",
+    "topic": "Getting around - Travel ",
+    "patterns": [
+      "Getting around",
+      "Travel "
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "How has traveling, even for short trips, been for you? Are you facing any challenges when traveling with ALS/MND? (type: multiple, options: I can travel without major issues; I can travel but it requires a lot of planning and is challenging; I have significant difficulty traveling now; I have not attempted traveling recently)",
+    "Prompt_Followup1": {
+      "question": "What specific accommodations or planning do you need to travel safely and comfortably?",
+      "type": "multiple",
+      "options": [
+        "Wheelchair-accessible transportation",
+        "Special seating or equipment arrangements",
+        "Having a companion/caregiver assist during travel",
+        "Scheduling extra breaks/rest during travel",
+        "No special accommodations needed",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have any upcoming travel that you're concerned about and might need help preparing for?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like information on travel services or tips for people with mobility or medical needs?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Getting around",
+    "subclass": "Travel"
+  },
+  {
+    "id": "PROMPT-027",
+    "topic": "Getting around - Transportation",
+    "patterns": [
+      "Getting around",
+      "Transportation"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "What kind of transportation do you mainly use to get to appointments or go out, and is it working well for you? (type: multiple, options: I drive myself; A family member/friend drives me in a regular car; I use a wheelchair-accessible vehicle or transport service; I use public transportation; I rarely go out and don’t use transportation; Other)",
+    "Prompt_Followup1": {
+      "question": "Have you needed to modify your car or use special transport, like wheelchair-accessible vans or ambulance services?",
+      "type": "multiple",
+      "options": [
+        "Yes – I modified my personal car for accessibility",
+        "Yes – I use a wheelchair-accessible van or transport service",
+        "Yes – sometimes I use ambulance/medical transport",
+        "No – I haven’t needed special transportation"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do you rely on someone else for transportation, and if so, is that arrangement reliable for you?",
+      "type": "multiple",
+      "options": [
+        "Yes – I depend on others and it’s reliably working out",
+        "Yes – I depend on others but it’s sometimes unreliable",
+        "No – I don’t rely on anyone, I manage my own transportation"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would additional transportation support",
+      "type": "multiple",
+      "options": [
+        "Yes",
+        "No"
+      ]
+    },
+    "class": "Getting around",
+    "subclass": "Transportation"
+  },
+  {
+    "id": "PROMPT-028",
+    "topic": "Getting around - Accessibility ",
+    "patterns": [
+      "Getting around",
+      "Accessibility "
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Are the places you need or want to go (like your home, work, or community spots) accessible enough for you right now?",
+    "Prompt_Followup1": {
+      "question": "Have you encountered obstacles, like stairs or narrow spaces, that make it hard to move around with your equipment (wheelchair, walker, etc.)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you made any adaptations at home or work to improve accessibility, and are those modifications completed?",
+      "type": "multiple",
+      "options": [
+        "Yes – necessary modifications (ramps, wider doors, etc.) have been made",
+        "Some changes have been made, but more are still needed",
+        "No major adaptations were needed",
+        "Not applicable"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any additional equipment or change that you feel would improve accessibility for you in daily life?",
+      "type": "multiple",
+      "options": [
+        "Yes – further home modifications could help",
+        "Yes – additional mobility equipment (ramps, lifts, etc.) could help",
+        "Yes – changes in my workplace or community setup would help",
+        "No – I’m okay with the current accessibility",
+        "Other"
+      ]
+    },
+    "class": "Getting around",
+    "subclass": "Accessibility"
+  },
+  {
+    "id": "PROMPT-029",
+    "topic": "Equipment and technology - Home adaptations",
+    "patterns": [
+      "Equipment and technology",
+      "Home adaptations"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "What changes or adaptations have you made at home to accommodate your needs, and do you feel anything else is needed?",
+    "Prompt_Followup1": {
+      "question": "Have important modifications",
+      "type": "multiple",
+      "options": [
+        "Yes – needed modifications are in place",
+        "Partially – some modifications done, others still pending",
+        "No – we haven’t made such modifications yet"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Are there still any difficulties you face at home",
+      "type": "multiple",
+      "options": [
+        "Difficulty with stairs or moving between floors",
+        "Difficulty reaching high shelves or items",
+        "Trouble in the bathroom or kitchen despite current setup",
+        "No major difficulties at home now",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need advice or assistance with planning or funding additional home modifications?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Equipment and technology",
+    "subclass": "Home adaptations"
+  },
+  {
+    "id": "PROMPT-030",
+    "topic": "Equipment and technology - Equipment",
+    "patterns": [
+      "Equipment and technology",
+      "Equipment"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "What medical or mobility equipment are you using currently, and is it all functioning well for you?",
+    "Prompt_Followup1": {
+      "question": "Do you have all the equipment you need",
+      "type": "multiple",
+      "options": [
+        "Yes – I have all the equipment I need",
+        "I’m waiting for some equipment to arrive",
+        "I’m considering getting additional equipment",
+        "I’m not sure what equipment I might need"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Are you and your caregivers comfortable using your equipment, or do you feel you need more training or practice?",
+      "type": "multiple",
+      "options": [
+        "Yes – we are comfortable using all equipment",
+        "We manage, but could use more training/practice",
+        "No – some equipment is difficult for us to use",
+        "Not applicable – I don’t use any special equipment"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is maintaining or servicing your equipment a challenge at all, and do you need any help with that?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Equipment and technology",
+    "subclass": "Equipment"
+  },
+  {
+    "id": "PROMPT-031",
+    "topic": "Equipment and technology - Safety",
+    "patterns": [
+      "Equipment and technology",
+      "Safety"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Are you using any safety devices or technology (like fall monitors or emergency alert systems) to help keep you safe?",
+    "Prompt_Followup1": {
+      "question": "Have you had any falls or close calls, and do you feel something like a medical alert system could help you feel more secure?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have smoke detectors, alarms, or other home safety features adjusted for your needs (for instance, if you have limited mobility or can't react quickly)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like information on any devices designed to improve safety for people with limited mobility or medical conditions?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Equipment and technology",
+    "subclass": "Safety"
+  },
+  {
+    "id": "PROMPT-032",
+    "topic": "Equipment and technology - Assistive technologies",
+    "patterns": [
+      "Equipment and technology",
+      "Assistive technologies"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "What assistive technologies (like special software, apps, or devices) are you using or interested in to help with daily tasks or communication?",
+    "Prompt_Followup1": {
+      "question": "Do you use any computer or smartphone accessibility features or apps to help you communicate or control things around you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are you facing any challenges in using technology",
+      "type": "multiple",
+      "options": [
+        "Yes – difficulty with hand use (typing, touching screens",
+        "Yes – difficulty seeing or hearing content",
+        "Yes – other technology usage issues",
+        "No – I don’t face significant tech challenges"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there a particular task you wish technology could help you with better",
+      "type": "multiple",
+      "options": [
+        "Communicating (speaking or writing) more easily",
+        "Controlling home devices (lights, appliances) more independently",
+        "Using computer/Internet more comfortably",
+        "No specific task comes to mind",
+        "Other"
+      ]
+    },
+    "class": "Equipment and technology",
+    "subclass": "Assistive technologies"
+  },
+  {
+    "id": "PROMPT-033",
+    "topic": "Communicating about ALS/MND - Support network",
+    "patterns": [
+      "Communicating about ALS/MND",
+      "Support network"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "How comfortable do you feel talking about your ALS/MND with your friends and extended family? (type: multiple, options: Very comfortable discussing it; Somewhat comfortable; Not very comfortable; Not at all comfortable/I avoid the topic)",
+    "Prompt_Followup1": {
+      "question": "Have you been able to share updates or explain your needs to the people around you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you feel that your friends and community understand what you’re going through, or do they have difficulty relating to your situation?",
+      "type": "multiple",
+      "options": [
+        "Yes – they generally understand and are supportive",
+        "It’s mixed – some understand, others have difficulty relating",
+        "No – I feel it’s hard for them to truly relate",
+        "I haven’t talked much about my illness with them"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any help you would like in communicating with your wider support network, like advice on what to say or even having someone help explain on your behalf?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Communicating about ALS/MND",
+    "subclass": "Support network"
+  },
+  {
+    "id": "PROMPT-034",
+    "topic": "Communicating about ALS/MND - Family planning",
+    "patterns": [
+      "Communicating about ALS/MND",
+      "Family planning"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Has your diagnosis affected any plans for having children or other family planning decisions?",
+    "Prompt_Followup1": {
+      "question": "Do you have concerns about genetic risks or the future care of children that are affecting your family planning thoughts?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you had a chance to discuss these concerns with a healthcare provider or a genetic counselor?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any support or information you need when it comes to family planning in light of your ALS/MND?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Communicating about ALS/MND",
+    "subclass": "Family planning"
+  },
+  {
+    "id": "PROMPT-035",
+    "topic": "Communicating about ALS/MND - Difficult conversations",
+    "patterns": [
+      "Communicating about ALS/MND",
+      "Difficult conversations"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "Are there any difficult conversations you've been needing to have with loved ones (for example, about disease progression or future plans) that you're struggling with?",
+    "Prompt_Followup1": {
+      "question": "Which topics do you find hardest to talk about with family or friends",
+      "type": "multiple",
+      "options": [
+        "Talking about my current and future care needs",
+        "Discussing end-of-life preferences",
+        "Discussing financial or legal plans",
+        "Talking about feelings and emotional impact",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you attempted to have any of these hard conversations? If so, how did it go?",
+      "type": "multiple",
+      "options": [
+        "Yes – I tried and it went okay",
+        "Yes – I tried but it was very difficult",
+        "No – I haven’t tried to discuss these topics yet",
+        "Some conversations went well, others were challenging"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any help (like speaking with a counselor or having a mediator) to make these conversations easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Communicating about ALS/MND",
+    "subclass": "Difficult conversations"
+  },
+  {
+    "id": "PROMPT-036",
+    "topic": "Why/why not get genetic testing - Further guidance",
+    "patterns": [
+      "Why/why not get genetic testing",
+      "Further guidance"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Have you considered genetic testing for ALS/MND (to see if you carry related genes), and what are your thoughts about it? (type: multiple, options: Yes, I have already done genetic testing; Yes, I am considering genetic testing; No, I haven’t really considered genetic testing; I decided against doing genetic testing)",
+    "Prompt_Followup1": {
+      "question": "If you have thought about or done genetic testing, what was your main reason for it?",
+      "type": "multiple",
+      "options": [
+        "Planning for family or future children",
+        "Personal curiosity about the disease cause",
+        "To contribute to research or science",
+        "Doctor’s recommendation",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Are there any worries that hold you back from genetic testing",
+      "type": "multiple",
+      "options": [
+        "Yes – worry about insurance or discrimination",
+        "Yes – worry about the emotional impact of knowing",
+        "Yes – unsure if results would be useful",
+        "Yes – concerned about cost or accessibility of testing",
+        "No significant worries",
+        "Other"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would talking to a genetic counselor or getting more information help you feel more comfortable making a decision about genetic testing?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Why/why not get genetic testing",
+    "subclass": "Further guidance"
+  },
+  {
+    "id": "PROMPT-037",
+    "topic": "Diagnostic testing - nan",
+    "patterns": [
+      "Diagnostic testing"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Do you feel that all the diagnostic tests and evaluations needed for your ALS/MND have been completed, or are you concerned something is still uncertain? (type: multiple, options: Yes – I believe all necessary tests have been done and nothing is left uncertain; No – I have concerns that something might be missing or unclear in my diagnosis)",
+    "Prompt_Followup1": {
+      "question": "Do you understand the tests you've undergone (like EMGs, MRIs, etc.) and your current diagnosis status?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Is there any part of the diagnostic process or results that you would like explained better or revisited?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "At this point, would you like additional medical opinions or tests, or are you satisfied with the evaluation you’ve received?",
+      "type": "multiple",
+      "options": [
+        "I feel satisfied with the current evaluation",
+        "I would like additional opinions or tests"
+      ]
+    },
+    "class": "Diagnostic testing",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-038",
+    "topic": "Predictive testing - nan",
+    "patterns": [
+      "Predictive testing"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Have you thought about tests or indicators that might predict how your ALS/MND will progress, and do you want that kind of information? (type: multiple, options: Yes – I’m interested in tests that could predict my progression; I have mixed feelings or am unsure if I want to know; No – I haven’t considered it or don’t want predictive information)",
+    "Prompt_Followup1": {
+      "question": "Do you believe knowing the possible progression or prognosis",
+      "type": "multiple",
+      "options": [
+        "Knowing more would help me plan and prepare",
+        "Knowing more would likely increase my anxiety",
+        "I’m not sure how I would feel about knowing that"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you discussed predictive information with your doctor, and what did they advise or say?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "When it comes to looking ahead, do you prefer to focus on day-to-day management, or do you actively seek information about what to expect in the future?",
+      "type": "multiple",
+      "options": [
+        "I prefer focusing on day-to-day and not looking too far ahead",
+        "I actively seek out information about the future progression",
+        "I try to balance living day-to-day with some future planning"
+      ]
+    },
+    "class": "Predictive testing",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-039",
+    "topic": "Accessibility - Cost",
+    "patterns": [
+      "Accessibility",
+      "Cost"
+    ],
+    "PNM Category": "Cognitive",
+    "Prompt_Main": "Are the costs of accessibility improvements or equipment (like wheelchairs, home modifications) a concern for you?",
+    "Prompt_Followup1": {
+      "question": "Have you had to pay out-of-pocket for any accessibility needs, and has that been a financial strain?",
+      "type": "multiple",
+      "options": [
+        "Yes – I’ve paid a lot out-of-pocket and it’s a financial strain",
+        "Yes – I’ve paid some extra costs but it’s manageable",
+        "No – most accessibility needs have been covered by insurance or other means",
+        "Not applicable – I haven’t needed special equipment/modifications"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Are you aware of any insurance coverage, grants, or programs that could help cover those accessibility costs?",
+      "type": "multiple",
+      "options": [
+        "Yes – I know of and have used some support programs",
+        "Yes – I’m aware but haven’t used them",
+        "No – I’m not aware of such programs",
+        "Not applicable"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like assistance in finding financial support or cost-saving options for accessibility equipment or home adaptations?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Accessibility",
+    "subclass": "Cost"
+  },
+  {
+    "id": "PROMPT-040",
+    "topic": "Muscles, mobility, and exercise - Physical therapy",
+    "patterns": [
+      "Muscles, mobility, and exercise",
+      "Physical therapy"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Are you doing any physical therapy to keep your muscles active, and if so, how is it going? (type: multiple, options: Yes – I’m doing physical therapy and it’s going well; Yes – I’m doing therapy but I’m not sure it’s helping or it’s tough; No – I’m not doing any physical therapy)",
+    "Prompt_Followup1": {
+      "question": "Do you have a physical therapist or exercise program tailored to your needs?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "How do the exercises or therapy sessions make you feel – do they help with stiffness or strength, or do they mostly cause fatigue?",
+      "type": "multiple",
+      "options": [
+        "They help me feel less stiff and maintain strength",
+        "They cause me to feel tired/fatigued",
+        "They help somewhat but also tire me out",
+        "I haven’t noticed a significant effect either way"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any additional support or equipment (like braces or splints) you think would help with your exercises or mobility?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Muscles, mobility, and exercise",
+    "subclass": "Physical therapy"
+  },
+  {
+    "id": "PROMPT-041",
+    "topic": "Muscles, mobility, and exercise - Moderate exercise plans",
+    "patterns": [
+      "Muscles, mobility, and exercise",
+      "Moderate exercise plans"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Have you been given a moderate exercise plan to follow, and are you able to do it comfortably? (type: multiple, options: Yes – I have an exercise plan and can follow it comfortably; Yes – I have a plan but it’s hard to do comfortably; No – I have not been given an exercise plan)",
+    "Prompt_Followup1": {
+      "question": "Which types of exercises are you currently doing on a regular basis?",
+      "type": "multiple",
+      "options": [
+        "Stretching or range-of-motion exercises",
+        "Light strength training or resistance exercises",
+        "Aerobic exercises (e.g., walking",
+        "Breathing/respiratory exercises",
+        "I’m not doing any exercises currently",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "How often do you exercise in a typical week?",
+      "type": "multiple",
+      "options": [
+        "Daily",
+        "A few times a week",
+        "About once a week",
+        "Less than once a week",
+        "Never"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any changes to your exercise routine or more guidance on safe and beneficial exercises for you?",
+      "type": "multiple",
+      "options": [
+        "Yes – I’d like adjustments because the routine is too hard or not effective",
+        "Yes – I’d like more guidance on safe exercises",
+        "No – I’m satisfied with my current exercise routine"
+      ]
+    },
+    "class": "Muscles, mobility, and exercise",
+    "subclass": "Moderate exercise plans"
+  },
+  {
+    "id": "PROMPT-042",
+    "topic": "Muscles, mobility, and exercise - Passive range of motion",
+    "patterns": [
+      "Muscles, mobility, and exercise",
+      "Passive range of motion"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Is someone helping you with passive range-of-motion exercises (moving your limbs for you to keep joints flexible)? (type: multiple, options: Yes – a family member helps with my exercises; Yes – a professional caregiver/therapist helps; No – I don’t have anyone helping with these exercises)",
+    "Prompt_Followup1": {
+      "question": "How often does your helper assist you with these range-of-motion exercises?",
+      "type": "multiple",
+      "options": [
+        "Multiple times a day",
+        "Daily",
+        "A few times a week",
+        "Once a week",
+        "Less than once a week",
+        "Never (no assistance"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "How are these exercises affecting you?",
+      "type": "multiple",
+      "options": [
+        "They make me feel better (less stiff/more comfortable",
+        "They cause some pain or discomfort",
+        "I haven’t noticed much difference",
+        "I haven’t done them enough to know"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like guidance on doing these passive exercises correctly, or would you be interested in having a therapist assist with them?",
+      "type": "multiple",
+      "options": [
+        "Yes – I’d like guidance on proper technique",
+        "Yes – I’d like a professional to help with these exercises",
+        "No – I don’t need additional help with these exercises"
+      ]
+    },
+    "class": "Muscles, mobility, and exercise",
+    "subclass": "Passive range of motion"
+  },
+  {
+    "id": "PROMPT-043",
+    "topic": "Muscles, mobility, and exercise - Mobility aids",
+    "patterns": [
+      "Muscles, mobility, and exercise",
+      "Mobility aids"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "What mobility aids are you currently using (e.g., cane, walker, wheelchair), and are they meeting your needs? (type: multiple, options: I use a cane; I use a walker/rollator; I use a manual wheelchair; I use a power wheelchair/scooter; I use leg braces or orthotics; I don’t use any mobility aids; [Select all that apply])",
+    "Prompt_Followup1": {
+      "question": "Are your current mobility aids still sufficient for you, or is it getting harder to get around even with them?",
+      "type": "multiple",
+      "options": [
+        "My current aids are sufficient to get around",
+        "It’s getting harder to move around even with my aids",
+        "I do not use mobility aids (or N/A"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you been assessed for any new mobility equipment, like a power wheelchair, as your needs change?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any help learning to use your mobility aids or making modifications to them for comfort and ease of use?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Muscles, mobility, and exercise",
+    "subclass": "Mobility aids"
+  },
+  {
+    "id": "PROMPT-044",
+    "topic": "Nutrition - Diet",
+    "patterns": [
+      "Nutrition",
+      "Diet"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "How is your eating and diet at the moment? Have you needed to make any changes because of ALS/MND? (type: multiple, options: I’m eating normally without major changes; I’ve made some dietary changes due to ALS; I’m having difficulty eating and have had to significantly adapt my diet; I have not been eating well lately)",
+    "Prompt_Followup1": {
+      "question": "Are you having any difficulty chewing or swallowing certain foods?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you been advised to follow a specific diet or use any supplements to maintain your weight and energy?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you feel you are getting the right nutrition, or would you like to speak with a dietitian to help with meal planning?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Nutrition",
+    "subclass": "Diet"
+  },
+  {
+    "id": "PROMPT-045",
+    "topic": "Nutrition - Weight management",
+    "patterns": [
+      "Nutrition",
+      "Weight management"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Have you noticed any significant weight loss or gain, and are you managing your weight as desired? (type: multiple, options: No significant weight change and weight is stable; Yes – I’ve lost weight and it concerns me; Yes – I’ve gained weight and it concerns me; I’m having difficulty managing my weight)",
+    "Prompt_Followup1": {
+      "question": "Are you currently monitoring your weight, and has it been stable or changing recently?",
+      "type": "multiple",
+      "options": [
+        "My weight has been stable",
+        "My weight has been going down",
+        "My weight has been going up",
+        "I’m not actively tracking my weight"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you discussed with your doctor or dietitian ways to gain, lose, or maintain weight as needed?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any nutritional supplements or assistance with meals to help manage your weight effectively?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Nutrition",
+    "subclass": "Weight management"
+  },
+  {
+    "id": "PROMPT-046",
+    "topic": "Nutrition - Feeding tubes",
+    "patterns": [
+      "Nutrition",
+      "Feeding tubes"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": " Are you considering or already using a feeding tube (such as a PEG tube) to help with your nutrition? (type: multiple, options: Yes – I already have a feeding tube; I am considering getting a feeding tube; No – I’m not considering a feeding tube at this time)",
+    "Prompt_Followup1": {
+      "question": "If you have a feeding tube, are you comfortable with how it's working and managing it daily?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "If you haven't got a feeding tube, have there been discussions about when might be the right time to consider one?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need more information about feeding tube options or support in caring for the tube (cleaning, using it, etc.)?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Nutrition",
+    "subclass": "Feeding tubes"
+  },
+  {
+    "id": "PROMPT-047",
+    "topic": "Nutrition - Eating aids",
+    "patterns": [
+      "Nutrition",
+      "Eating aids"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Do you use any special utensils or eating aids to help you eat, and are they benefiting you? (type: multiple, options: Yes – I use adaptive utensils/aids and they help; Yes – I use some aids but they’re not helping enough; No – I don’t use any special utensils or aids)",
+    "Prompt_Followup1": {
+      "question": "What kinds of difficulties do you experience during meals",
+      "type": "multiple",
+      "options": [
+        "Trouble gripping utensils",
+        "Difficulty lifting cups or bringing food to my mouth",
+        "Difficulty cutting food",
+        "Getting fatigued before finishing a meal",
+        "No major difficulties during meals",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you tried adaptive tools like weighted utensils, grip aids, or plate guards to make eating easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to explore more gadgets or strategies to help make eating and drinking safer and simpler for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Nutrition",
+    "subclass": "Eating aids"
+  },
+  {
+    "id": "PROMPT-048",
+    "topic": "Saliva and swallowing - Risks",
+    "patterns": [
+      "Saliva and swallowing",
+      "Risks"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": " Have you experienced issues with saliva or swallowing that worry you (such as choking or excessive drooling)? (type: multiple, options: Yes – I’m having significant saliva/swallowing issues that concern me; I have minor issues but nothing major; No – I haven’t had worrisome saliva or swallowing problems)",
+    "Prompt_Followup1": {
+      "question": "Do certain foods or liquids cause you more difficulty when swallowing than others?",
+      "type": "multiple",
+      "options": [
+        "Yes – thin liquids like water are harder",
+        "Yes – thick liquids or creamy foods are harder",
+        "Yes – solid foods are harder to swallow",
+        "No – nothing particular causes more trouble",
+        "Not sure"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you talked with your healthcare team about ways to manage saliva (for instance, medications or exercises)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any guidance or equipment you think would help you feel safer while eating or swallowing",
+      "type": "multiple",
+      "options": [
+        "Yes – using a suction device during meals might help",
+        "Yes – learning specific swallowing techniques might help",
+        "Yes – other tools like specialized cups or thickeners might help",
+        "No – I feel okay without additional aids for swallowing"
+      ]
+    },
+    "class": "Saliva and swallowing",
+    "subclass": "Risks"
+  },
+  {
+    "id": "PROMPT-049",
+    "topic": "Saliva and swallowing - Medication",
+    "patterns": [
+      "Saliva and swallowing",
+      "Medication"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": ": Are you taking any medication to help with saliva or swallowing issues, and if so, is it working for you? (type: multiple, options: Yes – I take medication for saliva/swallowing and it’s helping; Yes – I take medication but I’m not sure it’s helping; Yes – I take medication but it doesn’t seem to help; No – I’m not on any medication for those issues)",
+    "Prompt_Followup1": {
+      "question": "What treatments have been suggested to you to reduce saliva or improve swallowing?",
+      "type": "multiple",
+      "options": [
+        "Medication to dry up saliva",
+        "Botulinum injections to salivary glands",
+        "Using a suction machine for saliva",
+        "Thickeners for liquids",
+        "Changing head/body posture while eating",
+        "None have been suggested yet",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you noticed any side effects from these treatments, or are they making a positive difference?",
+      "type": "multiple",
+      "options": [
+        "They’re helping manage saliva/swallowing noticeably",
+        "I’m experiencing side effects from the medication",
+        "I haven’t noticed much benefit yet",
+        "Not applicable (not using treatments"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Do you feel you need to adjust your medication or try a different approach for saliva and swallowing management?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Saliva and swallowing",
+    "subclass": "Medication"
+  },
+  {
+    "id": "PROMPT-050",
+    "topic": "Saliva and swallowing - Suction equipment",
+    "patterns": [
+      "Saliva and swallowing",
+      "Suction equipment"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Do you have a suction device to clear saliva or mucus, and are you comfortable using it when needed? (type: multiple, options: Yes – I have a suction device and I’m comfortable using it; Yes – I have a suction device but I’m not very comfortable using it; No – I do not have a suction device)",
+    "Prompt_Followup1": {
+      "question": "How often do you need to use suction to clear your airway or mouth?",
+      "type": "multiple",
+      "options": [
+        "Multiple times a day",
+        "About once a day",
+        "A few times a week",
+        "Rarely",
+        "Never"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Is the suction device easy for you or your caregiver to use, and does it effectively relieve your discomfort?",
+      "type": "multiple",
+      "options": [
+        "Yes – it’s easy to use and works effectively",
+        "It’s somewhat hard to use but it does help",
+        "It’s easy to use but not very effective",
+        "It’s hard to use and doesn’t help enough",
+        "Not applicable (no device"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any training or backup equipment to make sure you can manage secretions safely at home?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Saliva and swallowing",
+    "subclass": "Suction equipment"
+  },
+  {
+    "id": "PROMPT-051",
+    "topic": "Breathing - Exercises",
+    "patterns": [
+      "Breathing",
+      "Exercises"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Are you doing any breathing exercises to keep your lungs strong, and if so, how are they going for you? (type: multiple, options: Yes – I do breathing exercises and they’re going well; Yes – I do them but it’s difficult or I’m not sure they help; No – I’m not doing breathing exercises)",
+    "Prompt_Followup1": {
+      "question": "Were you taught specific techniques or exercises (like using a spirometer) to support your breathing?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do these breathing exercises help you feel better or breathe easier, or are they hard to do regularly?",
+      "type": "multiple",
+      "options": [
+        "Yes – they help me breathe easier",
+        "They are difficult to perform regularly",
+        "I haven’t noticed an effect",
+        "I’m not doing breathing exercises regularly"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to talk to a respiratory therapist about other exercises or methods to maintain your lung function?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Breathing",
+    "subclass": "Exercises"
+  },
+  {
+    "id": "PROMPT-052",
+    "topic": "Breathing - Invasive and non-invasive ventilation",
+    "patterns": [
+      "Breathing",
+      "Invasive and non-invasive ventilation"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Have you begun using any ventilatory support (like a BiPAP machine or a ventilator) to assist with your breathing? (type: multiple, options: Yes – I’m using a BiPAP (non-invasive ventilation); Yes – I’m on invasive ventilation (tracheostomy); No – I’m not using any breathing support yet)",
+    "Prompt_Followup1": {
+      "question": "If you're using a BiPAP or ventilator, are you finding it comfortable and helpful at night or when needed?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you discussed future breathing support options with your doctor, in case your breathing becomes more difficult?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you have any concerns or need guidance about equipment like ventilators or using them (for example, cleaning the machine or power backup)?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Breathing",
+    "subclass": "Invasive and non-invasive ventilation"
+  },
+  {
+    "id": "PROMPT-053",
+    "topic": "Fatigue and sleep - Rest",
+    "patterns": [
+      "Fatigue and sleep",
+      "Rest"
+    ],
+    "PNM Category": "Safety",
+    "Prompt_Main": "Do you find that you need more rest during the day, and are you able to get the rest you need when you do? (type: multiple, options: Yes – I need more rest and I manage to get enough rest; Yes – I need more rest but I often can’t get enough; No – I don’t need extra rest during the day)",
+    "Prompt_Followup1": {
+      "question": "How often do you take breaks or naps to help manage fatigue?",
+      "type": "multiple",
+      "options": [
+        "Multiple times a day",
+        "Once a day",
+        "A few times a week",
+        "Rarely",
+        "Never"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do these rest periods help you feel better, or do you still feel very tired afterwards?",
+      "type": "multiple",
+      "options": [
+        "They refresh me and I feel better",
+        "They help a little but I still feel quite tired",
+        "No, I still feel very tired even after resting",
+        "I usually don’t take rests"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there anything that makes it hard for you to rest when you need to",
+      "type": "multiple",
+      "options": [
+        "Yes – responsibilities (work/family) prevent me from resting",
+        "Yes – I have trouble relaxing or sleeping during the day",
+        "No – nothing in particular prevents me from resting when needed"
+      ]
+    },
+    "class": "Fatigue and sleep",
+    "subclass": "Rest"
+  },
+  {
+    "id": "PROMPT-054",
+    "topic": "Fatigue and sleep - Sleep",
+    "patterns": [
+      "Fatigue and sleep",
+      "Sleep"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "How are you sleeping at night? Have you had any issues with sleep lately? (type: multiple, options: I’m sleeping well without major issues; I’m having some problems with sleep; I’m experiencing significant sleep issues lately)",
+    "Prompt_Followup1": {
+      "question": "Do you have trouble falling asleep, staying asleep, or do you wake up not feeling rested?",
+      "type": "multiple",
+      "options": [
+        "Yes – difficulty falling asleep",
+        "Yes – waking up frequently during the night",
+        "Yes – waking up feeling unrefreshed",
+        "No – I don’t have those issues"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you noticed if symptoms like difficulty breathing, anxiety, or muscle discomfort are affecting your sleep?",
+      "type": "multiple",
+      "options": [
+        "Yes – breathing issues disturb my sleep",
+        "Yes – anxiety or worries disturb my sleep",
+        "Yes – pain or discomfort affects my sleep",
+        "No – none of these symptoms significantly affect my sleep"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any help you need to improve your sleep",
+      "type": "multiple",
+      "options": [
+        "Yes – possibly medication to help sleep",
+        "Yes – better bedding or pillow arrangements",
+        "Yes – help establishing a better bedtime routine",
+        "No – I don’t need any special help with sleep"
+      ]
+    },
+    "class": "Fatigue and sleep",
+    "subclass": "Sleep"
+  },
+  {
+    "id": "PROMPT-055",
+    "topic": "Fatigue and sleep - Positioning",
+    "patterns": [
+      "Fatigue and sleep",
+      "Positioning"
+    ],
+    "PNM Category": "Physiological",
+    "Prompt_Main": "Are you using any special positioning techniques or equipment (like certain pillows or an adjustable bed) to help you rest or sleep better?",
+    "Prompt_Followup1": {
+      "question": "Do you find that changing positions or being repositioned helps prevent discomfort or pressure sores?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have someone to help you adjust your position when needed, especially during the night?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you benefit from equipment like a hospital bed, specialized mattress, or turning devices to improve comfort?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Fatigue and sleep",
+    "subclass": "Positioning"
+  },
+  {
+    "id": "PROMPT-056",
+    "topic": "Fatigue and sleep - Insomnia",
+    "patterns": [
+      "Fatigue and sleep",
+      "Insomnia"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Have you been experiencing insomnia or difficulty sleeping, and if so, how is it affecting you? (type: multiple, options: Yes – I have insomnia and it’s affecting me (e.g., causing fatigue); Yes – I have some sleep difficulty but it’s manageable; No – I haven’t had insomnia issues)",
+    "Prompt_Followup1": {
+      "question": "How long have you had trouble sleeping, and do you notice it tied to any particular worry or symptom?",
+      "type": "multiple",
+      "options": [
+        "It’s been a short-term issue (weeks",
+        "It’s been a long-term issue (months or more",
+        "It seems related to anxiety or worry",
+        "It seems related to physical symptoms (pain, breathing",
+        "Not sure about duration or cause"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you tried any strategies to help with insomnia, like relaxation techniques or consulting with a doctor for sleep aids?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to explore support for your insomnia, such as speaking to a sleep specialist or therapist?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Fatigue and sleep",
+    "subclass": "Insomnia"
+  },
+  {
+    "id": "PROMPT-057",
+    "topic": "Voice preservation - nan",
+    "patterns": [
+      "Voice preservation"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Have you considered preserving your voice (for example, voice banking) while it's still strong?",
+    "Prompt_Followup1": {
+      "question": "If yes, have you started the process of recording your voice for future use?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "How do you feel about using technology to communicate if speaking becomes difficult?",
+      "type": "multiple",
+      "options": [
+        "I’m comfortable with the idea of using communication devices",
+        "I have mixed feelings or am unsure about using tech to communicate",
+        "I feel uncomfortable about relying on technology to communicate"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like information on voice banking or other ways to save your speech patterns for later?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Voice preservation",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-058",
+    "topic": "Augmentative Alternative Communication - nan",
+    "patterns": [
+      "Augmentative Alternative Communication"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are you using any augmentative or alternative communication tools (like speech-generating devices or communication apps)?",
+    "Prompt_Followup1": {
+      "question": "If you have communication devices or apps, do they meet your needs, or are you finding some limitations?",
+      "type": "multiple",
+      "options": [
+        "Yes – my devices/apps meet my needs well",
+        "They help, but I’ve encountered some limitations",
+        "No – they aren’t meeting my needs adequately",
+        "Not applicable – I don’t use any devices/apps"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you been trained to use your communication device effectively, or do you feel you need more practice or support?",
+      "type": "multiple",
+      "options": [
+        "Yes – I’ve been trained and use it effectively",
+        "I could use more practice/support",
+        "No – I haven’t had any training yet",
+        "Not applicable – I don’t use a device"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Is there any additional communication aid you’re interested in or think could help",
+      "type": "multiple",
+      "options": [
+        "Yes – I’m interested in trying eye-gaze technology",
+        "Yes – I’m interested in other communication apps/devices",
+        "No – I don’t think I need additional aids",
+        "Other"
+      ]
+    },
+    "class": "Augmentative Alternative Communication",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-059",
+    "topic": "Hygiene - Oral hygiene",
+    "patterns": [
+      "Hygiene",
+      "Oral hygiene"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are you having any challenges with oral hygiene, like brushing your teeth or dental care?",
+    "Prompt_Followup1": {
+      "question": "Do you need help with brushing your teeth or have you adapted the routine to make it easier (for example, using special toothbrushes)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you experienced issues like mouth sores, dry mouth, or dental problems recently?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would assistance from a caregiver or adaptive tools (like a toothbrush with a better grip) make oral care easier for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Oral hygiene"
+  },
+  {
+    "id": "PROMPT-060",
+    "topic": "Hygiene - Showering",
+    "patterns": [
+      "Hygiene",
+      "Showering"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "How are you managing bathing or showering, and do you feel safe and comfortable while doing so? (type: multiple, options: I bathe/shower independently and feel safe; I need some help but I feel okay with bathing; Bathing is difficult or unsafe for me even with help)",
+    "Prompt_Followup1": {
+      "question": "Do you have any equipment to assist with bathing, such as a shower chair or grab bars?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Is a caregiver helping you with bathing, and if so, is that arrangement working out for both of you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any additional support or modifications to make bathing easier (like a walk-in shower or home care assistance)?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Showering"
+  },
+  {
+    "id": "PROMPT-061",
+    "topic": "Hygiene - Toileting",
+    "patterns": [
+      "Hygiene",
+      "Toileting"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "What assistance or equipment do you use for toileting, and is it working well for you? (type: multiple, options: I use some toileting aids and they work well; I use aids but still have difficulties; I don’t use any special aids)",
+    "Prompt_Followup1": {
+      "question": "Do you have grab bars, a raised toilet seat, or other aids to help you use the bathroom safely?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are you able to get to the toilet in time when you need to, or have you experienced accidents or difficulties?",
+      "type": "multiple",
+      "options": [
+        "I can reach the toilet in time with no accidents",
+        "I occasionally have difficulty or accidents",
+        "I often have accidents or need significant help",
+        "I use alternatives like a commode/urinal regularly"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "If it becomes harder to reach the bathroom, would you consider using a bedside commode or urinal, or do you feel you need more help currently?",
+      "type": "multiple",
+      "options": [
+        "Yes – I would use a commode or urinal if needed",
+        "I already use a commode/urinal or get extra help",
+        "No – I don’t feel I need those at this point"
+      ]
+    },
+    "class": "Hygiene",
+    "subclass": "Toileting"
+  },
+  {
+    "id": "PROMPT-062",
+    "topic": "Hygiene - Skin care",
+    "patterns": [
+      "Hygiene",
+      "Skin care"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are you experiencing any skin problems (such as dryness or pressure sores), and how are you taking care of your skin? (type: multiple, options: No significant skin problems; Yes – minor issues like dryness that I manage; Yes – pressure sores or other major skin issues that concern me)",
+    "Prompt_Followup1": {
+      "question": "Do you have a skincare routine or any products that help keep your skin healthy (for example, moisturizers or barrier creams)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Has being in a wheelchair or bed caused any red spots or sores on your skin?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any advice on preventing skin issues or treating any that have come up?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Skin care"
+  },
+  {
+    "id": "PROMPT-063",
+    "topic": "Hygiene - Foot and nail care",
+    "patterns": [
+      "Hygiene",
+      "Foot and nail care"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "How are you handling foot care and nail care? Is it getting difficult for you to manage those tasks yourself? (type: multiple, options: I manage foot and nail care on my own fine; I can do some but it’s becoming difficult; I cannot manage and need help with foot/nail care)",
+    "Prompt_Followup1": {
+      "question": "Are you able to trim your toenails and fingernails, or do you have someone help you with that?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you noticed any foot pain or changes (like swelling or sores) that need attention?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would a visit from a podiatrist or using adaptive nail care tools be helpful for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Foot and nail care"
+  },
+  {
+    "id": "PROMPT-064",
+    "topic": "Hygiene - Hair and beauty",
+    "patterns": [
+      "Hygiene",
+      "Hair and beauty"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Have you had to adjust how you take care of your hair or other personal grooming because of your condition?",
+    "Prompt_Followup1": {
+      "question": "Is it getting harder to do things like combing your hair, shaving, or other grooming activities on your own?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have someone to assist with your grooming, or have you found tools that make these activities easier?",
+      "type": "multiple",
+      "options": [
+        "Yes – a caregiver/family member helps me",
+        "Yes – I use adaptive tools for grooming",
+        "No – I handle grooming by myself"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Are there any aspects of personal grooming you miss or struggle with, where some support might improve how you feel?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Hair and beauty"
+  },
+  {
+    "id": "PROMPT-065",
+    "topic": "Hygiene - Dressing",
+    "patterns": [
+      "Hygiene",
+      "Dressing"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "How are you managing getting dressed and undressed each day? Has it become challenging?",
+    "Prompt_Followup1": {
+      "question": "Do you use any adaptive clothing or tools (like zipper pulls or velcro fasteners) to make dressing easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are there certain clothes or shoes that you avoid now because they're too hard to put on?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like help in finding adaptive clothing or strategies to make dressing less tiring?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Dressing"
+  },
+  {
+    "id": "PROMPT-066",
+    "topic": "Hygiene - Ear wax",
+    "patterns": [
+      "Hygiene",
+      "Ear wax"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Have you had any issues with ear care, like managing ear wax or hearing problems?",
+    "Prompt_Followup1": {
+      "question": "Is it difficult for you to clean your ears safely given your mobility, or do you have someone help you with it?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you experienced any changes in your hearing or discomfort in your ears?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to see an ear specialist or get assistance with ear care (for example, safe cleaning or hearing check-ups)?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Hygiene",
+    "subclass": "Ear wax"
+  },
+  {
+    "id": "PROMPT-067",
+    "topic": "Activities - Laundry",
+    "patterns": [
+      "Activities",
+      "Laundry"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are you able to do laundry and manage clothing care? If not, who helps you with these chores? (type: multiple, options: Yes – I handle laundry myself; I do some laundry but need help with heavier tasks; No – a family member handles the laundry; No – I use a laundry service)",
+    "Prompt_Followup1": {
+      "question": "Is doing laundry tiring or hard for you physically?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you set up any schedule or gotten any help (like family or a service) to manage laundry chores?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would it help you to have any appliances or arrangements (like a washer/dryer relocation or laundry service) to make this easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Activities",
+    "subclass": "Laundry"
+  },
+  {
+    "id": "PROMPT-068",
+    "topic": "Activities - Meal prep",
+    "patterns": [
+      "Activities",
+      "Meal prep"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "How are you handling meal preparation and cooking? Do you cook, or does someone cook for you now? (type: multiple, options: I still cook for myself regularly; I cook occasionally with some help on harder tasks; Someone else primarily cooks for me; I mostly rely on meal services/takeout instead of cooking)",
+    "Prompt_Followup1": {
+      "question": "Is it difficult to cook or prepare meals due to your symptoms (like weakness or fatigue)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have any tools or adapted utensils that make cooking safer or easier for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you be interested in services like meal delivery or having someone assist with meal prep to help out?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Activities",
+    "subclass": "Meal prep"
+  },
+  {
+    "id": "PROMPT-069",
+    "topic": "Activities - Knitting",
+    "patterns": [
+      "Activities",
+      "Knitting"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "I know you enjoyed knitting – is knitting (or similar crafts) still something you enjoy, and are you able to continue doing it? (type: multiple, options: Yes – I still enjoy knitting and can do it; I enjoy it but it has become more difficult; I can no longer do knitting due to my symptoms; I don’t participate in that activity anymore)",
+    "Prompt_Followup1": {
+      "question": "Have your symptoms made it harder to do knitting (for example, finger dexterity or arm strength issues)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you found any adaptations that allow you to keep knitting, like specialized knitting needles or taking more breaks?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to explore other hobbies or creative activities if knitting becomes too difficult, or find ways to keep it accessible for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Activities",
+    "subclass": "Knitting"
+  },
+  {
+    "id": "PROMPT-070",
+    "topic": "Activities - Parent",
+    "patterns": [
+      "Activities",
+      "Parent"
+    ],
+    "PNM Category": [],
+    "Prompt_Main": "How has your role as a parent been affected by ALS/MND, and what support might help with parenting duties? (type: multiple, options: I’m still able to handle parenting tasks as before; I can do some parenting duties but have difficulties with others; My parenting role has changed significantly and I rely on others more now)",
+    "Prompt_Followup1": {
+      "question": "Are there activities with your children that you have trouble doing now (like lifting a young child, driving them places)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you talked with your family about sharing parenting responsibilities as needed?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any outside help or resources (like counseling for your kids or family services) to support your family through this change?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Activities",
+    "subclass": "Parent"
+  },
+  {
+    "id": "PROMPT-071",
+    "topic": "Activities - Reading",
+    "patterns": [
+      "Activities",
+      "Reading"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Do you still enjoy reading, and have you had to adjust how you read (for example, by using audiobooks or e-readers)? (type: multiple, options: Yes – I enjoy reading and read in the usual way; Yes – I enjoy reading but now use audiobooks/e-books due to difficulty with physical books; I don’t read as much because it has become difficult; I wasn’t much of a reader even before)",
+    "Prompt_Followup1": {
+      "question": "Is holding a book or turning pages becoming difficult for you, and have you tried alternatives like audiobooks or e-books with large text?",
+      "type": "multiple",
+      "options": [
+        "Yes – physical books are difficult and I’ve tried audiobooks/e-books",
+        "Yes – books are hard but I haven’t tried alternatives yet",
+        "No – I can still manage physical books fine",
+        "Not applicable"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Do you find reading helps you relax or stay mentally active?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like recommendations for accessible reading materials or devices that could make reading easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Activities",
+    "subclass": "Reading"
+  },
+  {
+    "id": "PROMPT-072",
+    "topic": "Activities - Email",
+    "patterns": [
+      "Activities",
+      "Email"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "How are you managing with writing emails or using a computer to stay in touch with people? (type: multiple, options: I can still use email/computer with no problem; I can use them but it’s getting harder; It has become very difficult for me to use a computer for communication; I don’t use email/computers much at all)",
+    "Prompt_Followup1": {
+      "question": "Have you noticed any difficulty typing or using a computer due to your symptoms?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are you using any speech-to-text or other accessibility features to help you use email or a computer?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any support setting up adaptive technology to make online communication easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Activities",
+    "subclass": "Email"
+  },
+  {
+    "id": "PROMPT-073",
+    "topic": "Family and relationships counselling - Life changes",
+    "patterns": [
+      "Family and relationships counselling",
+      "Life changes"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "Would you be interested in family or relationship counseling to help you and your loved ones adjust to changes from ALS/MND?",
+    "Prompt_Followup1": {
+      "question": "Have you or your family noticed strains or misunderstandings that you'd like help working through with a counselor?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are there major life changes (like shifts in responsibilities or future plans) that your family is struggling to cope with?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Do you need any information on how to find a counselor or support group that focuses on families dealing with serious illness?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Family and relationships counselling",
+    "subclass": "Life changes"
+  },
+  {
+    "id": "PROMPT-074",
+    "topic": "Mental health counselling - Coming to terms with a terminal illness",
+    "patterns": [
+      "Mental health counselling",
+      "Coming to terms with a terminal illness"
+    ],
+    "PNM Category": "Self-actualisation",
+    "Prompt_Main": "How are you coping emotionally with having a terminal illness? Would you consider counseling to help you come to terms with it? (type: multiple, options: I feel I’m coping emotionally as well as can be expected; I often struggle to cope emotionally; I would consider seeing a counselor to help me cope; I don’t think I need counseling for this)",
+    "Prompt_Followup1": {
+      "question": "Do you find yourself struggling to accept the diagnosis or feeling overwhelmed by what it means?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you talked with any mental health professional about these feelings of coming to terms with your illness?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "What kind of support do you think might help you find peace or acceptance?",
+      "type": "multiple",
+      "options": [
+        "Talking to a therapist or counselor",
+        "Joining a support group with others in similar situations",
+        "Seeking spiritual or religious guidance",
+        "More information and understanding of the illness",
+        "I’m not sure what would help",
+        "Other"
+      ]
+    },
+    "class": "Mental health counselling",
+    "subclass": "Coming to terms with a terminal illness"
+  },
+  {
+    "id": "PROMPT-075",
+    "topic": "Mental health counselling - Purpose and meaning, legacy",
+    "patterns": [
+      "Mental health counselling",
+      "Purpose and meaning, legacy"
+    ],
+    "PNM Category": "Self-actualisation",
+    "Prompt_Main": "Have you been reflecting on your life’s purpose, meaning, or the legacy you want to leave, and would you like support in exploring these feelings? (type: multiple, options: Yes – I’ve been reflecting on purpose/legacy and would like support; Yes – I’ve been reflecting but don’t feel I need support with it; No – I haven’t been focusing on those issues)",
+    "Prompt_Followup1": {
+      "question": "Do you have certain goals or things you want to accomplish that give you a sense of purpose right now?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are there ways you're expressing or recording what matters to you (like writing letters, keeping a journal, or creating something to leave behind)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would talking to someone (like a counselor, life coach, or spiritual advisor) help in finding meaning or peace with your life's story and legacy?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Mental health counselling",
+    "subclass": "Purpose and meaning, legacy"
+  },
+  {
+    "id": "PROMPT-076",
+    "topic": "Mental health counselling - Regrets, unfinished business",
+    "patterns": [
+      "Mental health counselling",
+      "Regrets, unfinished business"
+    ],
+    "PNM Category": "Self-actualisation",
+    "Prompt_Main": "Do you have any regrets or unfinished business that weigh on you, and would you like help addressing them or finding peace with them? (type: multiple, options: Yes – I have regrets/unfinished business and I’d like help to find peace; Yes – I have some regrets but I prefer to handle them myself; No – I don’t have significant regrets weighing on me)",
+    "Prompt_Followup1": {
+      "question": "Are there any unresolved issues or relationships you'd like to mend while you can?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you shared these feelings",
+      "type": "multiple",
+      "options": [
+        "Yes – I have shared with someone I trust",
+        "No – I keep these feelings to myself"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you find it helpful to speak with a counselor or someone you trust about these regrets or things you wish to do?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Mental health counselling",
+    "subclass": "Regrets, unfinished business"
+  },
+  {
+    "id": "PROMPT-077",
+    "topic": "Social support - Activites",
+    "patterns": [
+      "Social support",
+      "Activites"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": " Do you have opportunities to take part in social activities or events, and is anything making it hard for you to join in? (type: multiple, options: Yes – I still participate socially without much trouble; I have opportunities but physical/communication challenges make it hard; No – I no longer have or pursue many social activities)",
+    "Prompt_Followup1": {
+      "question": "What kinds of social or recreational activities do you enjoy or wish you could still do?",
+      "type": "multiple",
+      "options": [
+        "Visiting with friends/family",
+        "Attending community events/outings",
+        "Hobbies or club activities",
+        "Traveling for leisure",
+        "Other"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Are mobility or communication challenges keeping you from socializing as much as you'd like?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you be interested in any community programs or assistance that help people with ALS/MND stay socially active?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Social support",
+    "subclass": "Activites"
+  },
+  {
+    "id": "PROMPT-078",
+    "topic": "Bereavement support - Anticipatory grief",
+    "patterns": [
+      "Bereavement support",
+      "Anticipatory grief"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are you or your loved ones experiencing anticipatory grief (grieving in advance), and would you want support for that? (type: multiple, options: Yes – we are feeling that kind of grief and would welcome support; Yes – we feel it but are managing without outside support; No – we haven’t experienced anticipatory grief)",
+    "Prompt_Followup1": {
+      "question": "How are you and your close ones coping with knowing what the future holds, emotionally speaking?",
+      "type": "multiple",
+      "options": [
+        "We are open with each other and supporting one another",
+        "It’s very difficult – there’s a lot of stress or we avoid the topic",
+        "Some family members cope better than others",
+        "I’m not sure how everyone is coping"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you considered joining a support group or speaking with a counselor to talk about these feelings of grief?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would it be helpful to have resources for your family to help them prepare emotionally for the changes and loss?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Bereavement support",
+    "subclass": "Anticipatory grief"
+  },
+  {
+    "id": "PROMPT-079",
+    "topic": "Peer support - Support groups",
+    "patterns": [
+      "Peer support",
+      "Support groups"
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "Have you connected with any ALS/MND support groups or peers? If not, would you be interested in that kind of support? (type: multiple, options: Yes – I’m involved with a support group or peers; No – I haven’t, but I would be interested; No – I haven’t and I’m not interested right now)",
+    "Prompt_Followup1": {
+      "question": "Do you know others with ALS/MND you can talk to, either in person or online, who understand what you're going through?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "How comfortable would you be sharing experiences or asking questions in a support group setting?",
+      "type": "multiple",
+      "options": [
+        "Very comfortable",
+        "Somewhat comfortable",
+        "Not very comfortable",
+        "Not at all comfortable"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like help finding a local or online support group for people with ALS/MND or their caregivers?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Peer support",
+    "subclass": "Support groups"
+  },
+  {
+    "id": "PROMPT-080",
+    "topic": "Cognition - Managing changes",
+    "patterns": [
+      "Cognition",
+      "Managing changes"
+    ],
+    "PNM Category": "Self-actualisation",
+    "Prompt_Main": "Have you noticed any changes in your memory, thinking, or behavior, and do you feel you have support to manage those changes? (type: multiple, options: Yes – I’ve noticed cognitive/behavior changes and have support for them; Yes – I’ve noticed changes but I don’t really have support; No – I haven’t noticed significant changes)",
+    "Prompt_Followup1": {
+      "question": "Are there specific cognitive changes that concern you",
+      "type": "multiple",
+      "options": [
+        "Yes – memory problems concern me",
+        "Yes – word-finding or language issues concern me",
+        "Yes – changes in mood or behavior concern me",
+        "No – no specific cognitive changes",
+        "Not sure"
+      ]
+    },
+    "Prompt_Followup2": {
+      "question": "Have you discussed these changes with a doctor, and were any strategies or therapies suggested to help?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would cognitive exercises, routines, or support from a psychologist be something you'd be interested in to cope with these changes?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Cognition",
+    "subclass": "Managing changes"
+  },
+  {
+    "id": "PROMPT-081",
+    "topic": "Entertainment - Arts",
+    "patterns": [
+      "Entertainment",
+      "Arts"
+    ],
+    "PNM Category": "Aesthetic",
+    "Prompt_Main": "Are you still able to enjoy art or creative activities as you used to (for example, painting, drawing, music)? (type: multiple, options: Yes – I can still enjoy my creative activities in the same way; I still enjoy them but I’ve had to adapt how I do them; No – I can’t engage in those creative activities like before)",
+    "Prompt_Followup1": {
+      "question": "Have you had to adapt how you engage in art or creative hobbies due to physical changes (for instance, using adaptive tools)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do creative outlets still interest you as much, or have you found new ones that better fit your current abilities?",
+      "type": "multiple",
+      "options": [
+        "Yes – I’m still interested in the same creative outlets",
+        "I’ve lost some interest in those activities",
+        "I’ve found new creative hobbies that suit me now"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like assistance finding ways to continue enjoying art or creativity, such as digital art tools or accessible instruments?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Arts"
+  },
+  {
+    "id": "PROMPT-082",
+    "topic": "Entertainment - Literature",
+    "patterns": [
+      "Entertainment",
+      "Literature"
+    ],
+    "PNM Category": "Aesthetic",
+    "Prompt_Main": "Do you enjoy literature or writing, and have you been able to continue with that despite your illness? (type: multiple, options: Yes – I enjoy reading/writing and I’m continuing; I still enjoy them but I do less now; No – I haven’t continued with reading or writing due to my illness)",
+    "Prompt_Followup1": {
+      "question": "Are you able to read books or write (stories, poems, journal) as much as you'd like?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you considered writing about your experiences or perhaps keeping a memoir or blog?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any tools or support, such as voice-to-text for writing or audiobooks for reading, to help you continue enjoying literature?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Literature"
+  },
+  {
+    "id": "PROMPT-083",
+    "topic": "Entertainment - Cooking",
+    "patterns": [
+      "Entertainment",
+      "Cooking"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Do you still enjoy cooking or being involved in meal preparation as an activity, not just a necessity?",
+    "Prompt_Followup1": {
+      "question": "Have you modified the way you cook or participate in cooking, perhaps by delegating tasks or using adaptive utensils?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Does cooking still bring you enjoyment, and is there a way to keep you involved even if you can’t do everything yourself?",
+      "type": "multiple",
+      "options": [
+        "Yes – I still enjoy cooking and find ways to stay involved",
+        "I enjoy it but I can’t do much now",
+        "I don’t really get enjoyment from cooking anymore"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like ideas or tools to continue exploring cooking or recipes, like easier-to-handle gadgets or simplified recipes?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Cooking"
+  },
+  {
+    "id": "PROMPT-084",
+    "topic": "Entertainment - Films",
+    "patterns": [
+      "Entertainment",
+      "Films"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are you able to enjoy watching films or TV, and do you have any special setup to make it easier or more comfortable? (type: yesno, options: Yes – I watch comfortably without special setups; Yes – I watch with a special setup to help; No – I have difficulty enjoying TV/movies now)",
+    "Prompt_Followup1": {
+      "question": "Do you use any special remote controls or smart home devices to help control the TV or streaming services?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you face any difficulties when watching TV or movies",
+      "type": "multiple",
+      "options": [
+        "Yes – I have hearing difficulties and need higher volume or subtitles",
+        "Yes – I have vision issues and need subtitles/large screen",
+        "Yes – it’s hard to sit comfortably for a whole movie",
+        "No – I don’t face significant difficulties watching TV"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you be interested in any technology (like voice-controlled remotes or mounting screens) to help you enjoy movies more?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Films"
+  },
+  {
+    "id": "PROMPT-085",
+    "topic": "Entertainment - Gaming",
+    "patterns": [
+      "Entertainment",
+      "Gaming"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "If you enjoy video games or gaming, are you still able to participate? Have you tried any adaptive gaming setups? (type: multiple, options: Yes – I still play games as before or with minor changes; Yes – I play using some adaptive equipment; No – I can’t play video games anymore due to my condition; Gaming was not a hobby of mine)",
+    "Prompt_Followup1": {
+      "question": "Have you faced any challenges using standard game controllers or keyboards as your mobility changes?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Are there specific games you miss playing, or have you switched to different games that are easier for you to manage?",
+      "type": "multiple",
+      "options": [
+        "Yes – I miss some games I used to play",
+        "Yes – I’ve started playing different types of games that are easier now",
+        "I’m still playing the same games",
+        "I’ve stopped gaming entirely"
+      ]
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like information on adaptive gaming devices (like special controllers or voice-controlled games) to help you keep playing?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Gaming"
+  },
+  {
+    "id": "PROMPT-086",
+    "topic": "Entertainment - Sports",
+    "patterns": [
+      "Entertainment",
+      "Sports"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Were sports or outdoor activities a part of your life, and are you able to engage in them in some way now? (type: multiple, options: Yes – I was active and I still participate in modified ways; I was active but now I can only do very limited activity; I’m no longer able to engage in sports/outdoor activities; Sports/outdoors were not a big part of my life)",
+    "Prompt_Followup1": {
+      "question": "Are there modified or less intense versions of sports that you've tried or considered (like wheelchair sports or assisted outings)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you have someone to help you attend sports events or participate in activities as a spectator if you can't play?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to find adaptive sports programs or leisure activities that fit your abilities and interests?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Sports"
+  },
+  {
+    "id": "PROMPT-087",
+    "topic": "Entertainment - nan",
+    "patterns": [
+      "Entertainment"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Are there other hobbies or interests that are important to you, and have you found ways to continue them or alternatives that bring you joy? (type: yesno, options: Yes – I’m managing to continue my other hobbies; No – I’ve had to give up some hobbies without alternatives)",
+    "Prompt_Followup1": {
+      "question": "Can you tell me about any hobby you really enjoy and how you are managing to keep up with it (or if you've had to stop)?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you discovered any new hobbies that suit you better now, or adaptations of old hobbies that make them doable?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Is there a hobby you'd like to try or get back into with some help or adaptive equipment?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-088",
+    "topic": "Entertainment - Dining out",
+    "patterns": [
+      "Entertainment",
+      "Dining out"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Do you still like going out to restaurants or dining out, and is there anything that makes it hard for you to do so? (type: multiple, options: Yes – I dine out and it’s not a big problem; Yes – I enjoy dining out but certain difficulties make it challenging; No – I no longer dine out because it’s too difficult or unenjoyable)",
+    "Prompt_Followup1": {
+      "question": "Are accessibility issues at restaurants (like steps, narrow spaces, or suitable seating) a challenge for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Do you feel comfortable eating in public given any eating or communication difficulties?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like assistance such as someone to go with you, or information on disability-friendly restaurants or services, to make dining out easier?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Entertainment",
+    "subclass": "Dining out"
+  },
+  {
+    "id": "PROMPT-089",
+    "topic": "Intimacy - nan",
+    "patterns": [
+      "Intimacy"
+    ],
+    "PNM Category": "Esteem",
+    "Prompt_Main": "Has ALS/MND affected your intimate or sexual life, and is this an area where you would like support or to speak with a professional? (type: multiple, options: Yes – it has affected my intimate life and I would like support; Yes – it has affected it but I do not want to seek support right now; No – it hasn’t significantly affected my intimate life; I prefer not to discuss this topic)",
+    "Prompt_Followup1": {
+      "question": "Are there specific physical challenges or concerns (like fatigue, muscle weakness, or spasticity) that make intimacy difficult?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you and your partner been able to communicate about these changes and find new ways to be close or intimate?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like to talk with a specialist (like a therapist or nurse) for strategies to maintain intimacy and address any issues?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Intimacy",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-090",
+    "topic": "Spirituality - nan",
+    "patterns": [
+      "Spirituality"
+    ],
+    "PNM Category": "Transcendence",
+    "Prompt_Main": " Do you have any spiritual or religious needs that are important to you at this stage, and are those needs being met? (type: multiple, options: Yes – I have spiritual/religious needs and they are being met; Yes – I have these needs but they are not fully met; No – I do not have particular spiritual or religious needs)",
+    "Prompt_Followup1": {
+      "question": "Are there spiritual practices or rituals (like prayer, meditation, attending services) that you want to continue or need help continuing?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you been able to talk to a faith leader or spiritual counselor about your illness and feelings, if that's something you desire?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like support in connecting with a spiritual community or resources, such as arranging home visits from someone in your faith community?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Spirituality",
+    "subclass": "nan"
+  },
+  {
+    "id": "PROMPT-091",
+    "topic": "Self-care - PALS & Caregivers ",
+    "patterns": [
+      "Self-care",
+      "PALS & Caregivers "
+    ],
+    "PNM Category": "Love & Belonging",
+    "Prompt_Main": "How are you and your caregivers taking care of yourselves emotionally and physically outside of the direct illness needs? (type: multiple, options: We have some routines/activities for self-care; We find it hard to make time for self-care; We haven’t really addressed self-care much)",
+    "Prompt_Followup1": {
+      "question": "Do you or your caregiver(s) take breaks or personal time to avoid burnout?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have you considered any counseling, relaxation techniques, or hobbies to help relieve stress for you or your caregiver?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like help finding resources (like respite care, therapy, or support groups) to support self-care for you and those caring for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Self-care",
+    "subclass": "PALS & Caregivers"
+  },
+  {
+    "id": "PROMPT-092",
+    "topic": "Self-care - Impact of ALS/MND on caregivers & family",
+    "patterns": [
+      "Self-care",
+      "Impact of ALS/MND on caregivers & family"
+    ],
+    "PNM Category": "Self-actualisation",
+    "Prompt_Main": "How do you feel your condition is affecting your family or caregivers, and does that worry you? (type: multiple, options: It’s putting a lot of strain on my family/caregivers and it concerns me; I sense some impact on them but it’s manageable; I don’t think it’s significantly affecting them; I’m not sure how it’s affecting them)",
+    "Prompt_Followup1": {
+      "question": "Do you worry about the emotional or physical strain on your loved ones who care for you?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup2": {
+      "question": "Have your family members or caregivers expressed what support they need or how they're coping with the situation?",
+      "type": "yesno",
+      "options": []
+    },
+    "Prompt_Followup3": {
+      "question": "Would you like any help opening a discussion with your family about how everyone is feeling and what support is needed for them?",
+      "type": "yesno",
+      "options": []
+    },
+    "class": "Self-care",
+    "subclass": "Impact of ALS/MND on caregivers & family"
+  }
+]

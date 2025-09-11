@@ -6,9 +6,13 @@ PRAGMA foreign_keys = ON;
 -- ---------- users ----------
 CREATE TABLE IF NOT EXISTS users (
   id              TEXT PRIMARY KEY,
-  email           TEXT UNIQUE,
-  display_name    TEXT,
-  created_at      DATETIME DEFAULT (datetime('now'))
+  email           TEXT UNIQUE NOT NULL,
+  password_hash   TEXT NOT NULL,
+  display_name    TEXT NOT NULL,
+  is_active       BOOLEAN DEFAULT 1,
+  last_login      DATETIME,
+  created_at      DATETIME DEFAULT (datetime('now')),
+  updated_at      DATETIME DEFAULT (datetime('now'))
 );
 
 -- ---------- sessions ----------
@@ -22,13 +26,18 @@ CREATE TABLE IF NOT EXISTS sessions (
   current_pnm       TEXT,
   current_term      TEXT,
   current_qid       TEXT,                -- NEW: stick to a single questionnaire across followups
-  asked_qids        TEXT,                -- JSON array
+  asked_qids        TEXT DEFAULT '[]',   -- JSON array
   followup_ptr      INTEGER DEFAULT 0,
   lock_until_turn   INTEGER DEFAULT 0,
   turn_index        INTEGER DEFAULT 0,
   last_info_turn    INTEGER DEFAULT -999,
   pnm_scores        TEXT DEFAULT '[]',   -- JSON array of PNM scores
   evidence_count    TEXT DEFAULT '{}',   -- JSON object of evidence counts
+  keyword_pool      TEXT DEFAULT '[]',   -- JSON array of routing keywords
+  ai_confidence     REAL DEFAULT 0.0,    -- AI routing confidence score
+  routing_method    TEXT DEFAULT 'exact', -- Routing method used
+  last_policy_decision TEXT DEFAULT 'structured', -- Policy decision type
+  last_dialogue_prompt TEXT,              -- Last dialogue prompt
   created_at        DATETIME DEFAULT (datetime('now')),
   updated_at        DATETIME DEFAULT (datetime('now')),
   FOREIGN KEY(user_id) REFERENCES users(id)
@@ -38,17 +47,20 @@ CREATE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id);
 
 -- ---------- turns ----------
 CREATE TABLE IF NOT EXISTS turns (
-  id           INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id   TEXT NOT NULL,
-  turn_index   INTEGER NOT NULL,      -- real turn id used by scorer
-  role         TEXT NOT NULL,         -- 'user' | 'assistant' | ...
-  text         TEXT,
-  meta         TEXT,                  -- JSON object
-  created_at   DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id      TEXT NOT NULL,
+  conversation_id TEXT,                   -- Link to conversations table
+  turn_index      INTEGER NOT NULL,       -- real turn id used by scorer
+  role            TEXT NOT NULL,          -- 'user' | 'assistant' | ...
+  text            TEXT,
+  meta            TEXT,                   -- JSON object
+  created_at      DATETIME DEFAULT (datetime('now')),
+  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
+  FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id);
+CREATE INDEX IF NOT EXISTS idx_turns_conversation_id ON turns(conversation_id);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_turns_sid_idx ON turns(session_id, turn_index);
 
 -- ---------- term_scores ----------
@@ -88,18 +100,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_dim_scores_sid_pnm
 
 -- ---------- evidence_log (optional trace) ----------
 CREATE TABLE IF NOT EXISTS evidence_log (
-  id          INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id  TEXT NOT NULL,
-  pnm         TEXT,
-  term        TEXT,
-  turn_id     INTEGER,                 -- optional FK to turns(id)
-  snippet     TEXT,
-  tag         TEXT,                    -- e.g., 'info', 'scoring'
-  created_at  DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+  id              INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id      TEXT NOT NULL,
+  conversation_id TEXT,                    -- Link to conversations
+  pnm             TEXT,
+  term            TEXT,
+  turn_id         INTEGER,                 -- optional FK to turns(id)
+  snippet         TEXT,
+  tag             TEXT,                    -- e.g., 'info', 'scoring', 'info_card'
+  card_type       TEXT,                    -- Type of info card
+  card_data       TEXT,                    -- JSON data for info cards
+  display_order   INTEGER DEFAULT 0,       -- Display order for cards
+  created_at      DATETIME DEFAULT (datetime('now')),
+  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
+  FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
 CREATE INDEX IF NOT EXISTS idx_evidence_sid ON evidence_log(session_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_conversation_id ON evidence_log(conversation_id);
 
 -- ---------- conversations ----------
 -- Table for managing conversation history and state
