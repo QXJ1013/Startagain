@@ -52,11 +52,7 @@ scoring:
 
 # FSM & Dialogue Configuration  
 dialogue:
-  # Policy ratios
-  dialogue_ratio: 0.8  # 80% dialogue
-  question_ratio: 0.2  # 20% questions
-  
-  # Turn management
+  # Turn management - intelligent mode selection without ratios
   min_dialogue_turns: 2
   max_consecutive_dialogue: 5
   max_consecutive_questions: 2
@@ -69,6 +65,10 @@ dialogue:
   min_response_length: 50
   max_response_length: 300
   preferred_response_length: 150
+  
+  # Dynamic routing thresholds
+  routing_confidence_threshold: 0.7
+  fallback_to_assessment_threshold: 0.3
 
 # AI Model Configuration
 ai_models:

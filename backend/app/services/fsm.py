@@ -202,7 +202,41 @@ class ConversationFSM:
         return self._get_default_question()
     
     def _get_default_question(self) -> Dict[str, Any]:
-        """Get default fallback question"""
+        """Get default fallback question from question bank"""
+        try:
+            # Try to get a general question from question bank
+            fallback_question = self.qb.choose_for_term('Physiological', 'Breathing', [])
+            
+            if fallback_question:
+                options = []
+                if fallback_question.options:
+                    options = [
+                        {'value': opt.get('id', opt.get('value', str(i))), 
+                         'label': opt.get('label', opt.get('text', str(opt)))} 
+                        for i, opt in enumerate(fallback_question.options)
+                    ]
+                else:
+                    # Default severity options if no specific options
+                    options = [
+                        {'value': 'minimal', 'label': 'Minimal impact'},
+                        {'value': 'moderate', 'label': 'Moderate impact'},
+                        {'value': 'significant', 'label': 'Significant impact'},
+                        {'value': 'severe', 'label': 'Severe impact'}
+                    ]
+                
+                return {
+                    'question_text': fallback_question.main,
+                    'question_type': 'assessment',
+                    'options': options,
+                    'current_pnm': 'Physiological',
+                    'current_term': 'Breathing',
+                    'question_id': fallback_question.id,
+                    'next_state': 'continue'
+                }
+        except Exception as e:
+            log.warning(f"Failed to get default question from question bank: {e}")
+        
+        # Final hardcoded fallback (should rarely be used)
         return {
             'question_text': 'How has ALS been affecting your daily activities?',
             'question_type': 'general',
@@ -245,8 +279,9 @@ class ConversationFSM:
         scores = self.conversation.assessment_state.get('scores', {})
         pnm_scores = scores.get(pnm, {})
         
-        # Simple completion check - has at least one scored term
-        return len(pnm_scores) >= 1
+        # Load completion threshold from config, fallback to 1
+        completion_threshold = getattr(self, 'evidence_threshold', 1)
+        return len(pnm_scores) >= completion_threshold
     
     def _complete_pnm(self, pnm: str) -> Dict[str, Any]:
         """Complete PNM dimension assessment"""

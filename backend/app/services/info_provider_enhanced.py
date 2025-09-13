@@ -9,7 +9,7 @@ Enhanced Information Provider with intelligent RAG.
 """
 
 from typing import List, Dict, Any, Optional
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 
 from app.config import get_settings
@@ -17,7 +17,7 @@ from app.vendors.ibm_cloud import RAGQueryClient, LLMClient
 from app.vendors.bm25 import BM25Client
 from app.utils.rerank import hybrid_fusion
 from app.utils.text import normalize_text, split_sentences, truncate_words
-# from app.services.nlg_service import NaturalLanguageGenerator, ContentContext, ContentType, ToneStyle
+from app.services.nlg_service import NaturalLanguageGenerator, enhance_info_card
 from datetime import datetime
 import logging
 
@@ -26,12 +26,27 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class InfoContext:
-    """Context for information retrieval"""
+    """Enhanced context for intelligent information retrieval and personalization"""
+    # Basic context fields (backward compatible)
     current_pnm: str
     current_term: str
     last_answer: str
     question_history: List[str]
     severity_indicators: List[str]
+    
+    # Enhanced intelligence fields
+    emotional_state: str = 'neutral'
+    user_responses: List[str] = field(default_factory=list)
+    specific_mentions: List[str] = field(default_factory=list)
+    session_stage: str = 'initial'
+    pnm_scores: Dict[str, float] = field(default_factory=dict)
+    cultural_context: str = 'general'
+    
+    # Advanced personalization fields
+    major_concerns: List[str] = field(default_factory=list)
+    is_detailed_responder: bool = False
+    symptom_changes: List[Dict[str, Any]] = field(default_factory=list)
+    total_interactions: int = 0
     
     
 class EnhancedInfoProvider:
@@ -74,7 +89,7 @@ class EnhancedInfoProvider:
         self.alpha = float(getattr(self.cfg, "HYBRID_ALPHA", 0.6))
         
         # Initialize NLG service for enhanced content quality
-        # self.nlg = NaturalLanguageGenerator()
+        self.nlg = NaturalLanguageGenerator()
         
     def maybe_provide_info(
         self,
@@ -97,20 +112,21 @@ class EnhancedInfoProvider:
             log.info("Info provider disabled")
             return []
             
-        # Check throttling - simple approach using message count
-        if not conversation or len(conversation.messages) % 5 != 0:
-            # Only provide info every 5 messages to avoid spam
+        # Check throttling - document-based architecture
+        if not conversation or not conversation.messages:
+            log.info("No conversation or messages available")
             return []
-        min_gap = int(getattr(self.cfg, "INFO_MIN_TURNS_INTERVAL", 2))
-        if hasattr(session, "last_info_turn"):
-            gap = session.turn_index - int(session.last_info_turn or -999)
-            log.info(f"Throttle check: turn_index={session.turn_index}, last_info_turn={session.last_info_turn}, gap={gap}, min_gap={min_gap}")
-            if gap < min_gap:
-                log.info(f"Throttled: gap {gap} < min_gap {min_gap}")
-                return []
+            
+        message_count = len(conversation.messages)
+        min_interval = int(getattr(self.cfg, "INFO_MIN_TURNS_INTERVAL", 2))
+        
+        # Simple throttling: provide info every 3 messages after minimum interval
+        if message_count < min_interval or message_count % 3 != 0:
+            log.info(f"Throttled: message_count={message_count}, min_interval={min_interval}")
+            return []
                 
-        # Build enhanced context
-        context = self._build_context(session, last_answer, current_pnm, current_term, storage)
+        # Build enhanced context using conversation document
+        context = self._build_context(conversation, last_answer, current_pnm, current_term, storage)
         log.info(f"Context built: {bool(context)}")
         if not context:
             log.info("No context built")
@@ -119,24 +135,16 @@ class EnhancedInfoProvider:
         # Retrieve relevant knowledge
         documents = self._retrieve_knowledge(context)
         log.info(f"Retrieved {len(documents) if documents else 0} documents")
-        if not documents:
-            log.info("No documents retrieved")
-            return []
-            
-        # Generate information cards
-        cards = self._generate_cards(documents, context)
         
-        # Update throttle state
-        if cards:
-            session.last_info_turn = session.turn_index
-            if storage:
-                self._update_session_throttle(session, storage)
-                
+        # Generate information cards (with fallback if no documents)
+        cards = self._generate_cards(documents or [], context)
+        
+        # No throttle state update needed in document-based architecture
         return cards
     
     def _build_context(
         self,
-        session,
+        conversation,
         last_answer: str,
         current_pnm: Optional[str],
         current_term: Optional[str],
@@ -154,18 +162,20 @@ class EnhancedInfoProvider:
         user_responses = []
         repeated_concerns = {}  # Track recurring themes
         symptom_progression = []  # Track how symptoms change
+        messages = []  # Initialize messages list
         
-        if storage and session.session_id:
-            turns = storage.list_turns(session.session_id)
+        if conversation and conversation.messages:
+            # Use conversation messages for analysis
+            messages = conversation.messages
             
-            # Analyze ALL turns for patterns, not just recent ones
-            for idx, turn in enumerate(turns):
-                if turn.get('role') == 'assistant':
-                    content = turn.get('content', '')
+            # Analyze ALL messages for patterns, not just recent ones
+            for idx, message in enumerate(messages):
+                if message.role == 'assistant':
+                    content = message.content
                     if content and '?' in content:
                         question_history.append(content)
-                elif turn.get('role') == 'user':
-                    content = turn.get('content', '').lower()
+                elif message.role == 'user':
+                    content = message.content.lower()
                     if content and len(content) > 10:  # Meaningful responses only
                         user_responses.append(content)
                         
@@ -203,29 +213,39 @@ class EnhancedInfoProvider:
         
         # Add comprehensive personalization data
         enhanced_context.user_responses = user_responses[-10:]  # More responses for better patterns
-        enhanced_context.session_stage = self._determine_session_stage(session, storage)
+        enhanced_context.session_stage = self._determine_session_stage(conversation, storage)
         enhanced_context.specific_mentions = self._extract_specific_mentions(last_answer)
         enhanced_context.major_concerns = major_concerns  # New: recurring themes
         enhanced_context.is_detailed_responder = is_detailed_responder  # New: response style
         enhanced_context.symptom_changes = symptom_progression[-3:]  # New: progression tracking
-        enhanced_context.total_interactions = len(turns)  # New: conversation depth
+        enhanced_context.total_interactions = len(messages) if messages else 0  # New: conversation depth
+        
+        # Add intelligence fields
+        enhanced_context.emotional_state = self._detect_emotional_state(last_answer)
+        
+        # Extract PNM scores from conversation assessment_state
+        if hasattr(conversation, 'assessment_state') and conversation.assessment_state:
+            enhanced_context.pnm_scores = conversation.assessment_state.get('scores', {})
+        
+        # Determine cultural context (simple implementation)
+        enhanced_context.cultural_context = 'general'  # Could be enhanced with user profile data
         
         return enhanced_context
     
-    def _determine_session_stage(self, session, storage) -> str:
+    def _determine_session_stage(self, conversation, storage) -> str:
         """Determine what stage of the conversation we're in for better personalization"""
-        if not storage or not session.session_id:
+        if not conversation or not conversation.messages:
             return "initial"
             
         try:
-            turns = storage.list_turns(session.session_id)
-            turn_count = len([t for t in turns if t.get('role') == 'user'])
+            messages = conversation.messages
+            user_message_count = len([m for m in messages if m.role == 'user'])
             
-            if turn_count <= 2:
+            if user_message_count <= 2:
                 return "initial"
-            elif turn_count <= 5:
+            elif user_message_count <= 5:
                 return "exploring"
-            elif turn_count <= 10:
+            elif user_message_count <= 10:
                 return "detailed"
             else:
                 return "comprehensive"
@@ -405,21 +425,29 @@ class EnhancedInfoProvider:
         context: InfoContext
     ) -> List[Dict[str, Any]]:
         """
-        Generate enhanced information cards from retrieved documents.
+        Generate enhanced information cards from retrieved documents with fallback support.
         Uses NLG service to improve RAG content quality and personalization.
         """
         cards = []
         
-        for doc in documents[:self.max_cards]:
-            # First generate card content (existing logic)
-            if self.llm and self.llm.healthy():
-                raw_card = self._generate_card_with_llm(doc, context)
-            else:
-                raw_card = self._generate_card_simple(doc, context)
-            
-            # Then enhance with NLG for better quality and personalization
-            if raw_card:
-                enhanced_card = self._enhance_card_with_nlg(raw_card, context)
+        # If we have documents, generate from them
+        if documents:
+            for doc in documents[:self.max_cards]:
+                # First generate card content (existing logic)
+                if self.llm and self.llm.healthy():
+                    raw_card = self._generate_card_with_llm(doc, context)
+                else:
+                    raw_card = self._generate_card_simple(doc, context)
+                
+                # Then enhance with NLG for better quality and personalization
+                if raw_card:
+                    enhanced_card = self._enhance_card_with_nlg(raw_card, context)
+                    cards.append(enhanced_card)
+        else:
+            # Fallback: generate template-based card when no documents available
+            fallback_card = self._generate_fallback_card(context)
+            if fallback_card:
+                enhanced_card = self._enhance_card_with_nlg(fallback_card, context)
                 cards.append(enhanced_card)
                 
         return cards
@@ -835,52 +863,22 @@ OUTPUT FORMAT (JSON only):
     
     def _enhance_card_with_nlg(self, card: Dict[str, Any], context: InfoContext) -> Dict[str, Any]:
         """
-        Enhance card content using NLG service for better language quality.
+        NLG enhancement pipeline for RAG-generated cards using new NLG service.
         """
+        if not self.nlg or not self.nlg.enabled:
+            return card
+            
         try:
-            # Build content context for NLG enhancement  
-            content_context = ContentContext(
-                user_input=f"Information about {context.current_term}",
-                current_pnm=context.current_pnm,
-                current_term=context.current_term,
-                user_emotional_state=getattr(context, 'user_emotional_state', 'neutral'),
-                target_audience="patient"
-            )
+            # Build conversation context for NLG using helper functions
+            conversation_context = {
+                'emotional_state': self._detect_emotional_state(context.last_answer),
+                'severity_level': self._calculate_severity_level(context.severity_indicators),
+                'session_stage': getattr(context, 'session_stage', 'initial'),
+                'specific_mentions': getattr(context, 'specific_mentions', [])
+            }
             
-            # Add retrieved content if available
-            content_context.retrieved_content = card.get('content', '')
-            
-            # Add conversation history if available
-            if hasattr(context, 'question_history'):
-                content_context.conversation_history = context.question_history[-3:]
-            
-            # Enhance different parts of the card
-            enhanced_card = card.copy()
-            
-            # Enhance title if present
-            if "title" in card and card["title"]:
-                enhanced_title_result = self.nlg.enhance_rag_content(
-                    card["title"], 
-                    content_context,
-                    target_format="title"
-                )
-                enhanced_card["title"] = enhanced_title_result.generated_text
-            
-            # Enhance bullets content
-            if "bullets" in card and card["bullets"]:
-                enhanced_bullets = []
-                for bullet in card["bullets"]:
-                    enhanced_bullet_result = self.nlg.enhance_rag_content(
-                        bullet,
-                        content_context,
-                        target_format="bullet"
-                    )
-                    enhanced_bullets.append(enhanced_bullet_result.generated_text)
-                enhanced_card["bullets"] = enhanced_bullets
-            
-            # Add NLG metadata
-            enhanced_card["nlg_enhanced"] = True
-            enhanced_card["enhancement_timestamp"] = datetime.now().isoformat()
+            # Use utility function for enhancement
+            enhanced_card = enhance_info_card(card, conversation_context, nlg_service=self.nlg)
             
             return enhanced_card
             
@@ -890,22 +888,91 @@ OUTPUT FORMAT (JSON only):
             card["nlg_enhanced"] = False
             return card
 
-    def _update_session_throttle(self, session, storage) -> None:
-        """Update session with last info turn"""
-        try:
-            storage.upsert_session(
-                session_id=session.session_id,
-                user_id=session.user_id,
-                status=session.status,
-                fsm_state=session.fsm_state,
-                current_pnm=session.current_pnm,
-                current_term=session.current_term,
-                current_qid=session.current_qid,
-                asked_qids=session.asked_qids,
-                followup_ptr=session.followup_ptr,
-                lock_until_turn=session.lock_until_turn,
-                turn_index=session.turn_index,
-                last_info_turn=session.last_info_turn,
-            )
-        except:
-            pass  # Non-critical
+    def _detect_emotional_state(self, text: str) -> str:
+        """Detect user emotional state from text for NLG personalization"""
+        text_lower = text.lower()
+        
+        # Anxious/worried indicators
+        if any(word in text_lower for word in ['worried', 'anxious', 'scared', 'frightened', 'overwhelmed']):
+            return 'anxious'
+        
+        # Sad/depressed indicators  
+        if any(word in text_lower for word in ['sad', 'depressed', 'hopeless', 'down', 'crying']):
+            return 'sad'
+        
+        # Frustrated/angry indicators
+        if any(word in text_lower for word in ['frustrated', 'angry', 'mad', 'annoyed', 'irritated']):
+            return 'frustrated'
+        
+        # Information-seeking indicators
+        if any(word in text_lower for word in ['want to know', 'need information', 'tell me', 'explain']):
+            return 'information_seeking'
+        
+        return 'neutral'
+    
+    def _calculate_severity_level(self, severity_indicators: List[str]) -> str:
+        """Calculate severity level from indicators for NLG adaptation"""
+        if not severity_indicators:
+            return 'moderate'
+        
+        high_count = sum(1 for indicator in severity_indicators if indicator.startswith('high:'))
+        low_count = sum(1 for indicator in severity_indicators if indicator.startswith('low:'))
+        
+        if high_count >= 2:
+            return 'high'
+        elif low_count >= 2:
+            return 'low'
+        else:
+            return 'moderate'
+    
+    def _generate_fallback_card(self, context: InfoContext) -> Dict[str, Any]:
+        """Generate fallback information card when no documents are retrieved"""
+        from app.config import get_settings
+        cfg = get_settings()
+        
+        # Get fallback templates from config
+        fallback_templates = getattr(cfg, 'INFO_FALLBACK_TEMPLATES', {})
+        
+        # Determine which template to use based on current term/PNM
+        term_lower = context.current_term.lower()
+        template_bullets = []
+        
+        if 'breathing' in term_lower:
+            template_bullets = fallback_templates.get('breathing', [
+                "Consider discussing breathing support options with your respiratory therapist.",
+                "Many people find that positioning with extra pillows helps improve comfort during sleep.",
+                "Regular monitoring of breathing patterns can help your care team adjust treatments."
+            ])
+        elif 'swallow' in term_lower:
+            template_bullets = fallback_templates.get('swallowing', [
+                "Work with a speech-language pathologist to assess safe swallowing strategies.",
+                "Consider modifying food textures and liquid consistency based on professional guidance.",
+                "Many families find meal planning and preparation techniques help ensure proper nutrition."
+            ])
+        elif 'mobility' in term_lower or 'walk' in term_lower:
+            template_bullets = fallback_templates.get('mobility', [
+                "Physical therapy can help maintain strength and develop adaptive movement strategies.",
+                "Consider mobility aids and equipment that can support independence and safety.",
+                "Many people find that pacing activities throughout the day helps manage energy."
+            ])
+        else:
+            # Default template
+            default_templates = fallback_templates.get('default', [
+                "Consider discussing {term} management with your ALS care team.",
+                "Many people find that working with specialists helps develop effective strategies for {term}.",
+                "Regular monitoring and adjustment of approaches can help optimize {term} management."
+            ])
+            template_bullets = [t.format(term=context.current_term) for t in default_templates]
+        
+        # Create fallback card
+        fallback_card = {
+            "title": f"Managing {context.current_term} with ALS",
+            "bullets": template_bullets[:3],  # Limit to 3 bullets
+            "source": "template_fallback",
+            "pnm": context.current_pnm,
+            "term": context.current_term
+        }
+        
+        return fallback_card
+    
+    # _update_session_throttle method removed - not needed in document-based architecture

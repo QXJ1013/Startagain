@@ -1,0 +1,19 @@
+# --- Database ---
+DB_PATH=app/data/als.db
+DB_SCHEMA_PATH=app/data/schema.sql
+
+# --- IBM watsonx ---
+WATSONX_URL=https://eu-gb.ml.cloud.ibm.com
+WATSONX_APIKEY=2WFP6H8wNxt60gCkHU727aGjKeJ68MS45S92bbILBy4z
+SPACE_ID=f68919bd-af1c-49cb-97e4-49c68748b88b
+PROJECT_ID=0989d54e-bebc-4a33-b6bd-c3331cdef4d9
+ENABLE_SEMANTIC_BACKOFF=true
+# --- Vector Indexes ---
+BACKGROUND_VECTOR_INDEX_ID=b3c5ee54-0637-487c-b9d7-e805713a1724
+QUESTION_VECTOR_INDEX_ID=3123bb7e-5046-4fc2-a1e1-a984a3872733
+
+BM25_ENABLED=true
+BM25_BG_INDEX_DIR=app/data/bm25_bg
+BM25_Q_INDEX_DIR=app/data/bm25_q
+
+VITE_API_BASE=http://localhost:8000

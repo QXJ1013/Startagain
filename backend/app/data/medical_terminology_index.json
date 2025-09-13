@@ -1,0 +1,446 @@
+{
+  "medical_terminology_index": {
+    "mobility_expressions": [
+      {
+        "expression": "walking becoming difficult",
+        "domain": "Mobility",
+        "category": "progressive_decline",
+        "description": "indicates mobility decline and ambulatory function deterioration",
+        "keywords": ["walking", "difficult", "becoming", "mobility", "movement", "ambulatory"]
+      },
+      {
+        "expression": "walking is becoming difficult",
+        "domain": "Mobility",
+        "category": "progressive_decline", 
+        "description": "mobility function deterioration with progressive difficulty",
+        "keywords": ["walking", "becoming", "difficult"]
+      },
+      {
+        "expression": "trouble with movement",
+        "domain": "Mobility", 
+        "category": "motor_function",
+        "description": "suggests motor function loss and mobility challenges",
+        "keywords": ["trouble", "movement", "motor", "mobility", "coordination"]
+      },
+      {
+        "expression": "getting around harder",
+        "domain": "Mobility",
+        "category": "functional_decline",
+        "description": "mobility deterioration pattern indicating reduced ambulatory capacity",
+        "keywords": ["getting around", "harder", "mobility", "ambulatory", "movement"]
+      },
+      {
+        "expression": "can't walk as far",
+        "domain": "Mobility",
+        "category": "capacity_reduction", 
+        "description": "ambulatory capacity reduction indicating mobility function decline",
+        "keywords": ["walk", "far", "capacity", "endurance", "mobility", "ambulatory"]
+      },
+      {
+        "expression": "having trouble walking",
+        "domain": "Mobility",
+        "category": "progressive_decline",
+        "description": "indicates walking difficulty and mobility function decline", 
+        "keywords": ["trouble", "walking", "mobility", "movement"]
+      },
+      {
+        "expression": "getting around is harder now",
+        "domain": "Mobility",
+        "category": "functional_decline",
+        "description": "mobility deterioration with increased difficulty",
+        "keywords": ["getting around", "harder", "mobility", "movement", "ambulatory"]
+      },
+      {
+        "expression": "moving around is difficult",
+        "domain": "Mobility", 
+        "category": "motor_function",
+        "description": "movement difficulty indicating mobility function decline",
+        "keywords": ["moving around", "difficult", "mobility", "movement", "motor"]
+      },
+      {
+        "expression": "walking has become challenging",
+        "domain": "Mobility",
+        "category": "progressive_decline", 
+        "description": "walking function deterioration with increased challenge",
+        "keywords": ["walking", "challenging", "mobility", "ambulatory"]
+      },
+      {
+        "expression": "struggle with walking now",
+        "domain": "Mobility",
+        "category": "functional_difficulty",
+        "description": "walking struggles indicating mobility decline",
+        "keywords": ["struggle", "walking", "mobility", "movement"]
+      },
+      {
+        "expression": "movement is getting harder",
+        "domain": "Mobility",
+        "category": "progressive_decline",
+        "description": "general movement difficulty indicating motor function loss", 
+        "keywords": ["movement", "harder", "mobility", "motor", "function"]
+      },
+      {
+        "expression": "walking ability is declining",
+        "domain": "Mobility",
+        "category": "capacity_reduction",
+        "description": "walking capacity decline and ambulatory function deterioration",
+        "keywords": ["walking", "ability", "declining", "mobility", "ambulatory"]
+      },
+      {
+        "expression": "need assistance with moving",
+        "domain": "Mobility",
+        "category": "support_requirement",
+        "description": "mobility assistance requirement indicating function decline",
+        "keywords": ["assistance", "moving", "mobility", "help", "support"]
+      },
+      {
+        "expression": "balance problems when walking",
+        "domain": "Mobility", 
+        "category": "stability_issues",
+        "description": "balance difficulties during walking indicating mobility challenges",
+        "keywords": ["balance", "problems", "walking", "mobility", "stability"]
+      },
+      {
+        "expression": "barely walk to the kitchen",
+        "domain": "Mobility",
+        "category": "capacity_limitation",
+        "description": "severely limited walking capacity indicating advanced mobility decline",
+        "keywords": ["barely", "walk", "mobility", "limited", "capacity"]
+      },
+      {
+        "expression": "legs feel weak when walking", 
+        "domain": "Mobility",
+        "category": "weakness_pattern",
+        "description": "leg weakness during walking indicating mobility function loss",
+        "keywords": ["legs", "weak", "walking", "mobility", "strength"]
+      },
+      {
+        "expression": "getting out of bed is hard",
+        "domain": "Mobility",
+        "category": "transfer_difficulty",
+        "description": "bed transfer difficulty indicating mobility and transfer function decline", 
+        "keywords": ["getting out", "bed", "hard", "transfer", "mobility"]
+      },
+      {
+        "expression": "need help getting up from chairs",
+        "domain": "Mobility",
+        "category": "transfer_assistance",
+        "description": "chair transfer assistance requirement indicating mobility decline",
+        "keywords": ["help", "getting up", "chairs", "transfer", "mobility"]
+      },
+      {
+        "expression": "transferring to the wheelchair is difficult",
+        "domain": "Mobility",
+        "category": "transfer_difficulty", 
+        "description": "wheelchair transfer difficulty indicating advanced mobility needs",
+        "keywords": ["transferring", "wheelchair", "difficult", "transfer", "mobility"]
+      },
+      {
+        "expression": "standing up from sitting is challenging",
+        "domain": "Mobility",
+        "category": "postural_transition",
+        "description": "sit-to-stand difficulty indicating mobility and strength decline",
+        "keywords": ["standing up", "sitting", "challenging", "mobility", "transfer"]
+      },
+      {
+        "expression": "moving from bed to chair is hard", 
+        "domain": "Mobility",
+        "category": "transfer_difficulty",
+        "description": "bed-to-chair transfer difficulty indicating mobility function loss",
+        "keywords": ["moving", "bed", "chair", "hard", "transfer", "mobility"]
+      }
+    ],
+    "hand_function_expressions": [
+      {
+        "expression": "hands getting weaker",
+        "domain": "Hand function",
+        "category": "strength_decline",
+        "description": "indicates hand strength deterioration and grip function loss",
+        "keywords": ["hands", "weaker", "strength", "grip", "dexterity", "motor"]
+      },
+      {
+        "expression": "trouble gripping things",
+        "domain": "Hand function",
+        "category": "grip_dysfunction",
+        "description": "suggests grip strength loss and fine motor skill deterioration", 
+        "keywords": ["gripping", "trouble", "grip", "hold", "grasp", "strength"]
+      },
+      {
+        "expression": "drop things frequently",
+        "domain": "Hand function",
+        "category": "grip_weakness",
+        "description": "frequent dropping indicating grip strength loss and hand function decline",
+        "keywords": ["drop", "things", "frequently", "grip", "hand", "strength"]
+      },
+      {
+        "expression": "holding utensils is difficult",
+        "domain": "Hand function", 
+        "category": "functional_difficulty",
+        "description": "utensil holding difficulty indicating hand function and grip decline",
+        "keywords": ["holding", "utensils", "difficult", "grip", "hand", "dexterity"]
+      },
+      {
+        "expression": "struggle with zippers",
+        "domain": "Hand function",
+        "category": "fine_motor_decline",
+        "description": "zipper manipulation difficulty indicating fine motor skill loss",
+        "keywords": ["struggle", "zippers", "fine motor", "dexterity", "hand"]
+      },
+      {
+        "expression": "picking up small objects is hard",
+        "domain": "Hand function",
+        "category": "precision_grip_loss",
+        "description": "small object manipulation difficulty indicating precision grip decline",
+        "keywords": ["picking up", "small objects", "hard", "precision", "grip", "dexterity"]
+      },
+      {
+        "expression": "typing has become very difficult",
+        "domain": "Hand function",
+        "category": "fine_motor_decline", 
+        "description": "typing difficulty indicating fine motor skill and hand function loss",
+        "keywords": ["typing", "difficult", "fine motor", "dexterity", "hand", "fingers"]
+      },
+      {
+        "expression": "need help with buttons and clasps",
+        "domain": "Hand function",
+        "category": "fine_motor_assistance",
+        "description": "button/clasp assistance need indicating fine motor function decline",
+        "keywords": ["help", "buttons", "clasps", "fine motor", "dexterity", "hand"]
+      }
+    ],
+    "breathing_expressions": [
+      {
+        "expression": "help with breathing",
+        "domain": "Breathing",
+        "category": "respiratory_support",
+        "description": "indicates respiratory function decline requiring assistance",
+        "keywords": ["breathing", "help", "respiratory", "air", "oxygen", "lung"]
+      },
+      {
+        "expression": "shortness of breath",
+        "domain": "Breathing", 
+        "category": "respiratory_distress",
+        "description": "respiratory distress indicating breathing function compromise",
+        "keywords": ["shortness", "breath", "breathless", "respiratory", "dyspnea"]
+      }
+    ],
+    "swallowing_expressions": [
+      {
+        "expression": "swallowing pills hard",
+        "domain": "Swallowing",
+        "category": "dysphagia",
+        "description": "indicates swallowing function decline and dysphagia symptoms",
+        "keywords": ["swallowing", "pills", "hard", "dysphagia", "eating", "choking"]
+      },
+      {
+        "expression": "choking when eating",
+        "domain": "Swallowing",
+        "category": "aspiration_risk",
+        "description": "aspiration risk indicating severe swallowing dysfunction",
+        "keywords": ["choking", "eating", "aspiration", "swallowing", "dysphagia"]
+      }
+    ],
+    "independence_expressions": [
+      {
+        "expression": "losing independence",
+        "domain": "Independence",
+        "category": "autonomy_decline",
+        "description": "indicates autonomy loss and functional independence deterioration",
+        "keywords": ["independence", "losing", "autonomous", "self", "maintain"]
+      }
+    ],
+    "cognitive_emotional_expressions": [
+      {
+        "expression": "having trouble with memory",
+        "domain": "Cognitive", 
+        "category": "memory_decline",
+        "description": "memory difficulties indicating cognitive function changes",
+        "keywords": ["trouble", "memory", "cognitive", "remember", "recall"]
+      },
+      {
+        "expression": "decision making is harder",
+        "domain": "Cognitive",
+        "category": "executive_function",
+        "description": "decision-making difficulty indicating cognitive processing changes",
+        "keywords": ["decision", "making", "harder", "cognitive", "thinking"]
+      },
+      {
+        "expression": "feel confused sometimes",
+        "domain": "Cognitive",
+        "category": "cognitive_clarity", 
+        "description": "confusion episodes indicating cognitive processing difficulties",
+        "keywords": ["confused", "sometimes", "cognitive", "clarity", "thinking"]
+      },
+      {
+        "expression": "thinking isn't as clear",
+        "domain": "Cognitive",
+        "category": "mental_clarity",
+        "description": "reduced mental clarity indicating cognitive function changes",
+        "keywords": ["thinking", "clear", "cognitive", "mental", "clarity"]
+      },
+      {
+        "expression": "feel confused and thinking not clear",
+        "domain": "Cognitive", 
+        "category": "cognitive_clarity",
+        "description": "confusion with unclear thinking indicating cognitive difficulties", 
+        "keywords": ["confused", "thinking", "clear", "cognitive", "mental"]
+      },
+      {
+        "expression": "worried about my condition",
+        "domain": "Esteem",
+        "category": "health_anxiety",
+        "description": "health-related worry indicating emotional distress and concern",
+        "keywords": ["worried", "condition", "anxiety", "concern", "emotional"]
+      },
+      {
+        "expression": "feel anxious about the future",
+        "domain": "Esteem", 
+        "category": "future_anxiety",
+        "description": "future-related anxiety indicating emotional distress and uncertainty",
+        "keywords": ["anxious", "future", "anxiety", "worry", "emotional"]
+      },
+      {
+        "expression": "depression is affecting me",
+        "domain": "Esteem",
+        "category": "mood_impact",
+        "description": "depression impact indicating significant emotional distress",
+        "keywords": ["depression", "affecting", "mood", "emotional", "mental"]
+      },
+      {
+        "expression": "depression affecting me and self-esteem declined",
+        "domain": "Esteem",
+        "category": "mood_impact",
+        "description": "depression with self-esteem decline indicating confidence concerns",
+        "keywords": ["depression", "affecting", "self-esteem", "declined", "confidence"]
+      },
+      {
+        "expression": "feel isolated from others",
+        "domain": "Love & Belonging",
+        "category": "social_isolation", 
+        "description": "social isolation feeling indicating relationship and connection concerns",
+        "keywords": ["isolated", "others", "social", "connection", "belonging"]
+      },
+      {
+        "expression": "isolated from others and relationships strained",
+        "domain": "Love & Belonging", 
+        "category": "social_isolation",
+        "description": "social isolation with relationship strain indicating isolation concerns",
+        "keywords": ["isolated", "others", "relationships", "strained", "social"]
+      },
+      {
+        "expression": "self-esteem has declined",
+        "domain": "Esteem",
+        "category": "self_worth",
+        "description": "self-esteem decline indicating confidence and self-worth concerns",
+        "keywords": ["self-esteem", "declined", "confidence", "worth", "self"]
+      },
+      {
+        "expression": "don't feel confident anymore",
+        "domain": "Esteem",
+        "category": "confidence_loss",
+        "description": "confidence loss indicating self-esteem and capability concerns",
+        "keywords": ["confident", "anymore", "confidence", "self-esteem", "capability"]
+      },
+      {
+        "expression": "family relationships are strained",
+        "domain": "Love & Belonging",
+        "category": "relationship_stress",
+        "description": "family relationship strain indicating social support challenges", 
+        "keywords": ["family", "relationships", "strained", "social", "support"]
+      },
+      {
+        "expression": "concerned about being a burden",
+        "domain": "Esteem",
+        "category": "burden_concern",
+        "description": "burden concerns indicating self-worth and impact on others worries",
+        "keywords": ["concerned", "burden", "worry", "impact", "others"]
+      }
+    ],
+    "pain_comfort_expressions": [
+      {
+        "expression": "experiencing muscle pain",
+        "domain": "Pain",
+        "category": "muscle_discomfort",
+        "description": "muscle pain indicating physical discomfort and pain management needs",
+        "keywords": ["experiencing", "muscle", "pain", "discomfort", "ache"]
+      },
+      {
+        "expression": "cramping in my legs", 
+        "domain": "Pain",
+        "category": "spasticity_cramp",
+        "description": "leg cramping indicating spasticity and muscle pain issues",
+        "keywords": ["cramping", "legs", "pain", "spasticity", "muscle"]
+      },
+      {
+        "expression": "discomfort in my joints",
+        "domain": "Pain",
+        "category": "joint_discomfort",
+        "description": "joint discomfort indicating pain and mobility-related discomfort",
+        "keywords": ["discomfort", "joints", "pain", "ache", "stiffness"]
+      },
+      {
+        "expression": "pain management is important",
+        "domain": "Pain",
+        "category": "pain_management_need",
+        "description": "pain management priority indicating significant pain concerns",
+        "keywords": ["pain", "management", "important", "control", "relief"]
+      },
+      {
+        "expression": "need help with comfort measures",
+        "domain": "Comfort",
+        "category": "comfort_support",
+        "description": "comfort assistance need indicating physical comfort and support requirements",
+        "keywords": ["help", "comfort", "measures", "support", "ease"]
+      },
+      {
+        "expression": "muscles ache constantly",
+        "domain": "Pain",
+        "category": "chronic_muscle_pain",
+        "description": "constant muscle aching indicating chronic pain management needs",
+        "keywords": ["muscles", "ache", "constantly", "pain", "chronic"]
+      },
+      {
+        "expression": "have spasticity and pain",
+        "domain": "Pain",
+        "category": "spasticity_pain",
+        "description": "spasticity with pain indicating neuromuscular discomfort",
+        "keywords": ["spasticity", "pain", "muscle", "spasm", "discomfort"]
+      }
+    ],
+    "symptom_progression_patterns": [
+      {
+        "pattern": "becoming + [difficulty/hard/trouble] + [action]",
+        "interpretation": "progressive function decline",
+        "example": "walking becoming difficult = mobility function decline"
+      },
+      {
+        "pattern": "can't + [action] + anymore",
+        "interpretation": "complete function loss", 
+        "example": "can't button shirt anymore = fine motor function loss"
+      },
+      {
+        "pattern": "trouble + [gerund_action]",
+        "interpretation": "functional difficulty",
+        "example": "trouble gripping = grip function impairment"
+      },
+      {
+        "pattern": "[body_part] + getting + [weaker/harder]",
+        "interpretation": "progressive weakness",
+        "example": "hands getting weaker = hand strength decline"
+      }
+    ],
+    "competing_categories_resolution": [
+      {
+        "primary_domain": "Mobility",
+        "competing_with": "Swallowing",
+        "resolution_keywords": ["walking", "movement", "gait", "ambulatory", "transfer"],
+        "rule": "If mobility keywords present with 'difficulty', prioritize Mobility over Swallowing"
+      },
+      {
+        "primary_domain": "Hand function", 
+        "competing_with": "Swallowing",
+        "resolution_keywords": ["hand", "grip", "grasp", "finger", "dexterity"],
+        "rule": "If hand keywords present with 'trouble', prioritize Hand function over Swallowing"
+      }
+    ]
+  }
+}

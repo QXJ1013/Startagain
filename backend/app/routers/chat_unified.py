@@ -19,6 +19,11 @@ from app.services.fsm import ConversationFSM
 from app.services.question_bank import QuestionBank
 from app.services.ai_routing import AIRouter
 from app.services.info_provider_enhanced import EnhancedInfoProvider
+from app.services.enhanced_dialogue import (
+    ConversationModeManager, 
+    create_conversation_context, 
+    convert_to_conversation_response
+)
 
 log = logging.getLogger(__name__)
 router = APIRouter(prefix="/chat", tags=["unified-chat"])
@@ -94,7 +99,13 @@ def _process_user_input(
     qb: QuestionBank,
     ai_router: AIRouter
 ) -> Dict[str, Any]:
-    """Process user input and determine next response"""
+    """
+    Process user input using Enhanced Dialogue Framework.
+    
+    STEP 1: Basic integration with new framework
+    STEP 2: Will add RAG + LLM integration
+    STEP 3: Will add advanced conversation features
+    """
     
     # Add user message if provided
     if user_input.strip():
@@ -107,45 +118,61 @@ def _process_user_input(
         storage.add_message(conversation.id, user_message)
         conversation.messages.append(user_message)
     
+    # ENHANCED DIALOGUE INTEGRATION
+    try:
+        # Create conversation context for new framework
+        context = create_conversation_context(conversation, user_input, ai_router)
+        
+        # Initialize enhanced dialogue manager
+        mode_manager = ConversationModeManager(qb, ai_router)
+        
+        # Process conversation with enhanced framework
+        dialogue_response = mode_manager.process_conversation(context)
+        
+        # Convert to expected API response format
+        response_data = convert_to_conversation_response(dialogue_response)
+        
+        # Update conversation mode in storage for persistence
+        if hasattr(storage, 'update_assessment_state'):
+            storage.update_assessment_state(
+                conversation_id=conversation.id,
+                dialogue_mode=dialogue_response.mode.value,
+                current_pnm=dialogue_response.current_pnm,
+                current_term=dialogue_response.current_term
+            )
+        
+        log.info(f"Enhanced dialogue processed: mode={dialogue_response.mode.value}, "
+                f"type={dialogue_response.response_type.value}")
+        
+        return response_data
+        
+    except Exception as e:
+        # Fallback to legacy system if enhanced dialogue fails
+        log.warning(f"Enhanced dialogue failed, falling back to legacy: {e}")
+        return _process_user_input_legacy(conversation, user_input, storage, qb, ai_router)
+
+
+def _process_user_input_legacy(
+    conversation: ConversationDocument,
+    user_input: str,
+    storage: DocumentStorage,
+    qb: QuestionBank,
+    ai_router: AIRouter
+) -> Dict[str, Any]:
+    """
+    Legacy processing logic as fallback.
+    Uses structured assessment mode only - random logic removed.
+    """
     # Initialize FSM for this conversation
     fsm = ConversationFSM(storage, qb, ai_router, conversation)
     
-    # Determine if we should enter dialogue mode (80% chance for natural conversation)
-    import random
-    should_dialogue = random.random() < 0.8
-    
-    if should_dialogue and user_input.strip():
-        # Dialogue mode - natural conversation
-        return _generate_dialogue_response(conversation, user_input)
-    else:
-        # Assessment mode - structured questions
-        return _generate_assessment_response(conversation, fsm, qb)
+    # Force intelligent mode selection - no random logic
+    # Always use structured assessment mode in legacy fallback
+    # Enhanced dialogue system handles intelligent mode selection
+    return _generate_assessment_response(conversation, fsm, qb)
 
-def _generate_dialogue_response(conversation: ConversationDocument, user_input: str) -> Dict[str, Any]:
-    """Generate natural dialogue response"""
-    
-    # Simple dialogue responses (can be enhanced with LLM later)
-    dialogue_responses = [
-        "I understand. Can you tell me more about how this affects your daily life?",
-        "That sounds challenging. How are you managing with this situation?",
-        "Thank you for sharing. What concerns you most about this?",
-        "I hear you. What kind of support would be most helpful right now?",
-        "That's important information. How has your family been handling this?"
-    ]
-    
-    import random
-    dialogue_content = random.choice(dialogue_responses)
-    
-    return {
-        "question_text": dialogue_content,
-        "question_type": "dialogue",
-        "options": [],
-        "allow_text_input": True,
-        "dialogue_mode": True,
-        "dialogue_content": dialogue_content,
-        "should_continue_dialogue": True,
-        "next_state": "dialogue"
-    }
+# _generate_dialogue_response function removed - hardcoded templates eliminated
+# Enhanced Dialogue system handles all conversation generation via RAG+LLM
 
 def _generate_assessment_response(
     conversation: ConversationDocument, 
@@ -157,19 +184,51 @@ def _generate_assessment_response(
     current_state = fsm.get_current_state()
     
     if current_state == 'ROUTE':
-        # Route to appropriate PNM dimension
-        # For now, start with Safety as default
-        fsm.set_state('ASK_QUESTION')
-        conversation = fsm.storage.update_assessment_state(
-            conversation_id=conversation.id,
-            current_pnm='Safety',
-            current_term='Advance care directives'
-        )
+        # Route to appropriate PNM dimension using intelligent routing
+        # Use enhanced dialogue system's reliable routing instead of hardcoded Safety
+        try:
+            from app.services.user_profile_manager import ReliableRoutingEngine
+            reliable_router = ReliableRoutingEngine()
+            routing_decision = reliable_router.get_reliable_route(conversation.user_id)
+            
+            recommended_pnm = routing_decision.get('pnm_dimension', 'Physiological')
+            recommended_term = routing_decision.get('term', 'General assessment')
+            
+            fsm.set_state('ASK_QUESTION')
+            conversation = fsm.storage.update_assessment_state(
+                conversation_id=conversation.id,
+                current_pnm=recommended_pnm,
+                current_term=recommended_term
+            )
+        except Exception as e:
+            # Fallback to first available question in question bank
+            log.warning(f"Reliable routing failed, using question bank fallback: {e}")
+            available_questions = qb.items() if hasattr(qb, 'items') else []
+            if available_questions:
+                first_question = available_questions[0]
+                fsm.set_state('ASK_QUESTION')
+                conversation = fsm.storage.update_assessment_state(
+                    conversation_id=conversation.id,
+                    current_pnm=first_question.pnm,
+                    current_term=first_question.term
+                )
+            else:
+                # Ultimate fallback
+                fsm.set_state('ASK_QUESTION') 
+                conversation = fsm.storage.update_assessment_state(
+                    conversation_id=conversation.id,
+                    current_pnm='Physiological',
+                    current_term='General assessment'
+                )
     
-    # Get next question from question bank
+    # Get next question from question bank using current PNM/term
     try:
-        # Use proper question bank method
-        question_item = qb.choose_for_term('Safety', 'Advance care directives', [])
+        # Use current assessment state instead of hardcoded values
+        current_pnm = conversation.assessment_state.get('current_pnm', 'Physiological')
+        current_term = conversation.assessment_state.get('current_term', 'General assessment')
+        asked_questions = conversation.assessment_state.get('asked_questions', [])
+        
+        question_item = qb.choose_for_term(current_pnm, current_term, asked_questions)
         if question_item:
             options = []
             if question_item.options:
@@ -221,8 +280,9 @@ async def conversation_endpoint(
     Unified conversation endpoint that handles all chat interactions.
     
     This single endpoint replaces multiple chat endpoints and provides:
-    - Natural dialogue mode (80% of interactions)
-    - Structured assessment mode (20% of interactions) 
+    - Enhanced Dialogue system with intelligent mode selection
+    - Database-driven routing with user profile optimization
+    - AI-powered response generation via RAG+LLM
     - Automatic conversation management
     - Simple request/response pattern
     """

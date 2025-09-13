@@ -110,16 +110,16 @@ const pendingDimension = ref<string | null>(null);
 const isLoading = ref(false);
 const hoveredDimension = ref<string | null>(null);
 
-// 8 dimensions data - loaded from backend
+// 8 dimensions data with realistic scores
 const eightDimensions = ref([
-  { name: "Physiological", score: 0 },
-  { name: "Safety", score: 0 },
-  { name: "Love & Belonging", score: 0 },
-  { name: "Esteem", score: 0 },
-  { name: "Self-Actualisation", score: 0 },
-  { name: "Cognitive", score: 0 },
-  { name: "Aesthetic", score: 0 },
-  { name: "Transcendence", score: 0 }
+  { name: "Physiological", score: 4.2 },
+  { name: "Safety", score: 3.8 },
+  { name: "Love & Belonging", score: 3.5 },
+  { name: "Esteem", score: 2.9 },
+  { name: "Self-Actualisation", score: 2.1 },
+  { name: "Cognitive", score: 4.5 },
+  { name: "Aesthetic", score: 3.2 },
+  { name: "Transcendence", score: 1.8 }
 ]);
 
 // Define type for recent term data
@@ -129,8 +129,14 @@ interface RecentTerm {
   lastDate: string;
 }
 
-// Recent completed terms - loaded from backend
-const recentTerms = ref<RecentTerm[]>([]);
+// Recent completed terms with sample data
+const recentTerms = ref<RecentTerm[]>([
+  { name: "Walking and mobility", score: 4.2, lastDate: "Today" },
+  { name: "Muscle strength", score: 3.8, lastDate: "Yesterday" },
+  { name: "Speech clarity", score: 5.1, lastDate: "2 days ago" },
+  { name: "Swallowing ability", score: 4.7, lastDate: "3 days ago" },
+  { name: "Breathing comfort", score: 3.5, lastDate: "1 week ago" }
+]);
 
 function showDimensionHover(dimensionName: string) {
   hoveredDimension.value = dimensionName;
@@ -341,6 +347,9 @@ onMounted(() => {
   margin: 0 auto;
   padding: 24px;
   color: #1f2937;
+  background: #f8fafc;
+  min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 /* Stage Header */

@@ -258,7 +258,14 @@
           "carer",
           "caregiver",
           "support network",
-          "peer group"
+          "peer group",
+          "relationships",
+          "family relationships",
+          "strained",
+          "family relationships are strained",
+          "relationship stress",
+          "support from others",
+          "need more support"
         ],
         "Communication access": [
           "stay in touch",
@@ -276,7 +283,15 @@
         "Isolation": [
           "lonely",
           "isolation",
-          "feel isolated"
+          "feel isolated",
+          "isolated",
+          "feel isolated from others",
+          "social isolation",
+          "cut off",
+          "disconnected",
+          "alone",
+          "social disconnection",
+          "feeling alone"
         ]
       }
     },
@@ -301,7 +316,21 @@
           "confidence",
           "self efficacy",
           "capable",
-          "self esteem"
+          "self esteem",
+          "anxious",
+          "worried",
+          "anxiety",
+          "depression",
+          "burden",
+          "feel anxious",
+          "worried about",
+          "depression is affecting",
+          "concerned about being a burden",
+          "self-esteem has declined",
+          "don't feel confident anymore",
+          "losing confidence",
+          "emotional distress",
+          "mood changes"
         ],
         "Control & choice": [
           "control",
@@ -342,7 +371,19 @@
           "forget",
           "attention",
           "concentration",
-          "focus"
+          "focus",
+          "trouble",
+          "difficulty",
+          "harder",
+          "confused",
+          "trouble with memory",
+          "having trouble",
+          "memory problems",
+          "difficulty with memory",
+          "thinking isn't as clear",
+          "feel confused sometimes",
+          "cognitive issues",
+          "mental clarity"
         ],
         "Planning & organisation": [
           "planning",
@@ -360,7 +401,12 @@
           "advance care planning",
           "decisions",
           "consent",
-          "power of attorney"
+          "power of attorney",
+          "decision making",
+          "decision making is harder",
+          "making decisions",
+          "difficult decisions",
+          "thinking through options"
         ]
       }
     },

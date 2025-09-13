@@ -26,6 +26,7 @@
         <!-- User Message -->
         <div v-if="message.type === 'user'" class="user-message">
           <div class="message-content">{{ message.content }}</div>
+          <div class="message-timestamp">{{ formatTimestamp(message.timestamp) }}</div>
         </div>
 
         <!-- Assistant Message -->
@@ -96,7 +97,7 @@
           <span></span>
           <span></span>
         </div>
-        <div class="loading-text">Analyzing your response...</div>
+        <div class="loading-text">{{ loadingText }}</div>
       </div>
     </div>
 
@@ -108,9 +109,13 @@
           <textarea 
             v-model="userInput"
             @keydown.enter.ctrl="sendMessage"
-            placeholder="Describe your situation or enter your response..."
+            @keydown.enter.shift="sendMessage"
+            @keydown.esc="clearInput"
+            placeholder="Describe your situation or enter your response... (Ctrl+Enter or Shift+Enter to send, Esc to clear)"
             rows="3"
             class="main-input"
+            :disabled="isLoading"
+            ref="mainInputRef"
           ></textarea>
           <button 
             @click="sendMessage" 
@@ -151,12 +156,25 @@
     </div>
 
     <!-- Error Display -->
-    <div v-if="error" class="error-container">
+    <div v-if="error" class="error-container" :class="`error-${errorType}`">
       <div class="error-message">
         <span class="error-icon">⚠️</span>
-        {{ error }}
+        <div class="error-content">
+          <div class="error-text">{{ error }}</div>
+          <div v-if="retryCount > 0" class="error-retry-info">
+            Retry attempt {{ retryCount }}/{{ maxRetries }}
+          </div>
+        </div>
       </div>
-      <button @click="error = null" class="dismiss-error">Close</button>
+      <div class="error-actions">
+        <button v-if="errorType === 'connection' || errorType === 'server'" 
+                @click="retryLastOperation" 
+                class="retry-error"
+                :disabled="retryCount >= maxRetries">
+          Retry
+        </button>
+        <button @click="clearError" class="dismiss-error">Close</button>
+      </div>
     </div>
   </div>
 </template>
@@ -182,6 +200,13 @@ const error = ref<string | null>(null)
 const messagesContainer = ref<HTMLElement>()
 const hasInitialized = ref(false)
 const isInDialogueMode = ref(false)
+const mainInputRef = ref<HTMLTextAreaElement>()
+const loadingText = ref('Analyzing your response...')
+const autoFocusInput = ref(true)
+const errorType = ref<'connection' | 'auth' | 'validation' | 'server' | 'unknown'>('unknown')
+const retryCount = ref(0)
+const maxRetries = 3
+const lastFailedOperation = ref<(() => Promise<void>) | null>(null)
 
 // Use messages from chat store and transform for display
 const messages = computed(() => {
@@ -209,6 +234,107 @@ const hasSelection = computed(() => {
 })
 
 // Methods
+function clearInput() {
+  userInput.value = ''
+}
+
+function focusInput() {
+  if (mainInputRef.value) {
+    mainInputRef.value.focus()
+  }
+}
+
+function setLoadingText(text: string) {
+  loadingText.value = text
+}
+
+function formatTimestamp(timestamp: string): string {
+  if (!timestamp) return ''
+  const date = new Date(timestamp)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  
+  // Less than 1 minute
+  if (diff < 60000) {
+    return 'Just now'
+  }
+  
+  // Less than 1 hour
+  if (diff < 3600000) {
+    const minutes = Math.floor(diff / 60000)
+    return `${minutes}m ago`
+  }
+  
+  // Same day
+  if (date.toDateString() === now.toDateString()) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  }
+  
+  // Different day
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
+}
+
+function categorizeError(error: any): 'connection' | 'auth' | 'validation' | 'server' | 'unknown' {
+  if (!error) return 'unknown'
+  
+  const message = error.message?.toLowerCase() || error.toString?.().toLowerCase() || ''
+  
+  if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {
+    return 'connection'
+  }
+  
+  if (message.includes('unauthorized') || message.includes('authentication') || message.includes('token')) {
+    return 'auth'
+  }
+  
+  if (message.includes('validation') || message.includes('invalid') || message.includes('required')) {
+    return 'validation'
+  }
+  
+  if (message.includes('server') || message.includes('internal')) {
+    return 'server'
+  }
+  
+  return 'unknown'
+}
+
+function getErrorMessage(type: string): string {
+  switch (type) {
+    case 'connection':
+      return 'Connection issue. Please check your internet connection and try again.'
+    case 'auth':
+      return 'Authentication failed. Please refresh the page and log in again.'
+    case 'validation':
+      return 'Invalid input. Please check your message and try again.'
+    case 'server':
+      return 'Server error. Please try again in a moment.'
+    default:
+      return 'An unexpected error occurred. Please try again.'
+  }
+}
+
+
+function clearError() {
+  error.value = null
+  errorType.value = 'unknown'
+  retryCount.value = 0
+  lastFailedOperation.value = null
+}
+
+async function retryLastOperation() {
+  if (lastFailedOperation.value && retryCount.value < maxRetries) {
+    try {
+      await lastFailedOperation.value()
+      clearError()
+    } catch (e: any) {
+      errorType.value = categorizeError(e)
+      error.value = getErrorMessage(errorType.value)
+      retryCount.value++
+      console.error('Retry failed:', e)
+    }
+  }
+}
+
 function isOptionSelected(value: string, multiSelect: boolean = false): boolean {
   if (multiSelect) {
     return selectedOptions.value.some(opt => opt.value === value)
@@ -242,14 +368,16 @@ async function sendMessage() {
   
   // Add user message
   chatStore.addMessage({
-    type: 'user',
+    id: Date.now(),
+    role: 'user',
     content: messageText,
-    timestamp: new Date()
+    type: 'text',
+    timestamp: new Date().toISOString()
   })
   
   // Check if this is the first real user message in this conversation
-  const userMessages = chatStore.messages.filter(m => m.type === 'user')
-  if (userMessages.length === 1 && chatStore.conversationType === 'general') {
+  const userMessages = chatStore.messages.filter(m => m.role === 'user')
+  if (userMessages.length === 1 && chatStore.conversationType === 'general_chat') {
     // This is the first user message, start conversation with routing
     await startConversationWithInput(messageText)
   } else {
@@ -275,9 +403,11 @@ async function submitSelection() {
   
   // Add user message showing their selection with full labels
   chatStore.addMessage({
-    type: 'user',
+    id: Date.now(),
+    role: 'user',
     content: displayText,
-    timestamp: new Date()
+    type: 'text',
+    timestamp: new Date().toISOString()
   })
   
   // Clear selections
@@ -291,19 +421,21 @@ async function submitSelection() {
 async function processUserInput(input: string) {
   isLoading.value = true
   error.value = ''
+  setLoadingText('Analyzing your response...')
   
   try {
     // Save message to conversation if authenticated
-    if (authStore.isAuthenticated && conversationStore.activeConversation) {
+    if (authStore.isAuthenticated && chatStore.currentConversationId) {
       await conversationsApi.addMessage(
         authStore.token!,
-        conversationStore.activeConversation.id,
+        chatStore.currentConversationId,
         'user',
         input,
-        {}
+        'text'
       )
     }
     
+    setLoadingText('Getting AI response...')
     // Call the real backend API with auth token
     const response = await api.getNextQuestion(sessionStore.sessionId, input, undefined, authStore.token)
     
@@ -314,15 +446,19 @@ async function processUserInput(input: string) {
       
       // Add assistant message with the backend response
       const assistantMessage = {
-        type: 'assistant' as const,
+        id: Date.now(),
+        role: 'assistant' as const,
         content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
-        options: isDialogue ? [] : (response.options || []),
-        multiSelect: false,
-        allowTextInput: isDialogue ? true : response.allow_text_input,
-        transition: response.transition_message || null,
-        infoCards: response.info_cards || null,
-        isDialogue: isDialogue,
-        timestamp: new Date()
+        type: 'response',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          options: isDialogue ? [] : (response.options || []),
+          multiSelect: false,
+          allowTextInput: isDialogue ? true : response.allow_text_input,
+          transition: response.transition_message || null,
+          infoCards: response.info_cards || null,
+          isDialogue: isDialogue
+        }
       }
       
       chatStore.addMessage(assistantMessage)
@@ -340,11 +476,17 @@ async function processUserInput(input: string) {
     }
     
   } catch (e: any) {
-    error.value = e.message || 'Error processing message'
-    chatStore.setError(e.message || 'Error processing message')
+    errorType.value = categorizeError(e)
+    const errorMessage = getErrorMessage(errorType.value)
+    error.value = errorMessage
+    chatStore.setError(errorMessage)
+    console.error('Processing error:', e)
   } finally {
     isLoading.value = false
     chatStore.setLoading(false)
+    if (autoFocusInput.value) {
+      setTimeout(focusInput, 100)
+    }
   }
 }
 
@@ -353,7 +495,7 @@ async function startConversationWithInput(userMessage: string) {
   error.value = ''
   
   // Only reset session for brand new conversations
-  if (chatStore.conversationType === 'general' && !sessionStore.currentPnm) {
+  if (chatStore.conversationType === 'general_chat' && !sessionStore.currentPnm) {
     sessionStore.resetSession()
   }
   
@@ -365,15 +507,19 @@ async function startConversationWithInput(userMessage: string) {
       const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
       
       const assistantMessage = {
-        type: 'assistant' as const,
+        id: Date.now(),
+        role: 'assistant' as const,
         content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
-        options: isDialogue ? [] : (response.options || []),
-        multiSelect: false,
-        allowTextInput: isDialogue ? true : response.allow_text_input,
-        transition: response.transition_message || null,
-        infoCards: response.info_cards || null,
-        isDialogue: isDialogue,
-        timestamp: new Date()
+        type: 'response',
+        timestamp: new Date().toISOString(),
+        metadata: {
+          options: isDialogue ? [] : (response.options || []),
+          multiSelect: false,
+          allowTextInput: isDialogue ? true : response.allow_text_input,
+          transition: response.transition_message || null,
+          infoCards: response.info_cards || null,
+          isDialogue: isDialogue
+        }
       }
       
       chatStore.addMessage(assistantMessage)
@@ -441,6 +587,7 @@ async function scrollToBottom() {
 async function loadExistingConversation(conversationId: string) {
   isLoading.value = true
   chatStore.setLoading(true)
+  
   try {
     const detail = await conversationsApi.getConversationDetail(authStore.token!, conversationId)
     
@@ -487,43 +634,6 @@ watch(() => sessionStore.dimensionFocus, async (newDimension) => {
     sessionStore.setDimensionFocus(null) // Clear after handling
   }
 }, { immediate: true })
-
-// Load existing conversation
-async function loadExistingConversation(conversationId: string) {
-  isLoading.value = true
-  try {
-    const detail = await conversationStore.loadConversationDetail(authStore.token!, conversationId)
-    
-    // Load messages into chat store
-    if (detail.messages) {
-      detail.messages.forEach((msg: any) => {
-        chatStore.addMessage({
-          type: msg.role === 'user' ? 'user' : 'assistant',
-          content: msg.text,
-          options: msg.meta?.options || [],
-          multiSelect: msg.meta?.multiSelect || false,
-          allowTextInput: msg.meta?.allowTextInput || false,
-          transition: msg.meta?.transition || null,
-          infoCards: msg.meta?.infoCards || null,
-          timestamp: new Date(msg.created_at)
-        })
-      })
-    }
-    
-    // Update current stage
-    if (detail.conversation.dimension_name) {
-      currentStage.value = `${detail.conversation.dimension_name} Assessment`
-    } else if (detail.conversation.current_pnm) {
-      currentStage.value = detail.conversation.current_pnm
-    }
-    
-    await scrollToBottom()
-  } catch (e: any) {
-    error.value = `Failed to load conversation: ${e.message}`
-  } finally {
-    isLoading.value = false
-  }
-}
 
 // Start dimension-specific conversation
 async function startDimensionConversation(dimension: string) {
@@ -607,40 +717,42 @@ onMounted(async () => {
   try {
     const activeConv = await conversationsApi.getActiveConversation(authStore.token!)
   
-  // Check if there's a dimension focus on mount
-  if (sessionStore.dimensionFocus && !hasInitialized.value) {
-    // Dimension-specific conversation is already created in Data.vue
-    startDimensionConversation(sessionStore.dimensionFocus)
-    sessionStore.setDimensionFocus(null)
-  } else if (activeConv) {
-    // Load existing active conversation
-    await loadExistingConversation(activeConv.id)
-  } else if (chatStore.messages.length === 0) {
-    // Create new general conversation
-    try {
-      const newConv = await conversationsApi.createConversation(authStore.token!, 'general_chat')
-      chatStore.startNewConversation('general_chat')
-      chatStore.setCurrentConversation(newConv.id)
-      
-      // Create fresh session for new conversation
-      sessionStore.resetSession()
-      
-      // Show welcome message
-      chatStore.addMessage({
-        id: Date.now(),
-        role: 'assistant',
-        content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
-        type: 'response',
-        timestamp: new Date().toISOString()
-      })
-    } catch (e: any) {
-      error.value = `Failed to create conversation: ${e.message}`
-      chatStore.setError(e.message)
+    // Check if there's a dimension focus on mount
+    if (sessionStore.dimensionFocus && !hasInitialized.value) {
+      // Dimension-specific conversation is already created in Data.vue
+      startDimensionConversation(sessionStore.dimensionFocus)
+      sessionStore.setDimensionFocus(null)
+    } else if (activeConv) {
+      // Load existing active conversation
+      await loadExistingConversation(activeConv.id)
+    } else if (chatStore.messages.length === 0) {
+      // Create new general conversation
+      try {
+        const newConv = await conversationsApi.createConversation(authStore.token!, 'general_chat')
+        chatStore.startNewConversation('general_chat')
+        chatStore.setCurrentConversation(newConv.id)
+        
+        // Create fresh session for new conversation
+        sessionStore.resetSession()
+        
+        // Show welcome message
+        chatStore.addMessage({
+          id: Date.now(),
+          role: 'assistant',
+          content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
+          type: 'response',
+          timestamp: new Date().toISOString()
+        })
+      } catch (e: any) {
+        error.value = `Failed to create conversation: ${e.message}`
+        chatStore.setError(e.message)
+      }
     }
   } catch (e: any) {
-    console.error('Error loading conversations:', e)
+    error.value = `Failed to initialize conversation: ${e.message}`
+    console.error('Conversation initialization error:', e)
   }
-  }
+  
   hasInitialized.value = true
 })
 
@@ -656,6 +768,14 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100vh;
   background: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+}
+
+/* Mobile-first responsive design */
+@media (max-width: 768px) {
+  .chat {
+    height: 100dvh; /* Use dynamic viewport height on mobile */
+  }
 }
 
 .chat-header {
@@ -665,6 +785,24 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
+}
+
+@media (max-width: 768px) {
+  .chat-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  
+  .chat-header h1 {
+    font-size: 18px;
+  }
+  
+  .header-indicators {
+    width: 100%;
+    justify-content: space-between;
+  }
 }
 
 .chat-header h1 {
@@ -735,6 +873,13 @@ onUnmounted(() => {
   gap: 16px;
 }
 
+@media (max-width: 768px) {
+  .messages-container {
+    padding: 16px 12px;
+    gap: 12px;
+  }
+}
+
 .message {
   display: flex;
   flex-direction: column;
@@ -745,6 +890,12 @@ onUnmounted(() => {
   max-width: 70%;
 }
 
+@media (max-width: 768px) {
+  .user-message {
+    max-width: 85%;
+  }
+}
+
 .user-message .message-content {
   background: #3b82f6;
   color: white;
@@ -752,6 +903,21 @@ onUnmounted(() => {
   border-radius: 18px 18px 4px 18px;
   font-size: 14px;
   line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .user-message .message-content {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 16px 16px 4px 16px;
+  }
+}
+
+.message-timestamp {
+  font-size: 11px;
+  color: #6b7280;
+  margin-top: 4px;
+  text-align: right;
 }
 
 .assistant-message {
@@ -976,6 +1142,12 @@ onUnmounted(() => {
   background: white;
 }
 
+@media (max-width: 768px) {
+  .input-area {
+    padding: 12px 16px;
+  }
+}
+
 .text-input-section {
   display: flex;
   flex-direction: column;
@@ -985,6 +1157,12 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   align-items: flex-end;
+}
+
+@media (max-width: 768px) {
+  .input-container {
+    gap: 8px;
+  }
 }
 
 .main-input {
@@ -1003,11 +1181,29 @@ onUnmounted(() => {
   box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
 }
 
+.main-input:disabled {
+  background: #f9fafb;
+  color: #6b7280;
+  cursor: not-allowed;
+}
+
+.main-input:disabled::placeholder {
+  color: #9ca3af;
+}
+
 .action-buttons,
 .start-buttons {
   display: flex;
   gap: 12px;
   justify-content: center;
+}
+
+@media (max-width: 768px) {
+  .action-buttons,
+  .start-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
 }
 
 .send-btn,
@@ -1063,19 +1259,86 @@ button:disabled {
   border-radius: 8px;
   padding: 12px 16px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
   gap: 12px;
   max-width: 400px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 1000;
 }
 
+@media (max-width: 768px) {
+  .error-container {
+    position: fixed;
+    top: 60px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    padding: 10px 12px;
+  }
+}
+
+.error-connection {
+  background: #fef7f0;
+  border-color: #fed7aa;
+}
+
+.error-auth {
+  background: #fdf2f8;
+  border-color: #fbcfe8;
+}
+
+.error-server {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+}
+
 .error-message {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   color: #991b1b;
   font-size: 14px;
+}
+
+.error-content {
+  flex: 1;
+}
+
+.error-text {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+
+.error-retry-info {
+  font-size: 12px;
+  color: #6b7280;
+  font-style: italic;
+}
+
+.error-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.retry-error {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.retry-error:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.retry-error:disabled {
+  background: #d1d5db;
+  cursor: not-allowed;
 }
 
 .error-icon {
@@ -1109,6 +1372,16 @@ button:disabled {
   max-width: 400px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 1000;
+}
+
+@media (max-width: 768px) {
+  .notification-container {
+    top: 60px;
+    left: 16px;
+    right: 16px;
+    max-width: none;
+    padding: 10px 12px;
+  }
 }
 
 .notification-message {
