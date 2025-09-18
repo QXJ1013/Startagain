@@ -1,0 +1,57 @@
+{
+  "dimension_results": [],
+  "infinite_loops": [],
+  "scoring_failures": [],
+  "summary_issues": [
+    {
+      "dimension": "Physiological",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096950"
+    },
+    {
+      "dimension": "Safety",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096959"
+    },
+    {
+      "dimension": "Love & Belonging",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096963"
+    },
+    {
+      "dimension": "Esteem",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096968"
+    },
+    {
+      "dimension": "Self-Actualisation",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096972"
+    },
+    {
+      "dimension": "Cognitive",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096976"
+    },
+    {
+      "dimension": "Aesthetic",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096980"
+    },
+    {
+      "dimension": "Transcendence",
+      "issue": "Critical testing error",
+      "context": "ConversationDocument.__init__() got an unexpected keyword argument 'conversation_type'",
+      "timestamp": "2025-09-18T04:02:02.096993"
+    }
+  ],
+  "term_completion_issues": [],
+  "response_patterns": []
+}

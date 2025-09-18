@@ -71,7 +71,7 @@ class UserProfileManager:
     
     def __init__(self):
         self.settings = get_settings()
-        self.db_path = self.settings.DATABASE_PATH
+        self.db_path = self.settings.DB_PATH
         self.log = logging.getLogger(__name__)
         self._ensure_profile_tables()
     

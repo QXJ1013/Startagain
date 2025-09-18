@@ -1,5 +1,6 @@
 <template>
   <div class="profile-container">
+    <!-- User Header -->
     <div class="profile-header">
       <div class="avatar-section">
         <div class="avatar">
@@ -9,15 +10,15 @@
           <h1>{{ userProfile.displayName }}</h1>
           <p class="user-email">{{ userProfile.email }}</p>
           <span class="user-status" :class="authStore.isAuthenticated ? 'status-active' : 'status-inactive'">
-            {{ authStore.isAuthenticated ? 'Active Account' : 'Account Inactive' }}
+            {{ authStore.isAuthenticated ? 'Active' : 'Inactive' }}
           </span>
         </div>
       </div>
     </div>
-    
-    <!-- Personal Information Card -->
+
+    <!-- Basic Info Card -->
     <div class="info-card">
-      <h2>Personal Information</h2>
+      <h2>Basic Information</h2>
       <div class="info-grid">
         <div class="info-item">
           <span class="label">Name:</span>
@@ -30,10 +31,6 @@
         <div class="info-item">
           <span class="label">Member Since:</span>
           <span class="value">{{ userProfile.memberSince }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Last Login:</span>
-          <span class="value">{{ userProfile.lastLogin }}</span>
         </div>
       </div>
     </div>
@@ -50,58 +47,43 @@
           <span class="label">Questions Answered:</span>
           <span class="value">{{ activityStats.questionsAnswered }}</span>
         </div>
-        <div class="info-item">
-          <span class="label">Current Session:</span>
-          <span class="value">{{ activityStats.currentSession }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Last Activity:</span>
-          <span class="value">{{ activityStats.lastActivity }}</span>
-        </div>
       </div>
     </div>
 
-    <!-- Account Settings -->
-    <div class="info-card">
-      <h2>Account Settings</h2>
-      <div class="settings-actions">
-        <button class="settings-btn secondary" @click="changePassword">
-          Change Password
-        </button>
-        <button class="settings-btn secondary" @click="updateProfile">
-          Update Profile
-        </button>
-        <button class="settings-btn primary" @click="exportData">
-          Export My Data
-        </button>
-      </div>
+    <!-- Actions -->
+    <div class="actions">
+      <button class="action-btn secondary" @click="updateProfile">
+        Update Profile
+      </button>
+      <button class="action-btn secondary" @click="changePassword">
+        Change Password
+      </button>
+      <button class="action-btn primary" @click="logout">
+        Logout
+      </button>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue'
+import { computed } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
+import { useRouter } from 'vue-router'
 
-// Store references
 const authStore = useAuthStore()
 const chatStore = useChatStore()
+const router = useRouter()
 
-// User profile data
 const userProfile = computed(() => ({
-  displayName: authStore.displayName || 'ALS Patient User',
+  displayName: authStore.displayName || 'User',
   email: authStore.userEmail || 'user@example.com',
-  memberSince: 'March 2024',
-  lastLogin: 'Today'
+  memberSince: 'March 2024'
 }))
 
-// Activity statistics
 const activityStats = computed(() => ({
   assessmentsCompleted: 5,
-  questionsAnswered: chatStore.messages?.length || 0,
-  currentSession: 'In Progress',
-  lastActivity: formatLastActivity()
+  questionsAnswered: chatStore.messages?.length || 0
 }))
 
 function getInitials(): string {
@@ -114,41 +96,28 @@ function getInitials(): string {
     .slice(0, 2)
 }
 
-function formatLastActivity(): string {
-  if (chatStore.messages && chatStore.messages.length > 0) {
-    const lastMessage = chatStore.messages[chatStore.messages.length - 1]
-    if (lastMessage.timestamp) {
-      const date = new Date(lastMessage.timestamp)
-      return date.toLocaleTimeString()
-    }
-  }
-  return 'No recent activity'
+function updateProfile() {
+  alert('Profile update functionality would be implemented here')
 }
 
 function changePassword() {
   alert('Password change functionality would be implemented here')
 }
 
-function updateProfile() {
-  alert('Profile update functionality would be implemented here')
+function logout() {
+  authStore.logout()
+  router.push('/login')
 }
-
-function exportData() {
-  alert('Data export functionality would be implemented here')
-}
-
-onMounted(() => {
-  // Load user profile data if needed
-})
 </script>
 
 <style scoped>
 .profile-container {
-  max-width: 800px;
+  max-width: 600px;
   margin: 0 auto;
   padding: 24px;
   background: #f8fafc;
   min-height: 100vh;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
 .profile-header {
@@ -162,25 +131,25 @@ onMounted(() => {
 .avatar-section {
   display: flex;
   align-items: center;
-  gap: 24px;
+  gap: 20px;
 }
 
 .avatar {
-  width: 80px;
-  height: 80px;
+  width: 70px;
+  height: 70px;
   border-radius: 50%;
   background: linear-gradient(135deg, #3b82f6, #1d4ed8);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
-  font-size: 24px;
+  font-size: 22px;
   font-weight: 600;
 }
 
 .user-details h1 {
   margin: 0 0 8px 0;
-  font-size: 28px;
+  font-size: 24px;
   color: #1f2937;
 }
 
@@ -217,7 +186,7 @@ onMounted(() => {
 
 .info-card h2 {
   margin: 0 0 20px 0;
-  font-size: 20px;
+  font-size: 18px;
   color: #1f2937;
   border-bottom: 1px solid #e5e7eb;
   padding-bottom: 12px;
@@ -225,15 +194,15 @@ onMounted(() => {
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 16px;
+  grid-template-columns: 1fr;
+  gap: 12px;
 }
 
 .info-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 0;
+  padding: 8px 0;
   border-bottom: 1px solid #f3f4f6;
 }
 
@@ -251,13 +220,14 @@ onMounted(() => {
   text-align: right;
 }
 
-.settings-actions {
+.actions {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  justify-content: center;
 }
 
-.settings-btn {
+.action-btn {
   padding: 12px 24px;
   border-radius: 8px;
   font-size: 14px;
@@ -267,22 +237,22 @@ onMounted(() => {
   transition: all 0.2s ease;
 }
 
-.settings-btn.primary {
-  background: #3b82f6;
+.action-btn.primary {
+  background: #ef4444;
   color: white;
 }
 
-.settings-btn.primary:hover {
-  background: #2563eb;
+.action-btn.primary:hover {
+  background: #dc2626;
 }
 
-.settings-btn.secondary {
+.action-btn.secondary {
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
 }
 
-.settings-btn.secondary:hover {
+.action-btn.secondary:hover {
   background: #e5e7eb;
 }
 
@@ -290,36 +260,22 @@ onMounted(() => {
   .profile-container {
     padding: 16px;
   }
-  
+
   .profile-header {
     padding: 24px 16px;
   }
-  
+
   .avatar-section {
     flex-direction: column;
     text-align: center;
     gap: 16px;
   }
-  
+
   .info-card {
     padding: 16px;
   }
-  
-  .info-grid {
-    grid-template-columns: 1fr;
-  }
-  
-  .info-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 4px;
-  }
-  
-  .value {
-    text-align: left;
-  }
-  
-  .settings-actions {
+
+  .actions {
     flex-direction: column;
   }
 }

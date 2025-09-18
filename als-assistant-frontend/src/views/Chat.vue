@@ -1,179 +1,274 @@
 <template>
   <div class="chat">
-    <!-- Conversation History Component -->
-    <ConversationHistory />
-    
-    <!-- Header -->
-    <div class="chat-header">
-      <h1>💬 ALS Assistant Chat</h1>
-      <div class="header-indicators">
-        <div class="mode-indicator" v-if="isInDialogueMode">
-          <span class="mode-badge dialogue">🗣️ Dialogue Mode (80%)</span>
-        </div>
-        <div class="mode-indicator" v-else>
-          <span class="mode-badge question">📋 Assessment Mode</span>
-        </div>
-        <div class="stage-indicator" v-if="currentStage">
-          <span class="stage-badge">{{ currentStage }}</span>
-        </div>
+    <!-- Initial Menu View -->
+    <div v-if="viewMode === 'menu'" class="chat-menu">
+      <div class="menu-header">
+        <h1>💬 ALS Assistant Chat</h1>
+        <p>Choose how you'd like to start your conversation</p>
+      </div>
+
+      <div class="menu-options">
+        <button @click="startNewChat" class="menu-option new-chat">
+          <div class="option-icon">💬</div>
+          <div class="option-content">
+            <h3>New Chat</h3>
+            <p>Start a new conversation with the ALS Assistant</p>
+          </div>
+        </button>
+
+        <button @click="viewHistory" class="menu-option history">
+          <div class="option-icon">📋</div>
+          <div class="option-content">
+            <h3>Chat History</h3>
+            <p>View and continue previous conversations</p>
+          </div>
+        </button>
       </div>
     </div>
 
-    <!-- Messages Container -->
-    <div class="messages-container" ref="messagesContainer">
-      <div v-for="(message, index) in messages" :key="index" class="message" :class="message.type">
-        
-        <!-- User Message -->
-        <div v-if="message.type === 'user'" class="user-message">
-          <div class="message-content">{{ message.content }}</div>
-          <div class="message-timestamp">{{ formatTimestamp(message.timestamp) }}</div>
-        </div>
+    <!-- History View -->
+    <div v-else-if="viewMode === 'history'" class="history-view">
+      <div class="history-header">
+        <button @click="backToMenu" class="back-btn">← Back</button>
+        <h2>Chat History</h2>
+        <button @click="startNewChat" class="new-chat-btn">
+          <span class="btn-icon">💬</span>
+          New Chat
+        </button>
+      </div>
 
-        <!-- Assistant Message -->
-        <div v-else class="assistant-message">
-          <!-- Info Cards (displayed first) -->
-          <div v-if="message.infoCards" class="info-cards">
-            <div v-for="(card, cardIndex) in message.infoCards" :key="cardIndex" class="info-card">
-              <div class="card-title">{{ card.title }}</div>
-              <div class="card-content">
-                <div v-for="(bullet, bulletIndex) in card.bullets" :key="bulletIndex" class="card-bullet">
-                  {{ bullet }}
-                </div>
-              </div>
-              <div class="card-disclaimer">
-                {{ card.disclaimer || "This advice is based on your responses and internal resources. It does not constitute a diagnosis." }}
-              </div>
-            </div>
-          </div>
-          
-          <!-- Transition Message -->
-          <div v-if="message.transition" class="transition-message">
-            {{ message.transition }}
-          </div>
-          
-          <!-- Dialogue or Question Content -->
-          <div class="question-content" :class="{ 'dialogue-mode': message.isDialogue }">
-            <div class="question-text" :class="{ 'dialogue-text': message.isDialogue }">{{ message.content }}</div>
-            
-            <!-- Button Options (hide in dialogue mode) -->
-            <div v-if="!message.isDialogue && message.options && message.options.length" class="options-container">
-              <div class="options-grid" :class="{ 'multi-select': message.multiSelect }">
-                <button 
-                  v-for="option in message.options"
-                  :key="option.value"
-                  class="option-btn"
-                  :class="{ 
-                    selected: isOptionSelected(option.value, message.multiSelect),
-                    'multi-select': message.multiSelect 
-                  }"
-                  @click="selectOption(option, message.multiSelect)"
+      <!-- Loading State -->
+      <div v-if="historyLoading" class="history-loading">
+        <div class="spinner"></div>
+        <p>Loading conversations...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="historyConversations.length === 0" class="history-empty">
+        <div class="empty-icon">📚</div>
+        <h3>No conversations yet</h3>
+        <p>Start a new conversation to begin your ALS assessment journey</p>
+        <button @click="startNewChat" class="start-chat-btn">
+          <span class="btn-icon">💬</span>
+          Start Your First Chat
+        </button>
+      </div>
+
+      <!-- Conversation List -->
+      <div v-else class="history-content">
+        <div class="conversations-grid">
+          <div
+            v-for="conv in historyConversations"
+            :key="conv.id"
+            class="conversation-card"
+            :class="{
+              active: conv.status === 'active',
+              completed: conv.status === 'completed'
+            }"
+            @click="openHistoryConversation(conv)"
+          >
+            <!-- Card Header -->
+            <div class="card-header">
+              <div class="status-dot" :class="conv.status"></div>
+              <h3 class="card-title">{{ conv.title || getConversationTitle(conv) }}</h3>
+              <div class="card-actions">
+                <button
+                  @click.stop="continueHistoryConversation(conv)"
+                  class="continue-btn"
+                  v-if="conv.status === 'active'"
                 >
-                  <span v-if="message.multiSelect" class="checkbox">
-                    {{ isOptionSelected(option.value, true) ? '☑️' : '☐' }}
-                  </span>
-                  {{ option.label }}
+                  →
                 </button>
               </div>
-              
-              <!-- Optional text input (always show in dialogue mode) -->
-              <div v-if="message.allowTextInput || message.isDialogue" class="text-input-container">
-                <div class="input-label">(Optional additional details)</div>
-                <textarea 
-                  v-model="supplementaryText" 
-                  placeholder="Enter additional details..."
-                  rows="2"
-                  class="supplement-input"
-                ></textarea>
+            </div>
+
+            <!-- Card Content -->
+            <div class="card-content">
+              <div class="conv-type-badge" :class="conv.type">
+                {{ getConversationType(conv) }}
               </div>
+              <div class="conv-date">{{ formatHistoryDate(conv.updated_at || conv.created_at) }}</div>
+            </div>
+
+            <!-- Stats Footer -->
+            <div class="card-footer">
+              <span class="stat">💬 {{ conv.message_count || 0 }}</span>
+              <span class="stat" v-if="conv.info_card_count">📋 {{ conv.info_card_count }}</span>
+              <span class="status-badge" :class="conv.status">{{ conv.status }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Chat View -->
+    <div v-else-if="viewMode === 'chat'" class="chat-view">
+      <!-- Header -->
+      <div class="chat-header">
+        <button @click="backToMenu" class="back-btn">← Menu</button>
+        <div class="header-content">
+          <h1>💬 ALS Assistant Chat</h1>
+          <div class="header-indicators">
+            <div class="mode-indicator" v-if="isInDialogueMode">
+              <span class="mode-badge dialogue">🗣️ Dialogue Mode</span>
+            </div>
+            <div class="mode-indicator" v-else>
+              <span class="mode-badge question">📋 Assessment Mode</span>
+            </div>
+            <div class="stage-indicator" v-if="currentStage">
+              <span class="stage-badge">{{ currentStage }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Loading indicator -->
-      <div v-if="isLoading" class="loading-message">
-        <div class="typing-indicator">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
-        <div class="loading-text">{{ loadingText }}</div>
-      </div>
-    </div>
+      <!-- Messages Container -->
+      <div class="messages-container" ref="messagesContainer">
+        <div v-for="(message, index) in messages" :key="index" class="message" :class="message.type">
 
-    <!-- Input Area -->
-    <div class="input-area">
-      <!-- Always show text input for user to type -->
-      <div class="text-input-section">
-        <div class="input-container">
-          <textarea 
-            v-model="userInput"
-            @keydown.enter.ctrl="sendMessage"
-            @keydown.enter.shift="sendMessage"
-            @keydown.esc="clearInput"
-            placeholder="Describe your situation or enter your response... (Ctrl+Enter or Shift+Enter to send, Esc to clear)"
-            rows="3"
-            class="main-input"
-            :disabled="isLoading"
-            ref="mainInputRef"
-          ></textarea>
-          <button 
-            @click="sendMessage" 
-            :disabled="!userInput.trim() || isLoading"
-            class="send-btn primary"
+          <!-- User Message -->
+          <div v-if="message.type === 'user'" class="user-message">
+            <div class="message-content">{{ message.content }}</div>
+            <div class="message-timestamp">{{ formatTimestamp(message.timestamp) }}</div>
+          </div>
+
+          <!-- Assistant Message -->
+          <div v-else class="assistant-message">
+            <!-- Info Cards (displayed first) -->
+            <div v-if="message.infoCards" class="info-cards">
+              <div v-for="(card, cardIndex) in message.infoCards" :key="cardIndex" class="info-card">
+                <div class="card-title">{{ card.title }}</div>
+                <div class="card-content">
+                  <div v-for="(bullet, bulletIndex) in card.bullets" :key="bulletIndex" class="card-bullet">
+                    {{ bullet }}
+                  </div>
+                </div>
+                <div class="card-disclaimer">
+                  {{ card.disclaimer || "This advice is based on your responses and internal resources. It does not constitute a diagnosis." }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Transition Message -->
+            <div v-if="message.transition" class="transition-message">
+              {{ message.transition }}
+            </div>
+
+            <!-- Dialogue or Question Content -->
+            <div class="question-content" :class="{ 'dialogue-mode': message.isDialogue }">
+              <div class="question-text" :class="{ 'dialogue-text': message.isDialogue }">{{ message.content }}</div>
+
+              <!-- Button Options (hide in dialogue mode) -->
+              <div v-if="!message.isDialogue && message.options && message.options.length" class="options-container">
+                <div class="options-grid" :class="{ 'multi-select': message.multiSelect }">
+                  <button
+                    v-for="option in message.options"
+                    :key="option.value"
+                    class="option-btn"
+                    :class="{
+                      selected: isOptionSelected(option.value, message.multiSelect),
+                      'multi-select': message.multiSelect
+                    }"
+                    @click="selectOption(option, message.multiSelect)"
+                  >
+                    <span v-if="message.multiSelect" class="checkbox">
+                      {{ isOptionSelected(option.value, true) ? '☑️' : '☐' }}
+                    </span>
+                    {{ option.label }}
+                  </button>
+                </div>
+
+                <!-- Optional text input (always show in dialogue mode) -->
+                <div v-if="message.allowTextInput || message.isDialogue" class="text-input-container">
+                  <div class="input-label">(Optional additional details)</div>
+                  <textarea
+                    v-model="supplementaryText"
+                    placeholder="Enter additional details..."
+                    rows="2"
+                    class="supplement-input"
+                  ></textarea>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading indicator -->
+        <div v-if="isLoading" class="loading-message">
+          <div class="typing-indicator">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <div class="loading-text">{{ loadingText }}</div>
+        </div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="input-area">
+        <!-- Always show text input for user to type -->
+        <div class="text-input-section">
+          <div class="input-container">
+            <textarea
+              v-model="userInput"
+              @keydown.enter.ctrl="sendMessage"
+              @keydown.enter.shift="sendMessage"
+              @keydown.esc="clearInput"
+              placeholder="Describe your situation or enter your response... (Ctrl+Enter or Shift+Enter to send, Esc to clear)"
+              rows="3"
+              class="main-input"
+              :disabled="isLoading"
+              ref="mainInputRef"
+            ></textarea>
+            <button
+              @click="sendMessage"
+              :disabled="!userInput.trim() || isLoading"
+              class="send-btn primary"
+            >
+              Send
+            </button>
+          </div>
+        </div>
+
+        <!-- Action buttons when options are selected -->
+        <div v-if="hasCurrentQuestion && hasSelection" class="action-buttons">
+          <button
+            @click="submitSelection"
+            :disabled="!hasSelection || isLoading"
+            class="submit-btn primary"
           >
-            Send
+            Submit selected options
+          </button>
+
+          <button
+            @click="clearSelection"
+            class="clear-btn secondary"
+          >
+            Clear selection
           </button>
         </div>
       </div>
 
-      <!-- Action buttons when options are selected -->
-      <div v-if="hasCurrentQuestion && hasSelection" class="action-buttons">
-        <button 
-          @click="submitSelection"
-          :disabled="!hasSelection || isLoading"
-          class="submit-btn primary"
-        >
-          Submit selected options
-        </button>
-        
-        <button 
-          @click="clearSelection"
-          class="clear-btn secondary"
-        >
-          Clear selection
-        </button>
-      </div>
-    </div>
-
-    <!-- Notification Display -->
-    <div v-if="sessionStore.message" class="notification-container">
-      <div class="notification-message">
-        <span class="notification-icon">ℹ️</span>
-        {{ sessionStore.message }}
-      </div>
-      <button @click="sessionStore.setMessage(null)" class="dismiss-notification">Close</button>
-    </div>
-
-    <!-- Error Display -->
-    <div v-if="error" class="error-container" :class="`error-${errorType}`">
-      <div class="error-message">
-        <span class="error-icon">⚠️</span>
-        <div class="error-content">
-          <div class="error-text">{{ error }}</div>
-          <div v-if="retryCount > 0" class="error-retry-info">
-            Retry attempt {{ retryCount }}/{{ maxRetries }}
+      <!-- Error Display -->
+      <div v-if="error" class="error-container" :class="`error-${errorType}`">
+        <div class="error-message">
+          <span class="error-icon">⚠️</span>
+          <div class="error-content">
+            <div class="error-text">{{ error }}</div>
+            <div v-if="retryCount > 0" class="error-retry-info">
+              Retry attempt {{ retryCount }}/{{ maxRetries }}
+            </div>
           </div>
         </div>
-      </div>
-      <div class="error-actions">
-        <button v-if="errorType === 'connection' || errorType === 'server'" 
-                @click="retryLastOperation" 
-                class="retry-error"
-                :disabled="retryCount >= maxRetries">
-          Retry
-        </button>
-        <button @click="clearError" class="dismiss-error">Close</button>
+        <div class="error-actions">
+          <button v-if="errorType === 'connection' || errorType === 'server'"
+                  @click="retryLastOperation"
+                  class="retry-error"
+                  :disabled="retryCount >= maxRetries">
+            Retry
+          </button>
+          <button @click="clearError" class="dismiss-error">Close</button>
+        </div>
       </div>
     </div>
   </div>
@@ -181,6 +276,7 @@
 
 <script setup lang="ts">
 import { ref, computed, nextTick, onMounted, onUnmounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 import { useChatStore } from '../stores/chat'
 import { api, conversationsApi } from '../services/api'
@@ -188,9 +284,11 @@ import ConversationHistory from '../components/ConversationHistory.vue'
 import { useAuthStore } from '../stores/auth'
 
 // State
+const router = useRouter()
 const sessionStore = useSessionStore()
 const chatStore = useChatStore()
 const authStore = useAuthStore()
+const viewMode = ref<'menu' | 'history' | 'chat'>('menu')
 const userInput = ref('')
 const supplementaryText = ref('')
 const selectedOptions = ref<{value: string, label: string}[]>([])
@@ -207,6 +305,10 @@ const errorType = ref<'connection' | 'auth' | 'validation' | 'server' | 'unknown
 const retryCount = ref(0)
 const maxRetries = 3
 const lastFailedOperation = ref<(() => Promise<void>) | null>(null)
+
+// History-related state
+const historyLoading = ref(false)
+const historyConversations = ref<any[]>([])
 
 // Use messages from chat store and transform for display
 const messages = computed(() => {
@@ -234,6 +336,23 @@ const hasSelection = computed(() => {
 })
 
 // Methods
+function startNewChat() {
+  viewMode.value = 'chat'
+  // Clear any existing conversation
+  chatStore.startNewConversation('general_chat')
+  // Initialize the chat
+  initializeNewChat()
+}
+
+function viewHistory() {
+  viewMode.value = 'history'
+  loadConversationHistory()
+}
+
+function backToMenu() {
+  viewMode.value = 'menu'
+}
+
 function clearInput() {
   userInput.value = ''
 }
@@ -253,48 +372,48 @@ function formatTimestamp(timestamp: string): string {
   const date = new Date(timestamp)
   const now = new Date()
   const diff = now.getTime() - date.getTime()
-  
+
   // Less than 1 minute
   if (diff < 60000) {
     return 'Just now'
   }
-  
+
   // Less than 1 hour
   if (diff < 3600000) {
     const minutes = Math.floor(diff / 60000)
     return `${minutes}m ago`
   }
-  
+
   // Same day
   if (date.toDateString() === now.toDateString()) {
     return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
   }
-  
+
   // Different day
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })
 }
 
 function categorizeError(error: any): 'connection' | 'auth' | 'validation' | 'server' | 'unknown' {
   if (!error) return 'unknown'
-  
+
   const message = error.message?.toLowerCase() || error.toString?.().toLowerCase() || ''
-  
+
   if (message.includes('network') || message.includes('fetch') || message.includes('connection')) {
     return 'connection'
   }
-  
+
   if (message.includes('unauthorized') || message.includes('authentication') || message.includes('token')) {
     return 'auth'
   }
-  
+
   if (message.includes('validation') || message.includes('invalid') || message.includes('required')) {
     return 'validation'
   }
-  
+
   if (message.includes('server') || message.includes('internal')) {
     return 'server'
   }
-  
+
   return 'unknown'
 }
 
@@ -312,7 +431,6 @@ function getErrorMessage(type: string): string {
       return 'An unexpected error occurred. Please try again.'
   }
 }
-
 
 function clearError() {
   error.value = null
@@ -362,10 +480,10 @@ function clearSelection() {
 
 async function sendMessage() {
   if (!userInput.value.trim() || isLoading.value) return
-  
+
   const messageText = userInput.value.trim()
   userInput.value = ''
-  
+
   // Add user message
   chatStore.addMessage({
     id: Date.now(),
@@ -374,33 +492,37 @@ async function sendMessage() {
     type: 'text',
     timestamp: new Date().toISOString()
   })
-  
+
   // Check if this is the first real user message in this conversation
-  const userMessages = chatStore.messages.filter(m => m.role === 'user')
-  if (userMessages.length === 1 && chatStore.conversationType === 'general_chat') {
-    // This is the first user message, start conversation with routing
+  // Use conversationId presence as the primary indicator, not message count
+  console.log(`[SEND MESSAGE DEBUG] currentConversationId: ${chatStore.currentConversationId}, conversationType: ${chatStore.conversationType}`)
+
+  if (!chatStore.currentConversationId && chatStore.conversationType === 'general_chat') {
+    // No conversation ID yet, this is truly the first message - create new conversation
+    console.log('[SEND MESSAGE] Creating new conversation...')
     await startConversationWithInput(messageText)
   } else {
-    // Continue existing conversation
+    // We have a conversation ID, continue existing conversation
+    console.log('[SEND MESSAGE] Continuing existing conversation...')
     await processUserInput(messageText)
   }
 }
 
 async function submitSelection() {
   if (!hasSelection.value || isLoading.value) return
-  
+
   // Combine selected options with supplementary text - use labels for display, values for backend
   const selectedLabels = selectedOptions.value.map(opt => opt.label).join(', ')
   const selectedValues = selectedOptions.value.map(opt => opt.value).join(',')
-  
+
   let displayText = selectedLabels
   let submitText = selectedValues  // Send values to backend for processing
-  
+
   if (supplementaryText.value.trim()) {
     displayText += `\nAdditional details: ${supplementaryText.value.trim()}`
     submitText += `\nAdditional details: ${supplementaryText.value.trim()}`
   }
-  
+
   // Add user message showing their selection with full labels
   chatStore.addMessage({
     id: Date.now(),
@@ -409,11 +531,11 @@ async function submitSelection() {
     type: 'text',
     timestamp: new Date().toISOString()
   })
-  
+
   // Clear selections
   selectedOptions.value = []
   supplementaryText.value = ''
-  
+
   // Send the actual values to backend for proper processing
   await processUserInput(submitText)
 }
@@ -422,28 +544,41 @@ async function processUserInput(input: string) {
   isLoading.value = true
   error.value = ''
   setLoadingText('Analyzing your response...')
-  
+
   try {
-    // Save message to conversation if authenticated
-    if (authStore.isAuthenticated && chatStore.currentConversationId) {
-      await conversationsApi.addMessage(
-        authStore.token!,
-        chatStore.currentConversationId,
-        'user',
-        input,
-        'text'
-      )
+    // Ensure we have a valid conversation ID
+    let conversationId = chatStore.currentConversationId
+
+    // If no conversation ID, create a new general chat conversation
+    if (!conversationId) {
+      setLoadingText('Creating conversation...')
+      try {
+        const newConv = await conversationsApi.createConversation(
+          authStore.token!,
+          'general_chat',
+          undefined,
+          'General Chat'
+        )
+        conversationId = newConv.id
+        console.log(`[START CONV] Setting conversation ID: ${conversationId}`)
+        chatStore.setCurrentConversation(conversationId)
+        console.log(`[START CONV] Store conversation ID after setting: ${chatStore.currentConversationId}`)
+      } catch (e: any) {
+        error.value = `Failed to create conversation: ${e.message}`
+        isLoading.value = false
+        return
+      }
     }
-    
+
     setLoadingText('Getting AI response...')
-    // Call the real backend API with auth token
-    const response = await api.getNextQuestion(sessionStore.sessionId, input, undefined, authStore.token)
-    
+    // Call the real backend API with auth token and proper conversation ID
+    const response = await api.getNextQuestion(conversationId, input, undefined, authStore.token)
+
     if (response) {
       // Check if this is a dialogue response (Policy system active)
       const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
       isInDialogueMode.value = isDialogue  // Update mode indicator
-      
+
       // Add assistant message with the backend response
       const assistantMessage = {
         id: Date.now(),
@@ -460,9 +595,9 @@ async function processUserInput(input: string) {
           isDialogue: isDialogue
         }
       }
-      
+
       chatStore.addMessage(assistantMessage)
-      
+
       // Update progress if assessment data provided
       if (response.current_pnm || response.current_term || response.fsm_state) {
         chatStore.updateProgress({
@@ -471,10 +606,10 @@ async function processUserInput(input: string) {
           fsm_state: response.fsm_state || 'ROUTE'
         })
       }
-      
+
       await scrollToBottom()
     }
-    
+
   } catch (e: any) {
     errorType.value = categorizeError(e)
     const errorMessage = getErrorMessage(errorType.value)
@@ -493,19 +628,43 @@ async function processUserInput(input: string) {
 async function startConversationWithInput(userMessage: string) {
   isLoading.value = true
   error.value = ''
-  
+
   // Only reset session for brand new conversations
   if (chatStore.conversationType === 'general_chat' && !sessionStore.currentPnm) {
     sessionStore.resetSession()
   }
-  
+
   try {
+    // Ensure we have a valid conversation ID
+    let conversationId = chatStore.currentConversationId
+
+    // If no conversation ID, create a new general chat conversation
+    if (!conversationId) {
+      setLoadingText('Creating conversation...')
+      try {
+        const newConv = await conversationsApi.createConversation(
+          authStore.token!,
+          'general_chat',
+          undefined,
+          'General Chat'
+        )
+        conversationId = newConv.id
+        console.log(`[START CONV] Setting conversation ID: ${conversationId}`)
+        chatStore.setCurrentConversation(conversationId)
+        console.log(`[START CONV] Store conversation ID after setting: ${chatStore.currentConversationId}`)
+      } catch (e: any) {
+        error.value = `Failed to create conversation: ${e.message}`
+        isLoading.value = false
+        return
+      }
+    }
+
     // Send the user's first message to backend which will route and return first question
-    const response = await api.getNextQuestion(sessionStore.sessionId, userMessage, undefined, authStore.token)
-    
+    const response = await api.getNextQuestion(conversationId, userMessage, undefined, authStore.token)
+
     if (response) {
       const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
-      
+
       const assistantMessage = {
         id: Date.now(),
         role: 'assistant' as const,
@@ -521,9 +680,9 @@ async function startConversationWithInput(userMessage: string) {
           isDialogue: isDialogue
         }
       }
-      
+
       chatStore.addMessage(assistantMessage)
-      
+
       // Update progress if assessment data provided
       if (response.current_pnm || response.current_term || response.fsm_state) {
         chatStore.updateProgress({
@@ -532,12 +691,12 @@ async function startConversationWithInput(userMessage: string) {
           fsm_state: response.fsm_state || 'ROUTE'
         })
       }
-      
+
       // Update session state if provided (legacy compatibility)
       if (response.current_pnm) {
         sessionStore.setState(response.current_pnm, response.current_term || null, response.fsm_state || 'ROUTE')
       }
-      
+
       await scrollToBottom()
     }
   } catch (e: any) {
@@ -549,80 +708,10 @@ async function startConversationWithInput(userMessage: string) {
   }
 }
 
-// Removed unused function startConversation
-
-// Skip current question - currently unused but may be needed for future functionality
-// async function skipQuestion() {
-//   if (isLoading.value) return
-  
-//   // Add user message indicating skip
-//   chatStore.addMessage({
-//     type: 'user',
-//     content: 'Skip this question',
-//     timestamp: new Date()
-//   })
-  
-//   // Clear selections
-//   selectedOptions.value = []
-//   supplementaryText.value = ''
-  
-//   // Process skip as user response
-//   await processUserInput('skip')
-// }
-
-// Function to continue from data page - currently unused
-// function continueFromData() {
-//   // This would be called from the data page
-//   sessionStore.setError('This feature needs to be launched from the Data page')
-// }
-
 async function scrollToBottom() {
   await nextTick()
   if (messagesContainer.value) {
     messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight
-  }
-}
-
-// Load existing conversation
-async function loadExistingConversation(conversationId: string) {
-  isLoading.value = true
-  chatStore.setLoading(true)
-  
-  try {
-    const detail = await conversationsApi.getConversationDetail(authStore.token!, conversationId)
-    
-    // Load conversation data into chat store
-    chatStore.loadConversationData({
-      conversation: {
-        id: detail.id,
-        title: detail.title,
-        type: detail.type,
-        dimension: detail.dimension,
-        status: detail.status,
-        created_at: detail.created_at,
-        updated_at: detail.updated_at,
-        current_pnm: detail.assessment_state?.current_pnm,
-        current_term: detail.assessment_state?.current_term,
-        fsm_state: detail.assessment_state?.fsm_state
-      },
-      messages: detail.messages || [],
-      progress: detail.assessment_state
-    })
-    
-    // Update current stage
-    if (detail.dimension) {
-      currentStage.value = `${detail.dimension} Assessment`
-    } else if (detail.assessment_state?.current_pnm) {
-      currentStage.value = detail.assessment_state.current_pnm
-    }
-    
-    await scrollToBottom()
-  } catch (e: any) {
-    error.value = `Failed to load conversation: ${e.message}`
-    chatStore.setError(e.message)
-  } finally {
-    isLoading.value = false
-    chatStore.setLoading(false)
   }
 }
 
@@ -637,58 +726,106 @@ watch(() => sessionStore.dimensionFocus, async (newDimension) => {
 
 // Start dimension-specific conversation
 async function startDimensionConversation(dimension: string) {
-  // Start a new dimension-specific conversation
-  chatStore.startNewConversation('dimension', dimension)
-  
-  // Create a new session for this dimension
+  console.log(`[CHAT.VUE] Starting dimension conversation for ${dimension}`)
+
+  viewMode.value = 'chat'
+
+  // Check if conversation is already created (from Data.vue)
+  const conversationExists = !!chatStore.currentConversationId
+  console.log(`[CHAT.VUE] Conversation exists: ${conversationExists}, ID: ${chatStore.currentConversationId}`)
+
+  if (!conversationExists) {
+    // Only create new conversation if one doesn't exist
+    chatStore.startNewConversation('dimension', dimension)
+  } else {
+    // Use existing conversation, just set the type and dimension
+    chatStore.conversationType = 'dimension'
+    chatStore.dimensionName = dimension
+  }
+
+  // Always reset session for fresh dimension assessment
   sessionStore.resetSession()
-  
+
+  // Clear any existing messages to ensure fresh start
+  chatStore.clearMessages()
+
+  // Force clear any cached state that might interfere
+  isInDialogueMode.value = false
+  error.value = null
+
+  console.log(`[CHAT.VUE] State cleared for ${dimension} - messages: ${chatStore.messages.length}`)
+
   isLoading.value = true
   hasInitialized.value = true
-  
+
   try {
-    // Create new conversation for dimension
-    if (authStore.isAuthenticated) {
+    let conversationId = chatStore.currentConversationId
+
+    // Create new conversation only if one doesn't exist
+    if (authStore.isAuthenticated && !conversationId) {
       try {
-        const newConv = await conversationsApi.createConversation(authStore.token!, 'dimension', dimension)
-        chatStore.setCurrentConversation(newConv.id)
+        const newConv = await conversationsApi.createConversation(authStore.token!, 'dimension', dimension, `${dimension} Assessment`)
+        conversationId = newConv.id
+        chatStore.setCurrentConversation(conversationId)
       } catch (e: any) {
         console.error('Failed to create dimension conversation:', e)
+        error.value = 'Failed to create conversation'
+        return
       }
     }
-    
+
+    // Add a small delay to ensure backend state is properly set
+    await new Promise(resolve => setTimeout(resolve, 50));
+
     // Get the first question for this dimension from the backend
-    const conversationId = chatStore.currentConversationId || 'temp-' + Date.now().toString()
-    const response = await api.getNextQuestion(conversationId, '', dimension, authStore.token)
-    
-    if (response) {
-      const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
-      
-      const assistantMessage = {
-        id: Date.now() + 1,
-        role: 'assistant' as const,
-        content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
-        type: 'response',
-        timestamp: new Date().toISOString(),
-        metadata: {
-          options: isDialogue ? [] : (response.options || []),
-          multiSelect: false,
-          allowTextInput: isDialogue ? true : response.allow_text_input,
-          transition: response.transition_message || null,
-          infoCards: response.info_cards || null,
-          isDialogue: isDialogue
+    if (conversationId) {
+      console.log(`[CHAT.VUE] Requesting first question for ${dimension} conversation ${conversationId}`)
+      const response = await api.getNextQuestion(conversationId, '', dimension, authStore.token)
+
+      if (response) {
+        console.log(`[CHAT.VUE] Got response for ${dimension}:`, {
+          dialogue_mode: response.dialogue_mode,
+          question_type: response.question_type,
+          options_count: response.options?.length || 0,
+          content_length: response.question_text?.length || 0,
+          current_pnm: response.current_pnm,
+          current_term: response.current_term
+        })
+
+        const isDialogue = response.dialogue_mode === true || response.should_continue_dialogue === true
+
+        // Log potential issue indicators
+        if (isDialogue && response.options && response.options.length === 0) {
+          console.warn(`[CHAT.VUE] ⚠️ POTENTIAL ISSUE: ${dimension} is in dialogue mode with no options - this might be the analysis mode bypass bug`)
         }
-      }
-      
-      chatStore.addMessage(assistantMessage)
-      currentStage.value = `${dimension} Assessment`
-      
-      // Update session state
-      if (response.current_pnm) {
-        sessionStore.setState(response.current_pnm, response.current_term || null, response.fsm_state || 'ROUTE')
+
+        const assistantMessage = {
+          id: Date.now() + 1,
+          role: 'assistant' as const,
+          content: isDialogue && response.dialogue_content ? response.dialogue_content : response.question_text,
+          type: 'response',
+          timestamp: new Date().toISOString(),
+          metadata: {
+            options: isDialogue ? [] : (response.options || []),
+            multiSelect: false,
+            allowTextInput: isDialogue ? true : response.allow_text_input,
+            transition: response.transition_message || null,
+            infoCards: response.info_cards || null,
+            isDialogue: isDialogue
+          }
+        }
+
+        chatStore.addMessage(assistantMessage)
+        currentStage.value = `${dimension} Assessment`
+
+        // Update session state
+        if (response.current_pnm) {
+          sessionStore.setState(response.current_pnm, response.current_term || null, response.fsm_state || 'ROUTE')
+        }
       }
     }
   } catch (e: any) {
+    console.error('Failed to start dimension conversation:', e)
     error.value = e.message || 'Failed to start dimension conversation'
     // Fallback message
     chatStore.addMessage({
@@ -702,8 +839,39 @@ async function startDimensionConversation(dimension: string) {
   } finally {
     isLoading.value = false
   }
-  
+
   await scrollToBottom()
+}
+
+async function initializeNewChat() {
+  // Check authentication
+  if (!authStore.isAuthenticated) {
+    error.value = 'Please login to use the assistant'
+    return
+  }
+
+  try {
+    // Generate a simple conversation ID for the session
+    const simpleConversationId = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    chatStore.setCurrentConversation(simpleConversationId)
+
+    // Create fresh session for new conversation
+    sessionStore.resetSession()
+
+    // Show welcome message
+    chatStore.addMessage({
+      id: Date.now(),
+      role: 'assistant',
+      content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms.',
+      type: 'response',
+      timestamp: new Date().toISOString()
+    })
+
+    hasInitialized.value = true
+  } catch (e: any) {
+    error.value = `Failed to initialize conversation: ${e.message}`
+    console.error('Conversation initialization error:', e)
+  }
 }
 
 onMounted(async () => {
@@ -712,49 +880,97 @@ onMounted(async () => {
     error.value = 'Please login to use the assistant'
     return
   }
-  
-  // Load active conversation if exists
+
   try {
-    const activeConv = await conversationsApi.getActiveConversation(authStore.token!)
-  
-    // Check if there's a dimension focus on mount
+    // Check if there's a dimension focus on mount (from Data page navigation)
     if (sessionStore.dimensionFocus && !hasInitialized.value) {
+      viewMode.value = 'chat'
       // Dimension-specific conversation is already created in Data.vue
       startDimensionConversation(sessionStore.dimensionFocus)
       sessionStore.setDimensionFocus(null)
-    } else if (activeConv) {
-      // Load existing active conversation
-      await loadExistingConversation(activeConv.id)
-    } else if (chatStore.messages.length === 0) {
-      // Create new general conversation
-      try {
-        const newConv = await conversationsApi.createConversation(authStore.token!, 'general_chat')
-        chatStore.startNewConversation('general_chat')
-        chatStore.setCurrentConversation(newConv.id)
-        
-        // Create fresh session for new conversation
-        sessionStore.resetSession()
-        
-        // Show welcome message
-        chatStore.addMessage({
-          id: Date.now(),
-          role: 'assistant',
-          content: 'Welcome to ALS Assistant! Please describe your current issues or symptoms, or select a specific dimension from the "Results & Data" page to begin assessment.',
-          type: 'response',
-          timestamp: new Date().toISOString()
-        })
-      } catch (e: any) {
-        error.value = `Failed to create conversation: ${e.message}`
-        chatStore.setError(e.message)
-      }
     }
+    // Otherwise, stay in menu mode and let user choose
   } catch (e: any) {
-    error.value = `Failed to initialize conversation: ${e.message}`
-    console.error('Conversation initialization error:', e)
+    error.value = `Failed to initialize: ${e.message}`
+    console.error('Initialization error:', e)
   }
-  
-  hasInitialized.value = true
 })
+
+// History-related methods
+async function loadConversationHistory() {
+  historyLoading.value = true
+  try {
+    if (!authStore.token) {
+      authStore.logout();
+      sessionStore.setMessage('Please login to view history');
+      router.push('/login');
+      return;
+    }
+
+    const response = await conversationsApi.getConversations(authStore.token!)
+    historyConversations.value = response.conversations || []
+  } catch (e: any) {
+    console.error('Failed to load conversation history:', e)
+
+    // Check if it's an authentication error
+    if (e.message && e.message.includes('401')) {
+      authStore.logout();
+      sessionStore.setMessage('Session expired. Please login again.');
+      router.push('/login');
+    } else {
+      error.value = 'Failed to load conversation history'
+    }
+  } finally {
+    historyLoading.value = false
+  }
+}
+
+function getConversationTitle(conversation: any): string {
+  return conversation.title || `Chat ${conversation.id.slice(0, 8)}`
+}
+
+function formatHistoryDate(dateStr: string): string {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+
+  // Less than 24 hours
+  if (diff < 86400000) {
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  // Less than 7 days
+  if (diff < 604800000) {
+    const days = Math.floor(diff / 86400000)
+    return `${days}d ago`
+  }
+
+  // Older
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
+function openHistoryConversation(conversation: any) {
+  // Load this conversation into the chat view
+  chatStore.setCurrentConversation(conversation.id)
+  // Load messages directly to the store instead of using non-existent method
+  chatStore.clearMessages()
+  if (conversation.messages) {
+    conversation.messages.forEach((msg: any) => chatStore.addMessage(msg))
+  }
+  viewMode.value = 'chat'
+}
+
+function getConversationType(conversation?: any) {
+  if (!conversation) return 'General Chat'
+  if (conversation.type === 'dimension') return `${conversation.dimension} Assessment`
+  if (conversation.type === 'assessment') return 'Assessment'
+  return 'General Chat'
+}
+
+function continueHistoryConversation(conversation: any) {
+  openHistoryConversation(conversation)
+}
 
 onUnmounted(() => {
   // Clear initialization flag when leaving
@@ -771,11 +987,330 @@ onUnmounted(() => {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
-/* Mobile-first responsive design */
-@media (max-width: 768px) {
-  .chat {
-    height: 100dvh; /* Use dynamic viewport height on mobile */
-  }
+/* Chat Menu Styles */
+.chat-menu {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  padding: 40px 24px;
+}
+
+.menu-header {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.menu-header h1 {
+  font-size: 28px;
+  color: #1f2937;
+  margin: 0 0 12px 0;
+}
+
+.menu-header p {
+  color: #6b7280;
+  font-size: 16px;
+  margin: 0;
+}
+
+.menu-options {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  max-width: 400px;
+}
+
+.menu-option {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border: 2px solid #e5e7eb;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+}
+
+.menu-option:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(59, 130, 246, 0.15);
+}
+
+.option-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.option-content {
+  flex: 1;
+}
+
+.option-content h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.option-content p {
+  margin: 0;
+  font-size: 14px;
+  color: #6b7280;
+  line-height: 1.4;
+}
+
+/* History View Styles */
+.history-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.history-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+  background: white;
+}
+
+.history-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #1f2937;
+  flex: 1;
+}
+
+.new-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.new-chat-btn:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+}
+
+.btn-icon {
+  font-size: 16px;
+}
+
+.history-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+}
+
+.conversations-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.conversation-card {
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.conversation-card:hover {
+  border-color: #3b82f6;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+}
+
+.conversation-card.active {
+  border-color: #10b981;
+  background: #f0fdf4;
+}
+
+.conversation-card.completed {
+  border-color: #8b5cf6;
+  background: #faf5ff;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.active {
+  background: #10b981;
+}
+
+.status-dot.completed {
+  background: #8b5cf6;
+}
+
+.status-dot.paused {
+  background: #f59e0b;
+}
+
+.card-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #1f2937;
+  flex: 1;
+  line-height: 1.3;
+}
+
+.card-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.continue-btn {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #3b82f6;
+  color: white;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  transition: all 0.2s ease;
+}
+
+.continue-btn:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+.card-content {
+  margin-bottom: 12px;
+}
+
+.conv-type-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+  margin-bottom: 8px;
+}
+
+.conv-type-badge.dimension {
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
+.conv-type-badge.assessment {
+  background: #f0f9ff;
+  color: #0369a1;
+}
+
+.conv-type-badge.general_chat {
+  background: #f9fafb;
+  color: #374151;
+}
+
+.conv-date {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.card-footer {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.stat {
+  font-size: 12px;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.status-badge {
+  margin-left: auto;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.status-badge.active {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.status-badge.completed {
+  background: #ede9fe;
+  color: #5b21b6;
+}
+
+.status-badge.paused {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+/* Chat View Styles */
+.chat-view {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+.header-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex: 1;
+}
+
+.back-btn {
+  background: #f3f4f6;
+  border: 1px solid #d1d5db;
+  color: #374151;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-btn:hover {
+  background: #e5e7eb;
 }
 
 .chat-header {
@@ -785,24 +1320,7 @@ onUnmounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-}
-
-@media (max-width: 768px) {
-  .chat-header {
-    padding: 12px 16px;
-    flex-direction: column;
-    gap: 12px;
-    align-items: flex-start;
-  }
-  
-  .chat-header h1 {
-    font-size: 18px;
-  }
-  
-  .header-indicators {
-    width: 100%;
-    justify-content: space-between;
-  }
+  gap: 16px;
 }
 
 .chat-header h1 {
@@ -873,13 +1391,6 @@ onUnmounted(() => {
   gap: 16px;
 }
 
-@media (max-width: 768px) {
-  .messages-container {
-    padding: 16px 12px;
-    gap: 12px;
-  }
-}
-
 .message {
   display: flex;
   flex-direction: column;
@@ -890,12 +1401,6 @@ onUnmounted(() => {
   max-width: 70%;
 }
 
-@media (max-width: 768px) {
-  .user-message {
-    max-width: 85%;
-  }
-}
-
 .user-message .message-content {
   background: #3b82f6;
   color: white;
@@ -903,14 +1408,6 @@ onUnmounted(() => {
   border-radius: 18px 18px 4px 18px;
   font-size: 14px;
   line-height: 1.5;
-}
-
-@media (max-width: 768px) {
-  .user-message .message-content {
-    padding: 10px 14px;
-    font-size: 13px;
-    border-radius: 16px 16px 4px 16px;
-  }
 }
 
 .message-timestamp {
@@ -953,7 +1450,6 @@ onUnmounted(() => {
   line-height: 1.5;
 }
 
-/* Dialogue mode styles */
 .dialogue-mode {
   background: linear-gradient(to right, #f0f9ff, #eff6ff);
   border: 1px solid #93c5fd;
@@ -966,12 +1462,6 @@ onUnmounted(() => {
   margin-bottom: 8px;
 }
 
-.dialogue-mode .text-input-container {
-  margin-top: 12px;
-  border-top: 1px solid #dbeafe;
-  padding-top: 12px;
-}
-
 .options-container {
   display: flex;
   flex-direction: column;
@@ -982,10 +1472,6 @@ onUnmounted(() => {
   display: grid;
   gap: 8px;
   grid-template-columns: 1fr;
-}
-
-.options-grid.multi-select {
-  gap: 6px;
 }
 
 .option-btn {
@@ -1012,16 +1498,6 @@ onUnmounted(() => {
   border-color: #3b82f6;
   background: #eff6ff;
   color: #1e40af;
-}
-
-.option-btn.multi-select.selected {
-  background: #ecfdf5;
-  border-color: #10b981;
-  color: #065f46;
-}
-
-.checkbox {
-  font-size: 16px;
 }
 
 .text-input-container {
@@ -1142,12 +1618,6 @@ onUnmounted(() => {
   background: white;
 }
 
-@media (max-width: 768px) {
-  .input-area {
-    padding: 12px 16px;
-  }
-}
-
 .text-input-section {
   display: flex;
   flex-direction: column;
@@ -1157,12 +1627,6 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   align-items: flex-end;
-}
-
-@media (max-width: 768px) {
-  .input-container {
-    gap: 8px;
-  }
 }
 
 .main-input {
@@ -1187,30 +1651,16 @@ onUnmounted(() => {
   cursor: not-allowed;
 }
 
-.main-input:disabled::placeholder {
-  color: #9ca3af;
-}
-
-.action-buttons,
-.start-buttons {
+.action-buttons {
   display: flex;
   gap: 12px;
   justify-content: center;
-}
-
-@media (max-width: 768px) {
-  .action-buttons,
-  .start-buttons {
-    flex-direction: column;
-    gap: 8px;
-  }
+  margin-top: 12px;
 }
 
 .send-btn,
 .submit-btn,
-.start-btn {
-  background: #3b82f6;
-  color: white;
+.clear-btn {
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -1220,27 +1670,23 @@ onUnmounted(() => {
   transition: background 0.2s ease;
 }
 
+.send-btn,
+.submit-btn {
+  background: #3b82f6;
+  color: white;
+}
+
 .send-btn:hover:not(:disabled),
-.submit-btn:hover:not(:disabled),
-.start-btn:hover:not(:disabled) {
+.submit-btn:hover:not(:disabled) {
   background: #2563eb;
 }
 
-.skip-btn,
-.continue-btn,
 .clear-btn {
   background: #f3f4f6;
   color: #374151;
   border: 1px solid #d1d5db;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
 }
 
-.skip-btn:hover:not(:disabled),
-.continue-btn:hover:not(:disabled),
 .clear-btn:hover:not(:disabled) {
   background: #e5e7eb;
 }
@@ -1252,7 +1698,7 @@ button:disabled {
 
 .error-container {
   position: fixed;
-  top: 80px;
+  bottom: 24px;
   right: 24px;
   background: #fef2f2;
   border: 1px solid #fecaca;
@@ -1264,32 +1710,6 @@ button:disabled {
   max-width: 400px;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   z-index: 1000;
-}
-
-@media (max-width: 768px) {
-  .error-container {
-    position: fixed;
-    top: 60px;
-    left: 16px;
-    right: 16px;
-    max-width: none;
-    padding: 10px 12px;
-  }
-}
-
-.error-connection {
-  background: #fef7f0;
-  border-color: #fed7aa;
-}
-
-.error-auth {
-  background: #fdf2f8;
-  border-color: #fbcfe8;
-}
-
-.error-server {
-  background: #f3f4f6;
-  border-color: #d1d5db;
 }
 
 .error-message {
@@ -1336,15 +1756,6 @@ button:disabled {
   background: #d97706;
 }
 
-.retry-error:disabled {
-  background: #d1d5db;
-  cursor: not-allowed;
-}
-
-.error-icon {
-  font-size: 16px;
-}
-
 .dismiss-error {
   background: none;
   border: none;
@@ -1358,54 +1769,73 @@ button:disabled {
   text-decoration: underline;
 }
 
-.notification-container {
-  position: fixed;
-  top: 80px;
-  right: 24px;
-  background: #f0f9ff;
-  border: 1px solid #7dd3fc;
-  border-radius: 8px;
-  padding: 12px 16px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  max-width: 400px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  z-index: 1000;
-}
-
 @media (max-width: 768px) {
-  .notification-container {
-    top: 60px;
+  .menu-options {
+    max-width: 100%;
+  }
+
+  .menu-option {
+    padding: 16px;
+  }
+
+  .option-content h3 {
+    font-size: 16px;
+  }
+
+  .option-content p {
+    font-size: 13px;
+  }
+
+  .chat-header {
+    padding: 12px 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .chat-header h1 {
+    font-size: 18px;
+  }
+
+  .header-indicators {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .messages-container {
+    padding: 16px 12px;
+    gap: 12px;
+  }
+
+  .user-message {
+    max-width: 85%;
+  }
+
+  .user-message .message-content {
+    padding: 10px 14px;
+    font-size: 13px;
+    border-radius: 16px 16px 4px 16px;
+  }
+
+  .input-area {
+    padding: 12px 16px;
+  }
+
+  .input-container {
+    gap: 8px;
+  }
+
+  .action-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .error-container {
+    bottom: 16px;
     left: 16px;
     right: 16px;
     max-width: none;
     padding: 10px 12px;
   }
-}
-
-.notification-message {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: #0c4a6e;
-  font-size: 14px;
-}
-
-.notification-icon {
-  font-size: 16px;
-}
-
-.dismiss-notification {
-  background: none;
-  border: none;
-  color: #0c4a6e;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 4px 8px;
-}
-
-.dismiss-notification:hover {
-  text-decoration: underline;
 }
 </style>

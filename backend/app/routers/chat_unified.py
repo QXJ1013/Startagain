@@ -64,35 +64,57 @@ class ConversationResponse(BaseModel):
 # ---------- Core Logic Functions ----------
 
 def _get_or_create_conversation(
-    storage: DocumentStorage, 
-    conversation_id: Optional[str], 
+    storage: DocumentStorage,
+    conversation_id: Optional[str],
     user_id: str,
     dimension_focus: Optional[str] = None
 ) -> ConversationDocument:
     """Get existing conversation or create new one"""
-    
+
     if conversation_id:
         doc = storage.get_conversation(conversation_id)
-        if doc and doc.user_id == user_id:
-            return doc
+
+        if doc:
+            if doc.user_id == user_id:
+                return doc
+            else:
+                # Conversation exists but belongs to different user
+                raise HTTPException(status_code=403, detail="Access denied to conversation")
         elif conversation_id.startswith('temp-'):
             # Handle temporary IDs by creating new conversation
             pass
         else:
-            raise HTTPException(status_code=404, detail="Conversation not found")
-    
-    # Create new conversation
+            # Conversation doesn't exist, create new one with the provided ID
+            # This allows frontend to specify conversation IDs
+            conversation_type = "dimension" if dimension_focus else "general_chat"
+            title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
+
+            try:
+                new_conv = storage.create_conversation_with_id(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    type=conversation_type,
+                    dimension=dimension_focus,
+                    title=title
+                )
+                return new_conv
+            except ValueError as e:
+                # If there's an error (like ID already exists), fall through to creating new conversation
+                pass
+
+    # Create new conversation (only if no conversation_id provided or creation with ID failed)
     conversation_type = "dimension" if dimension_focus else "general_chat"
     title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
-    
-    return storage.create_conversation(
+
+    new_conv = storage.create_conversation(
         user_id=user_id,
         type=conversation_type,
         dimension=dimension_focus,
         title=title
     )
+    return new_conv
 
-def _process_user_input(
+async def _process_user_input(
     conversation: ConversationDocument,
     user_input: str,
     storage: DocumentStorage,
@@ -115,8 +137,8 @@ def _process_user_input(
             content=user_input.strip(),
             type='text'
         )
-        storage.add_message(conversation.id, user_message)
-        conversation.messages.append(user_message)
+        # storage.add_message() returns updated conversation object with the new message
+        conversation = storage.add_message(conversation.id, user_message)
     
     # ENHANCED DIALOGUE INTEGRATION
     try:
@@ -124,22 +146,45 @@ def _process_user_input(
         context = create_conversation_context(conversation, user_input, ai_router)
         
         # Initialize enhanced dialogue manager
-        mode_manager = ConversationModeManager(qb, ai_router)
-        
+        mode_manager = ConversationModeManager(qb, ai_router, storage)
+        print(f"[CHAT_UNIFIED] mode_manager type: {type(mode_manager)}")
+        print(f"[CHAT_UNIFIED] About to call process_conversation")
+
         # Process conversation with enhanced framework
-        dialogue_response = mode_manager.process_conversation(context)
+        dialogue_response = await mode_manager.process_conversation(context)
+        print(f"[CHAT_UNIFIED] process_conversation completed")
         
         # Convert to expected API response format
         response_data = convert_to_conversation_response(dialogue_response)
         
         # Update conversation mode in storage for persistence
         if hasattr(storage, 'update_assessment_state'):
-            storage.update_assessment_state(
-                conversation_id=conversation.id,
-                dialogue_mode=dialogue_response.mode.value,
-                current_pnm=dialogue_response.current_pnm,
-                current_term=dialogue_response.current_term
-            )
+            # Update the assessment state in the conversation object first
+            conversation.assessment_state['dialogue_mode'] = dialogue_response.mode.value
+            if dialogue_response.current_pnm:
+                conversation.assessment_state['current_pnm'] = dialogue_response.current_pnm
+            if dialogue_response.current_term:
+                conversation.assessment_state['current_term'] = dialogue_response.current_term
+
+            # Check if conversation is completed (based on enhanced dialogue signals)
+            conversation_locked = conversation.assessment_state.get('conversation_locked', False)
+            response_type_value = dialogue_response.response_type.value
+            is_summary = response_type_value == 'summary'
+
+            print(f"[CHAT_UNIFIED] Completion check: locked={conversation_locked}, response_type='{response_type_value}', is_summary={is_summary}")
+
+            if conversation_locked or is_summary:
+                print(f"[CHAT_UNIFIED] Conversation completed, updating status")
+                conversation.status = 'completed'
+
+                # Set completion timestamp
+                from datetime import datetime
+                conversation.assessment_state['completed_at'] = datetime.now().isoformat()
+
+                print(f"[CHAT_UNIFIED] Conversation {conversation.id} marked as completed")
+
+            # Save the updated conversation (this preserves current_question_index)
+            storage.update_conversation(conversation)
         
         log.info(f"Enhanced dialogue processed: mode={dialogue_response.mode.value}, "
                 f"type={dialogue_response.response_type.value}")
@@ -148,7 +193,9 @@ def _process_user_input(
         
     except Exception as e:
         # Fallback to legacy system if enhanced dialogue fails
+        import traceback
         log.warning(f"Enhanced dialogue failed, falling back to legacy: {e}")
+        log.warning(f"Full traceback: {traceback.format_exc()}")
         return _process_user_input_legacy(conversation, user_input, storage, qb, ai_router)
 
 
@@ -163,37 +210,59 @@ def _process_user_input_legacy(
     Legacy processing logic as fallback.
     Uses structured assessment mode only - random logic removed.
     """
+    # Check if this is a UC2 dimension conversation - if so, avoid state modifications
+    is_uc2_conversation = (conversation.type == "dimension" and conversation.dimension)
+    log.warning(f"Legacy fallback check: type='{conversation.type}', dimension='{conversation.dimension}', is_uc2={is_uc2_conversation}")
+
+    if is_uc2_conversation:
+        log.warning(f"Legacy fallback called for UC2 conversation {conversation.id} - UC2 system failed")
+        # Return a simple error response without modifying conversation state
+        return {
+            "question_text": f"There was an issue processing your {conversation.dimension} assessment. Please try again.",
+            "question_type": "error",
+            "options": [],
+            "allow_text_input": True,
+            "current_pnm": conversation.assessment_state.get('current_pnm', conversation.dimension),
+            "current_term": conversation.assessment_state.get('current_term', 'Assessment'),
+            "next_state": "retry"
+        }
+
     # Initialize FSM for this conversation
     fsm = ConversationFSM(storage, qb, ai_router, conversation)
     
     # Force intelligent mode selection - no random logic
     # Always use structured assessment mode in legacy fallback
     # Enhanced dialogue system handles intelligent mode selection
-    return _generate_assessment_response(conversation, fsm, qb)
+    return _generate_assessment_response(conversation, fsm, qb, ai_router)
 
 # _generate_dialogue_response function removed - hardcoded templates eliminated
 # Enhanced Dialogue system handles all conversation generation via RAG+LLM
 
 def _generate_assessment_response(
-    conversation: ConversationDocument, 
-    fsm: ConversationFSM, 
-    qb: QuestionBank
+    conversation: ConversationDocument,
+    fsm: ConversationFSM,
+    qb: QuestionBank,
+    ai_router: AIRouter
 ) -> Dict[str, Any]:
     """Generate structured assessment response"""
     
     current_state = fsm.get_current_state()
     
     if current_state == 'ROUTE':
-        # Route to appropriate PNM dimension using intelligent routing
-        # Use enhanced dialogue system's reliable routing instead of hardcoded Safety
+        # Route to appropriate PNM dimension using AI routing instead of database routing
         try:
-            from app.services.user_profile_manager import ReliableRoutingEngine
-            reliable_router = ReliableRoutingEngine()
-            routing_decision = reliable_router.get_reliable_route(conversation.user_id)
-            
-            recommended_pnm = routing_decision.get('pnm_dimension', 'Physiological')
-            recommended_term = routing_decision.get('term', 'General assessment')
-            
+            # Use AI router for intelligent routing based on user input
+            user_messages = [msg for msg in conversation.messages if msg.role == 'user']
+            if user_messages:
+                latest_input = user_messages[-1].content
+                routing_result = ai_router.route_query(latest_input)
+                recommended_pnm = routing_result.pnm
+                recommended_term = routing_result.term
+            else:
+                # No user input yet, start with physiological basics
+                recommended_pnm = 'Physiological'
+                recommended_term = 'General health'
+
             fsm.set_state('ASK_QUESTION')
             conversation = fsm.storage.update_assessment_state(
                 conversation_id=conversation.id,
@@ -202,7 +271,7 @@ def _generate_assessment_response(
             )
         except Exception as e:
             # Fallback to first available question in question bank
-            log.warning(f"Reliable routing failed, using question bank fallback: {e}")
+            log.warning(f"AI routing failed, using question bank fallback: {e}")
             available_questions = qb.items() if hasattr(qb, 'items') else []
             if available_questions:
                 first_question = available_questions[0]
@@ -214,11 +283,11 @@ def _generate_assessment_response(
                 )
             else:
                 # Ultimate fallback
-                fsm.set_state('ASK_QUESTION') 
+                fsm.set_state('ASK_QUESTION')
                 conversation = fsm.storage.update_assessment_state(
                     conversation_id=conversation.id,
                     current_pnm='Physiological',
-                    current_term='General assessment'
+                    current_term='General health'
                 )
     
     # Get next question from question bank using current PNM/term
@@ -243,8 +312,8 @@ def _generate_assessment_response(
                 "question_type": "main",
                 "options": options,
                 "allow_text_input": True,
-                "current_pnm": "Safety",
-                "current_term": "Advance care directives",
+                "current_pnm": current_pnm,
+                "current_term": current_term,
                 "question_id": question_item.id,
                 "next_state": "ask_question"
             }
@@ -297,7 +366,7 @@ async def conversation_endpoint(
         )
         
         # Process user input and generate response
-        response_data = _process_user_input(
+        response_data = await _process_user_input(
             conversation=conversation,
             user_input=request.user_response,
             storage=storage,
@@ -312,23 +381,19 @@ async def conversation_endpoint(
             **response_data
         )
         
-        # Add info cards if requested
-        if request.request_info and not response.dialogue_mode:
-            # Simple info card for demo
-            response.info_cards = [{
-                "title": "ALS Support Information",
-                "bullets": [
-                    "Remember that you're not alone in this journey",
-                    "Consider connecting with ALS support groups",
-                    "Discuss treatment options with your healthcare team"
-                ]
-            }]
+        # DISABLE hardcoded info cards - let Enhanced Dialogue provide contextual cards when appropriate
+        # This prevents repetitive template responses and allows natural conversation flow
+        # Enhanced Dialogue will provide info cards based on actual conversation context
+        pass
         
         return response
         
     except Exception as e:
+        import traceback
+        error_details = traceback.format_exc()
         log.error(f"Conversation endpoint error: {e}")
-        raise HTTPException(status_code=500, detail=f"Conversation error: {str(e)}")
+        log.error(f"Full traceback: {error_details}")
+        raise HTTPException(status_code=500, detail=f"Conversation error: {str(e)} | Type: {type(e).__name__}")
 
 # ---------- Health Check ----------
 

@@ -148,9 +148,46 @@ class DocumentStorage:
             doc.assessment_state.get('turn_index')
         ))
         self.conn.commit()
-        
+
         return doc
-    
+
+    def create_conversation_with_id(self, conversation_id: str, user_id: str, **kwargs) -> ConversationDocument:
+        """Create new conversation document with specific ID"""
+        # Validate user exists
+        user_exists = self.conn.execute("SELECT id FROM users WHERE id = ?", (user_id,)).fetchone()
+        if not user_exists:
+            raise ValueError(f"User {user_id} does not exist")
+
+        # Check if conversation ID already exists
+        existing = self.conn.execute("SELECT id FROM conversation_documents WHERE id = ?", (conversation_id,)).fetchone()
+        if existing:
+            raise ValueError(f"Conversation {conversation_id} already exists")
+
+        doc = ConversationDocument(
+            id=conversation_id,
+            user_id=user_id,
+            **kwargs
+        )
+
+        # Insert into database
+        self.conn.execute("""
+            INSERT INTO conversation_documents (
+                id, user_id, title, type, dimension, status,
+                document, created_at, updated_at, message_count,
+                current_pnm, current_term, fsm_state, turn_index
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            doc.id, doc.user_id, doc.title, doc.type, doc.dimension, doc.status,
+            json.dumps(asdict(doc)), doc.created_at, doc.updated_at, 0,
+            doc.assessment_state.get('current_pnm'),
+            doc.assessment_state.get('current_term'),
+            doc.assessment_state.get('fsm_state'),
+            doc.assessment_state.get('turn_index', 0)
+        ))
+        self.conn.commit()
+
+        return doc
+
     def get_conversation(self, conversation_id: str) -> Optional[ConversationDocument]:
         """Get conversation by ID"""
         row = self.conn.execute(

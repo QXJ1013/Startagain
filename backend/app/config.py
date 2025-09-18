@@ -111,7 +111,7 @@ class Settings(BaseSettings):
 
     # ---------- data paths ----------
     PNM_LEXICON_PATH: str = "app/data/pnm_lexicon.json"
-    QUESTION_BANK_PATH: str = "app/data/pnm_questions_v2_full.json"
+    QUESTION_BANK_PATH: str = "app/data/pnm_questions_v3_final.json"
 
     if PYDANTIC_V2:
         model_config = {

@@ -29,12 +29,28 @@ async function http<T>(path: string, init: RequestInit): Promise<T> {
     if (!res.ok) {
       const text = await res.text().catch(() => "");
       console.error(`[API Error] ${path}:`, text);
+
+      // Check if it's an authentication error with HTML response
+      if ((res.status === 401 || res.status === 403) && text.includes('<')) {
+        console.error(`[API Auth Error] Got HTML response for auth error on ${path}`);
+        throw new Error(`Authentication failed - please refresh and login again`);
+      }
+
       throw new Error(`HTTP ${res.status} ${res.statusText}: ${text || path}`);
     }
     
-    const data = await res.json() as T;
-    console.log(`[API Response] ${path}:`, data);
-    return data;
+    const text = await res.text();
+    console.log(`[API Raw Response] ${path}:`, text);
+
+    try {
+      const data = JSON.parse(text) as T;
+      console.log(`[API Response] ${path}:`, data);
+      return data;
+    } catch (jsonError) {
+      console.error(`[API JSON Parse Error] ${path}:`, jsonError);
+      console.error(`[API Raw Text] ${path}:`, text);
+      throw new Error(`Failed to parse JSON response: ${jsonError}`);
+    }
   } catch (error) {
     console.error(`[API Fetch Error] ${path}:`, error);
     throw error;
@@ -120,6 +136,7 @@ export const conversationsApi = {
       user_id: string;
       title: string;
       type: string;
+      dimension?: string;
       status: string;
       created_at: string;
       updated_at: string;
@@ -149,10 +166,12 @@ export const conversationsApi = {
         id: string;
         title: string;
         type: string;
+        dimension?: string;
         status: string;
         created_at: string;
         updated_at: string;
         message_count: number;
+        last_message_at?: string;
         current_pnm?: string;
         current_term?: string;
         fsm_state?: string;
@@ -173,11 +192,15 @@ export const conversationsApi = {
       id: string;
       title: string;
       type: string;
+      dimension?: string;
       status: string;
       created_at: string;
       updated_at: string;
+      message_count: number;
+      last_message_at?: string;
       current_pnm?: string;
       current_term?: string;
+      fsm_state?: string;
     } | null>("/conversations/active", {
       method: "GET",
       headers: {
@@ -315,8 +338,33 @@ export const conversationsApi = {
         "Authorization": `Bearer ${token}`
       },
       body: JSON.stringify({
-        status: 'interrupted'
+        status: 'paused'
       })
+    });
+  },
+
+  // Get user scores summary
+  getUserScoresSummary(token: string) {
+    return http<{
+      dimensions: Array<{
+        name: string;
+        score: number;
+        assessments_count: number;
+      }>;
+      term_scores: Array<{
+        pnm: string;
+        term: string;
+        score: number;
+        updated_at: string;
+      }>;
+      total_conversations: number;
+      completed_assessments: number;
+    }>("/conversations/scores/summary", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
     });
   }
 };

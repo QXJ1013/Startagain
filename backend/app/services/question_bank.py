@@ -174,6 +174,8 @@ class QuestionBank:
         return self.get_question_by_id(qid)
 
     def get(self, pnm: str, term: str) -> Optional[QuestionItem]:
+        if not pnm or not term:
+            return None
         return self._by_key.get((pnm.lower(), term.lower()))
 
     def has(self, pnm: str, term: str) -> bool:

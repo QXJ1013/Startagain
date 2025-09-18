@@ -24,6 +24,7 @@ from typing import Dict, List, Optional, Any, Union
 from dataclasses import dataclass
 from enum import Enum
 import logging
+from datetime import datetime
 
 from app.services.storage import ConversationDocument, ConversationMessage
 from app.services.question_bank import QuestionBank
@@ -498,28 +499,7 @@ class ConversationCoherenceTracker:
         """Extract the current conversation topic"""
         try:
             user_input = context.user_input.lower()
-            detected_symptoms = context.detected_symptoms or []
-            
-            # Priority order: explicit symptoms > inferred topics > general
-            if detected_symptoms:
-                return detected_symptoms[0]
-            
-            # Topic keywords mapping
-            topic_keywords = {
-                'mobility': ['walk', 'move', 'leg', 'wheelchair', 'mobility'],
-                'breathing': ['breath', 'breathing', 'air', 'ventilator', 'oxygen'],
-                'speech': ['talk', 'voice', 'speak', 'communication', 'word'],
-                'eating': ['eat', 'swallow', 'food', 'meal', 'nutrition'],
-                'emotions': ['feel', 'emotion', 'mood', 'scared', 'worried'],
-                'family': ['family', 'spouse', 'children', 'partner', 'support'],
-                'medical': ['doctor', 'appointment', 'medication', 'treatment'],
-                'daily_life': ['day', 'routine', 'home', 'activity', 'daily']
-            }
-            
-            for topic, keywords in topic_keywords.items():
-                if any(keyword in user_input for keyword in keywords):
-                    return topic
-            
+            # Simplified - no keyword matching, let AI handle topic selection
             return 'general'
             
         except Exception:
@@ -561,21 +541,7 @@ class ConversationCoherenceTracker:
         # Simplified topic extraction - same logic as _extract_current_topic
         text_lower = text.lower()
         
-        topic_keywords = {
-            'mobility': ['walk', 'move', 'leg', 'wheelchair'],
-            'breathing': ['breath', 'air', 'ventilator'],
-            'speech': ['talk', 'voice', 'speak'],
-            'eating': ['eat', 'swallow', 'food'],
-            'emotions': ['feel', 'emotion', 'scared'],
-            'family': ['family', 'spouse', 'support'],
-            'medical': ['doctor', 'medication'],
-            'daily_life': ['day', 'routine', 'home']
-        }
-        
-        for topic, keywords in topic_keywords.items():
-            if any(keyword in text_lower for keyword in keywords):
-                return topic
-        
+        # Removed hardcoded topic keywords - let AI handle topic detection
         return 'general'
     
     def _check_reference_resolution(self, context: ConversationContext) -> Dict[str, Any]:
@@ -697,15 +663,8 @@ class ConversationCoherenceTracker:
         user_messages = [msg for msg in messages[-4:] if msg.role == 'user']
         assistant_messages = [msg for msg in messages[-4:] if msg.role == 'assistant']
         
-        # Simple heuristic: assistant should acknowledge topic changes
-        acknowledgment_words = ['understand', 'see', 'about', 'regarding', 'concerning']
-        
-        smooth_transitions = 0
-        for msg in assistant_messages:
-            if any(word in msg.content.lower() for word in acknowledgment_words):
-                smooth_transitions += 1
-        
-        return min(1.0, smooth_transitions / max(1, len(assistant_messages)))
+        # Simplified - let AI handle natural conversation flow assessment
+        return 0.8  # Default good conversation flow
     
     def _calculate_coherence_score(self, analysis: Dict[str, Any]) -> float:
         """Calculate overall coherence score"""
@@ -780,6 +739,7 @@ class ConversationMode(Enum):
 class ResponseType(Enum):
     """Response content types"""
     CHAT = "chat"                            # Normal conversational response
+    QUESTION = "question"                    # Structured assessment question
     SUMMARY = "summary"                      # Detailed summary after completing assessments
 
 
@@ -811,110 +771,116 @@ class DialogueResponse:
     current_pnm: Optional[str] = None
     current_term: Optional[str] = None
     question_id: Optional[str] = None
-    options: List[Dict[str, str]] = None
-    
+    options: Optional[List[Dict[str, Any]]] = None
+
     # Information cards
     info_cards: Optional[List[Dict[str, Any]]] = None
-    detected_symptoms: List[str] = None
-    
+    detected_symptoms: Optional[List[str]] = None
+
     # Enhanced info provider integration
     has_info_cards: bool = False
-    
+
     # Metadata
     confidence_score: float = 0.0
-    rag_sources: List[str] = None
+    rag_sources: Optional[List[str]] = None
+
+    # Scoring data
+    score: Optional[float] = None
+    scoring_method: Optional[str] = None
+    rationale: Optional[str] = None
 
 
 class ConversationModeManager:
     """
     Central manager for conversation modes and transitions.
-    
-    STEP 1 TODO:
-    - Basic mode detection logic
-    - Simple transition rules
-    
-    STEP 2 TODO (AI Integration):
-    - AI-powered transition detection
-    - Context-aware mode selection
-    
-    STEP 3 TODO (Refinement):
-    - Advanced transition triggers
-    - User preference learning
     """
     
-    def __init__(self, qb: QuestionBank, ai_router: AIRouter):
+    def __init__(self, qb: QuestionBank, ai_router: AIRouter, storage=None):
         self.qb = qb
         self.ai_router = ai_router
+        self.storage = storage  # Add storage for UC1 scoring
         self.scoring_engine = PNMScoringEngine()
         self.enhanced_pnm_scorer = EnhancedPNMScorer()
         self.ai_scorer = AIFreeTextScorer(ai_router)
         self.stage_scorer = StageScorer()
         self.profile_manager = UserProfileManager()
         self.reliable_router = ReliableRoutingEngine()
-        
-        # Mode handlers (to be implemented in steps 2-3)
-        self.free_dialogue = None  # FreeDialogueMode - Step 2
-        self.dimension_analysis = None  # DimensionAnalysisMode - Step 2
-        self.transition_detector = None  # TransitionDetector - Step 2
+
+        # Use Case specific managers - clean separation
+        self.uc1_manager = UseCaseOneManager(qb, ai_router, self)  # Pass main manager for storage access
+        self.uc2_manager = UseCaseTwoManager(qb, ai_router, self)  # Pass main manager for scoring access
         
     def determine_conversation_mode(self, context: ConversationContext) -> ConversationMode:
         """
         Determine which conversation mode to use.
-        
+
         STEP 1: Basic rules
-        STEP 2: Add AI decision making  
+        STEP 2: Add AI decision making
         STEP 3: Add user preference learning
         """
-        # Step 1: Simple rule-based detection
-        if context.current_dimension:
-            # User selected specific dimension from data page
+        # Use Case 2: Explicit dimension selection from frontend
+        if (context.conversation.type == "dimension" and
+            context.conversation.dimension):
             return ConversationMode.DIMENSION_ANALYSIS
-            
-        if context.turn_count >= 3:
-            # After 3+ turns, consider transition to structured assessment
-            # TODO Step 2: Replace with AI decision
-            return ConversationMode.DIMENSION_ANALYSIS
-            
+
+        # Use Case 1: Start with FREE_DIALOGUE for first 3 turns
+        # Only transition to assessment after sufficient dialogue
+        if context.turn_count <= 3:
+            # Force free dialogue for first 3 turns (turns 1, 2, 3)
+            return ConversationMode.FREE_DIALOGUE
+
+        # After turn 3, allow transition based on should_transition_mode()
         return ConversationMode.FREE_DIALOGUE
     
     def should_transition_mode(self, context: ConversationContext) -> bool:
         """
         Determine if conversation should transition to different mode.
-        
+
         STEP 1: Basic transition triggers
         STEP 2: AI-powered transition detection
         STEP 3: Refined transition logic
         """
         if context.mode == ConversationMode.FREE_DIALOGUE:
-            # Transition triggers for free dialogue
-            if context.turn_count >= 5:
-                return True  # After 5 turns, move to assessment
-            if len(context.detected_symptoms) >= 2:
-                return True  # Multiple symptoms detected
-            # TODO Step 2: Add AI transition detection
-            
+            # Simple turn-based transition - no keyword matching
+            # After 3 turns of pure dialogue, transition to assessment
+            if context.turn_count >= 4:
+                return True  # Start assessment from turn 4
+
+            # Optional: Keep only very explicit user requests for assessment
+            if "start assessment" in context.user_input.lower() or "begin evaluation" in context.user_input.lower():
+                return True  # User explicitly requests assessment
+
         return False
         
-    def process_conversation(self, context: ConversationContext) -> DialogueResponse:
+    async def process_conversation(self, context: ConversationContext) -> DialogueResponse:
         """
         Main entry point for conversation processing.
-        Routes to appropriate mode handler.
+        Routes to appropriate Use Case manager.
         """
-        # Determine mode
-        target_mode = self.determine_conversation_mode(context)
-        
-        # Check for mode transition
-        if self.should_transition_mode(context):
-            target_mode = ConversationMode.DIMENSION_ANALYSIS
-            
-        # Route to appropriate handler
-        if target_mode == ConversationMode.FREE_DIALOGUE:
-            return self._handle_free_dialogue(context)
-        elif target_mode == ConversationMode.DIMENSION_ANALYSIS:
-            return self._handle_dimension_analysis(context)
+        print(f"[DEBUG] process_conversation called - START")
+        try:
+            print(f"[MAIN] Processing conversation: type={context.conversation.type}, dimension={context.conversation.dimension}, turn={context.turn_count}")
+        except Exception as e:
+            print(f"[ERROR] Exception accessing context attributes: {e}")
+            print(f"[ERROR] Context type: {type(context)}")
+            print(f"[ERROR] Context.conversation type: {type(context.conversation) if hasattr(context, 'conversation') else 'No conversation attr'}")
+            raise e  # Re-raise to trigger fallback to legacy system
+
+        # Route based on conversation type - clean separation
+        print(f"[ROUTING DEBUG] conversation.type: '{context.conversation.type}'")
+        print(f"[ROUTING DEBUG] conversation.dimension: '{context.conversation.dimension}'")
+        print(f"[ROUTING DEBUG] condition check: {context.conversation.type == 'dimension'} and {bool(context.conversation.dimension)}")
+
+        if (context.conversation.type == "dimension" and
+            context.conversation.dimension):
+            # Use Case 2: Single dimension assessment
+            print(f"[MAIN] Routing to UC2 manager for dimension: {context.conversation.dimension}")
+            return await self.uc2_manager.handle_dimension_assessment(
+                context, context.conversation.dimension)
         else:
-            # Fallback
-            return self._handle_fallback(context)
+            # Use Case 1: General conversation flow
+            print(f"[MAIN] Routing to UC1 manager for general conversation")
+            return await self.uc1_manager.handle_conversation_flow(context)
     
     def _handle_free_dialogue(self, context: ConversationContext) -> DialogueResponse:
         """
@@ -940,19 +906,25 @@ class ConversationModeManager:
                 detected_symptoms=context.detected_symptoms
             )
     
-    def _handle_dimension_analysis(self, context: ConversationContext) -> DialogueResponse:
+    async def _handle_dimension_analysis(self, context: ConversationContext) -> DialogueResponse:
         """
-        Handle dimension analysis mode using DimensionAnalysisMode class.
-        
-        STEP 2: Enhanced with AI scoring and RAG-powered summaries
+        Handle dimension analysis mode using the appropriate method:
+        - UC2: Use _generate_assessment_question_uc2 for dimension_focus requests (no AI routing)
+        - UC1: Use DimensionAnalysisMode.process_assessment for regular assessments (with AI routing)
         """
         try:
-            # Initialize dimension analysis mode handler
-            dimension_analysis = DimensionAnalysisMode(self.qb, self.ai_router, self.scoring_engine)
-            
-            # Process conversation in dimension analysis mode
-            return dimension_analysis.process_assessment(context)
-            
+            # Check if this is UC2 (dimension-specific assessment)
+            conversation_dimension = getattr(context.conversation, 'dimension', None)
+
+            if conversation_dimension:
+                # UC2: Fixed dimension assessment - use UC2 manager without AI routing
+                print(f"[UC2] Detected dimension-focused conversation: {conversation_dimension}")
+                return await self.uc2_manager.handle_dimension_assessment(context, conversation_dimension)
+            else:
+                # UC1: Regular assessment - use UC1 specialized method with AI routing
+                print(f"[UC1] Using UC1 specialized assessment method")
+                return await self._handle_assessment_phase(context)
+
         except Exception as e:
             log.error(f"Dimension analysis handling error: {e}")
             # Fallback to basic question selection
@@ -970,8 +942,19 @@ class ConversationModeManager:
     def _fallback_dimension_analysis(self, context: ConversationContext) -> DialogueResponse:
         """Fallback for dimension analysis mode"""
         try:
-            pnm = context.current_dimension or 'Safety'
-            term = context.current_term or 'Advance care directives'
+            # Only do PNM routing if we're truly in assessment mode
+            # Use Case 1: Don't auto-route to dimensions during free dialogue
+            if (context.conversation.type == "dimension" and context.conversation.dimension):
+                # Use Case 2: Explicit dimension assessment
+                pnm = context.conversation.dimension
+                term = context.current_term or 'General health'
+            elif context.current_dimension:
+                # Assessment mode with existing dimension
+                pnm = context.current_dimension
+                term = context.current_term or 'General health'
+            else:
+                # Use Case 1: Should not reach here - redirect to free dialogue
+                return self._handle_fallback(context)
             
             question_item = self.qb.choose_for_term(pnm, term, [])
             if question_item:
@@ -1043,21 +1026,14 @@ class TransitionDetector:
         if any(keyword in user_input_lower for keyword in assessment_keywords):
             return True
         
-        # Multiple symptoms mentioned (complexity indicator)
-        if len(context.detected_symptoms) >= 3:
-            return True
+        # Removed symptom-based complexity detection - use turn count instead
         
         # Extended conversation without assessment
         if context.turn_count >= 7:
             return True
         
-        # Emotional distress indicators
-        distress_keywords = [
-            'scared', 'worried', 'don\'t know', 'confused', 'overwhelmed',
-            'need guidance', 'what should i do'
-        ]
-        if any(keyword in user_input_lower for keyword in distress_keywords):
-            return True
+        # Removed distress keyword matching - these are common words that cause false triggers
+        # Let AI assess emotional state through natural conversation analysis instead
         
         return False
     
@@ -1379,236 +1355,6 @@ Return only the emotional state or 'neutral' if unclear.
             return "No conversation history available"
 
 
-class UserBehaviorAnalyzer:
-    """
-    STEP 3: Advanced user behavior learning and preference adaptation system.
-    
-    Tracks conversation patterns, preferences, and adapts dialogue experience.
-    """
-    
-    def __init__(self):
-        pass
-    
-    def analyze_user_preferences(self, context: ConversationContext) -> Dict[str, Any]:
-        """Analyze and learn user conversation preferences"""
-        preferences = {
-            'conversation_pace': self._analyze_conversation_pace(context),
-            'preferred_response_length': self._analyze_response_length_preference(context),
-            'topic_interests': self._analyze_topic_interests(context),
-            'engagement_patterns': self._analyze_engagement_patterns(context),
-            'support_needs': self._analyze_support_needs(context),
-            'communication_style': self._analyze_communication_style(context)
-        }
-        
-        # Store preferences for future use
-        self._store_user_preferences(context, preferences)
-        
-        return preferences
-    
-    def _analyze_conversation_pace(self, context: ConversationContext) -> str:
-        """Determine user's preferred conversation pace"""
-        try:
-            messages = context.conversation.messages[-10:] if context.conversation.messages else []
-            user_messages = [msg for msg in messages if msg.role == 'user']
-            
-            if len(user_messages) < 3:
-                return 'normal'
-            
-            # Analyze response times and message lengths
-            avg_length = sum(len(msg.content) for msg in user_messages) / len(user_messages)
-            
-            if avg_length < 20:
-                return 'fast'  # Short, quick responses
-            elif avg_length > 100:
-                return 'slow'  # Longer, more thoughtful responses
-            else:
-                return 'normal'
-                
-        except Exception:
-            return 'normal'
-    
-    def _analyze_response_length_preference(self, context: ConversationContext) -> str:
-        """Determine preferred response length from assistant"""
-        try:
-            # Look for user reactions to different response lengths
-            emotion_history = context.conversation.assessment_state.get('emotion_history', [])
-            
-            # Check if user shows positive responses to longer explanations
-            positive_emotions = ['hope', 'acceptance']
-            recent_positive = [entry for entry in emotion_history[-5:] if entry.get('emotion') in positive_emotions]
-            
-            if len(recent_positive) > 2:
-                return 'detailed'  # User appreciates thorough responses
-            elif any(entry.get('emotion') == 'confusion' for entry in emotion_history[-3:]):
-                return 'simple'   # User may be overwhelmed
-            else:
-                return 'balanced'
-                
-        except Exception:
-            return 'balanced'
-    
-    def _analyze_topic_interests(self, context: ConversationContext) -> List[str]:
-        """Identify topics user shows most interest in discussing"""
-        try:
-            interests = []
-            messages = context.conversation.messages[-15:] if context.conversation.messages else []
-            user_messages = [msg.content.lower() for msg in messages if msg.role == 'user']
-            
-            # Topic interest indicators
-            topic_keywords = {
-                'mobility': ['walking', 'moving', 'wheelchair', 'mobility', 'exercise'],
-                'breathing': ['breathing', 'breath', 'oxygen', 'ventilator', 'cpap'],
-                'speech': ['talking', 'speaking', 'voice', 'communication'],
-                'eating': ['eating', 'swallowing', 'food', 'nutrition'],
-                'family': ['family', 'spouse', 'children', 'partner', 'loved ones'],
-                'work': ['job', 'work', 'career', 'employment'],
-                'emotions': ['feeling', 'emotional', 'scared', 'worried', 'sad'],
-                'future': ['future', 'planning', 'goals', 'tomorrow', 'next']
-            }
-            
-            for topic, keywords in topic_keywords.items():
-                mentions = sum(1 for msg in user_messages for keyword in keywords if keyword in msg)
-                if mentions >= 2:  # Mentioned multiple times
-                    interests.append(topic)
-            
-            return interests[:3]  # Top 3 interests
-            
-        except Exception:
-            return []
-    
-    def _analyze_engagement_patterns(self, context: ConversationContext) -> Dict[str, Any]:
-        """Analyze when user is most engaged"""
-        try:
-            messages = context.conversation.messages if context.conversation.messages else []
-            user_messages = [msg for msg in messages if msg.role == 'user']
-            
-            engagement_data = {
-                'avg_message_length': 0,
-                'question_frequency': 0,
-                'emotional_openness': 0,
-                'initiative_taking': 0
-            }
-            
-            if user_messages:
-                # Average message length indicates engagement
-                engagement_data['avg_message_length'] = sum(len(msg.content) for msg in user_messages) / len(user_messages)
-                
-                # Question frequency shows curiosity/engagement
-                questions = sum(1 for msg in user_messages if '?' in msg.content)
-                engagement_data['question_frequency'] = questions / len(user_messages)
-                
-                # Emotional openness
-                emotional_words = ['feel', 'scared', 'worried', 'hope', 'sad', 'angry', 'grateful']
-                emotional_messages = sum(1 for msg in user_messages if any(word in msg.content.lower() for word in emotional_words))
-                engagement_data['emotional_openness'] = emotional_messages / len(user_messages)
-                
-                # Initiative taking (bringing up new topics)
-                initiative_indicators = ['i want to talk about', 'can we discuss', 'i\'m thinking about', 'what about']
-                initiative_messages = sum(1 for msg in user_messages if any(indicator in msg.content.lower() for indicator in initiative_indicators))
-                engagement_data['initiative_taking'] = initiative_messages / len(user_messages)
-            
-            return engagement_data
-            
-        except Exception:
-            return {'avg_message_length': 0, 'question_frequency': 0, 'emotional_openness': 0, 'initiative_taking': 0}
-    
-    def _analyze_support_needs(self, context: ConversationContext) -> List[str]:
-        """Identify user's primary support needs"""
-        support_needs = []
-        
-        try:
-            # Analyze detected symptoms and emotional patterns
-            symptoms = context.detected_symptoms or []
-            emotion_history = context.conversation.assessment_state.get('emotion_history', [])
-            
-            # Map symptoms to support needs
-            if any('breathing' in symptom for symptom in symptoms):
-                support_needs.append('respiratory_support')
-            if any('hand' in symptom or 'grip' in symptom for symptom in symptoms):
-                support_needs.append('mobility_assistance')
-            if any('speech' in symptom or 'voice' in symptom for symptom in symptoms):
-                support_needs.append('communication_aids')
-            
-            # Map emotions to support needs
-            recent_emotions = [entry.get('emotion') for entry in emotion_history[-5:]]
-            if 'severe_distress' in recent_emotions or 'anxiety' in recent_emotions:
-                support_needs.append('emotional_support')
-            if 'confusion' in recent_emotions:
-                support_needs.append('information_support')
-            if 'sadness' in recent_emotions:
-                support_needs.append('hope_building')
-            
-            return list(set(support_needs))  # Remove duplicates
-            
-        except Exception:
-            return []
-    
-    def _analyze_communication_style(self, context: ConversationContext) -> str:
-        """Determine user's communication style preference"""
-        try:
-            messages = context.conversation.messages[-10:] if context.conversation.messages else []
-            user_messages = [msg.content for msg in messages if msg.role == 'user']
-            
-            if not user_messages:
-                return 'balanced'
-            
-            # Analyze language patterns
-            formal_indicators = ['please', 'thank you', 'would you', 'could you', 'appreciate']
-            casual_indicators = ['yeah', 'ok', 'sure', 'got it', 'yep']
-            technical_indicators = ['diagnosis', 'prognosis', 'medical', 'treatment', 'symptoms']
-            
-            formal_count = sum(1 for msg in user_messages for indicator in formal_indicators if indicator in msg.lower())
-            casual_count = sum(1 for msg in user_messages for indicator in casual_indicators if indicator in msg.lower())
-            technical_count = sum(1 for msg in user_messages for indicator in technical_indicators if indicator in msg.lower())
-            
-            if formal_count > casual_count and formal_count > technical_count:
-                return 'formal'
-            elif technical_count > casual_count and technical_count > formal_count:
-                return 'technical'
-            elif casual_count > formal_count:
-                return 'casual'
-            else:
-                return 'balanced'
-                
-        except Exception:
-            return 'balanced'
-    
-    def _store_user_preferences(self, context: ConversationContext, preferences: Dict[str, Any]):
-        """Store learned preferences for future conversations"""
-        try:
-            if 'user_preferences' not in context.conversation.assessment_state:
-                context.conversation.assessment_state['user_preferences'] = {}
-            
-            # Update preferences with timestamp
-            context.conversation.assessment_state['user_preferences'].update({
-                'last_updated': context.conversation.created_at.isoformat() if context.conversation.created_at else None,
-                'preferences': preferences,
-                'learning_confidence': self._calculate_learning_confidence(context)
-            })
-            
-        except Exception as e:
-            log.warning(f"Failed to store user preferences: {e}")
-    
-    def _calculate_learning_confidence(self, context: ConversationContext) -> float:
-        """Calculate confidence level in learned preferences"""
-        try:
-            message_count = len(context.conversation.messages) if context.conversation.messages else 0
-            turn_count = context.turn_count
-            
-            # Higher confidence with more interaction data
-            if turn_count >= 10:
-                return 0.9
-            elif turn_count >= 5:
-                return 0.7
-            elif turn_count >= 3:
-                return 0.5
-            else:
-                return 0.3
-                
-        except Exception:
-            return 0.3
-
-
 class ResponseGenerator:
     """
     RAG + LLM powered response generation with advanced personalization.
@@ -1626,17 +1372,12 @@ class ResponseGenerator:
         # Load PNM lexicon for symptom understanding
         self.pnm_lexicon = self._load_pnm_lexicon()
         
-        # Initialize user behavior analyzer
-        self.behavior_analyzer = UserBehaviorAnalyzer()
+        # Removed user behavior analyzer - over-engineered keyword matching system
         
-        # Initialize performance cache
-        self.cache = ConversationCache()
-        
-        # Initialize conversation coherence tracker
-        self.coherence_tracker = ConversationCoherenceTracker()
-        
-        # Initialize dynamic knowledge base expander
-        self.knowledge_expander = DynamicKnowledgeExpander()
+        # REMOVED OBSOLETE COMPONENTS:
+        # - ConversationCache: Over-engineered caching not needed for UC1/UC2
+        # - ConversationCoherenceTracker: Complex coherence analysis not required
+        # - DynamicKnowledgeExpander: Over-complex knowledge expansion not needed
         
         # Initialize enhanced info provider for dual response modes
         self.info_provider = EnhancedInfoProvider()
@@ -1692,17 +1433,17 @@ class ResponseGenerator:
         4. Adaptive response styling based on learned preferences
         """
         try:
-            # 1. Analyze user preferences and behavior patterns
-            user_preferences = self.behavior_analyzer.analyze_user_preferences(context)
-            
+            # 1. Simplified user preferences - no keyword matching overhead
+            user_preferences = {'communication_style': 'balanced'}
+
             # 2. Analyze user input with enhanced context awareness
             analysis = self._analyze_user_input_enhanced(context, user_preferences)
-            
-            # 3. Retrieve personalized knowledge via RAG
+
+            # 3. Retrieve knowledge via RAG
             knowledge = self._retrieve_personalized_knowledge(context, analysis, user_preferences)
             
-            # 4. Analyze conversation coherence
-            coherence_analysis = self.coherence_tracker.analyze_conversation_coherence(context)
+            # 4. REMOVED: Conversation coherence analysis (over-engineered for UC1/UC2)
+            coherence_analysis = {'coherence_score': 0.8, 'suggestions': []}  # Simple fallback
             
             # 5. Decide response mode: Chat vs Info Cards
             should_provide_info = self._should_provide_info_cards(context, analysis, user_preferences)
@@ -1776,27 +1517,17 @@ class ResponseGenerator:
                 primary_symptoms = analysis['detected_symptoms'][:2]  # Focus on top 2 symptoms
                 query = f"ALS {' '.join(primary_symptoms)} management support care"
                 
-                # Try cache first
-                cached_results = self.cache.get_rag_response(query, "symptom_primary")
-                if cached_results:
-                    knowledge.extend(cached_results)
-                else:
-                    rag_results = self.rag.search(query, top_k=3, index_kind="background")
-                    self.cache.store_rag_response(query, rag_results, "symptom_primary")
-                    knowledge.extend(rag_results)
+                # Direct RAG search (removed caching for simplicity)
+                rag_results = self.rag.search(query, top_k=3, index_kind="background")
+                knowledge.extend(rag_results)
             
             # Secondary query for emotional support if needed
             if analysis['emotional_indicators'] and analysis['requires_support']:
                 emotion_query = f"ALS emotional support coping {analysis['emotional_indicators'][0]}"
                 
-                # Try cache first
-                cached_emotion = self.cache.get_rag_response(emotion_query, "emotional_support")
-                if cached_emotion:
-                    knowledge.extend(cached_emotion)
-                else:
-                    emotion_results = self.rag.search(emotion_query, top_k=2, index_kind="background")
-                    self.cache.store_rag_response(emotion_query, emotion_results, "emotional_support")
-                    knowledge.extend(emotion_results)
+                # Direct RAG search (removed caching for simplicity)
+                emotion_results = self.rag.search(emotion_query, top_k=2, index_kind="background")
+                knowledge.extend(emotion_results)
             
             # Tertiary query for general conversation continuation
             if not knowledge and context.turn_count > 1:
@@ -1805,14 +1536,9 @@ class ResponseGenerator:
                 if recent_topics:
                     general_query = f"ALS patient conversation {recent_topics[:100]}"
                     
-                    # Try cache first
-                    cached_general = self.cache.get_rag_response(general_query, "general_conversation")
-                    if cached_general:
-                        knowledge.extend(cached_general)
-                    else:
-                        general_results = self.rag.search(general_query, top_k=2, index_kind="background")
-                        self.cache.store_rag_response(general_query, general_results, "general_conversation")
-                        knowledge.extend(general_results)
+                    # Direct RAG search (removed caching for simplicity)
+                    general_results = self.rag.search(general_query, top_k=2, index_kind="background")
+                    knowledge.extend(general_results)
             
             return knowledge[:4]  # Limit to top 4 most relevant pieces
             
@@ -1826,20 +1552,8 @@ class ResponseGenerator:
             # Construct LLM prompt with context and knowledge
             prompt = self._build_chat_prompt(context, analysis, knowledge)
             
-            # Create context hash for cache key
-            context_hash = self._create_context_hash(context, analysis)
-            
-            # Try cache first
-            cached_response = self.cache.get_llm_response(prompt, context_hash)
-            if cached_response:
-                return self._clean_and_validate_response(cached_response, context)
-            
-            # Generate response using LLM
+            # Direct LLM generation (removed caching for simplicity)
             response = self.llm.generate_text(prompt)
-            
-            # Store in cache for future use
-            if response and len(response.strip()) > 10:
-                self.cache.store_llm_response(prompt, response, context_hash)
             
             # Clean and validate response
             return self._clean_and_validate_response(response, context)
@@ -1960,9 +1674,7 @@ Generate a natural, conversational response (NOT clinical advice):"""
                 topic_knowledge = self._retrieve_topic_specific_knowledge(topic, context)
                 knowledge.extend(topic_knowledge)
                 
-                # Add specialized knowledge from dynamic expander
-                specialized_knowledge = self.knowledge_expander.get_specialized_knowledge(topic, context)
-                knowledge.extend(specialized_knowledge)
+                # REMOVED: Dynamic knowledge expansion (over-engineered for UC1/UC2)
             
             # Retrieve support-specific knowledge
             for need in support_needs[:2]:  # Top 2 support needs
@@ -1970,9 +1682,9 @@ Generate a natural, conversational response (NOT clinical advice):"""
                 knowledge.extend(support_knowledge)
             
             # Identify and fill knowledge gaps
-            knowledge_gaps = self.knowledge_expander.identify_knowledge_gaps(context, analysis, knowledge)
-            if knowledge_gaps:
-                expanded_knowledge = self.knowledge_expander.expand_knowledge_dynamically(knowledge_gaps, context)
+            # REMOVED: Dynamic knowledge gap detection and expansion (over-engineered for UC1/UC2)
+            knowledge_gaps = []
+            if False:  # Disabled dynamic knowledge expansion
                 for topic, content_list in expanded_knowledge.items():
                     for content in content_list[:2]:  # Add top 2 pieces per topic
                         knowledge.append({
@@ -2067,12 +1779,8 @@ Generate a natural, conversational response (NOT clinical advice):"""
             info_card_signals = 0
             user_input = context.user_input.lower()
             
-            # 1. Direct user intent signals (highest priority - bypass symptom detection)
-            info_keywords = ['tell me', 'what is', 'how does', 'explain', 'information', 
-                           'help me understand', 'what can', 'what about', 'more about', 
-                           'details about', 'how to', 'what should']
-            if any(keyword in user_input for keyword in info_keywords):
-                info_card_signals += 4  # Strong signal
+            # 1. Info cards should trigger after follow-up questions complete, not via keyword matching
+            # Removed hardcoded info_keywords - let natural conversation flow determine timing
                 
             # 2. Use routing confidence from improved system (now actually reliable)
             routing_result = analysis.get('routing_result')
@@ -2101,11 +1809,8 @@ Generate a natural, conversational response (NOT clinical advice):"""
             if 'information_support' in support_needs:
                 info_card_signals += 2
                 
-            # 6. Conversation pattern analysis - questions that suggest information seeking
-            question_patterns = ['how', 'what', 'when', 'where', 'why', 'can', 'should', 'could']
-            question_count = sum(1 for pattern in question_patterns if pattern in user_input)
-            if question_count >= 2:  # Multiple question words suggest information seeking
-                info_card_signals += 2
+            # 6. Removed question pattern matching - these are common words that cause false triggers
+            # Info cards should flow naturally after assessment completion
                 
             # 7. Smart timing based on conversation flow (not rigid turn counting)
             if context.turn_count >= 3:
@@ -2220,7 +1925,7 @@ Generate a natural, conversational response (NOT clinical advice):"""
         if coherence_analysis:
             coherence_score = coherence_analysis.get('coherence_score', 1.0)
             current_topic = coherence_analysis.get('current_topic', 'general')
-            suggestions = self.coherence_tracker.get_coherence_improvement_suggestions(coherence_analysis)
+            suggestions = coherence_analysis.get('suggestions', [])  # Use fallback suggestions
             
             coherence_guidance = f"""
 CONVERSATION COHERENCE ANALYSIS:
@@ -2261,11 +1966,13 @@ RESPONSE STYLE:
 
 GUIDELINES:
 - Be empathetic and acknowledge their experience
+- Provide helpful information, suggestions, or support resources
+- Share knowledge that might help with their situation
 - Connect to their interests when relevant: {', '.join(topic_interests[:2])}
 - Address their support needs: {', '.join(support_needs[:2])}
-- Maintain conversation coherence and smooth topic transitions
-- Ask a follow-up question that shows you're listening
-- Never provide medical advice, just supportive conversation
+- Maintain conversation coherence and offer practical insights
+- Focus on being helpful rather than asking questions
+- Never provide medical advice, just supportive conversation and information
 
 Generate your response:"""
 
@@ -2515,13 +2222,8 @@ Generate a supportive summary response:"""
             # Retrieve information with caching
             info_query = f"ALS {focus_topic} practical tips daily living support"
             
-            # Try cache first
-            cached_docs = self.cache.get_rag_response(info_query, "info_cards")
-            if cached_docs:
-                info_docs = cached_docs
-            else:
-                info_docs = self.rag.search(info_query, top_k=3, index_kind="background")
-                self.cache.store_rag_response(info_query, info_docs, "info_cards")
+            # Direct RAG search (removed caching for simplicity)
+            info_docs = self.rag.search(info_query, top_k=3, index_kind="background")
             
             if not info_docs:
                 return []
@@ -2572,18 +2274,20 @@ def create_conversation_context(
     This function bridges the existing DocumentStorage system with the new
     enhanced dialogue framework.
     """
-    # Extract current state
+    # Extract current state with proper None handling
     mode_str = conversation.assessment_state.get('dialogue_mode', 'free_dialogue')
-    mode = ConversationMode(mode_str) if mode_str in [m.value for m in ConversationMode] else ConversationMode.FREE_DIALOGUE
+    if mode_str and mode_str in [m.value for m in ConversationMode]:
+        mode = ConversationMode(mode_str)
+    else:
+        mode = ConversationMode.FREE_DIALOGUE
     
     # Count user messages for turn tracking
     turn_count = sum(1 for msg in conversation.messages if msg.role == 'user')
     
-    # Detect symptoms in user input using existing AI router
+    # Skip automatic symptom detection during free dialogue
+    # Keywords should only be used for question bank retrieval, not symptom detection
+    # This aligns with original design: AI-expanded keywords for question matching
     detected_symptoms = []
-    for symptom, mapping in ai_router.SYMPTOM_KEYWORDS.items():
-        if any(kw in user_input.lower() for kw in mapping['primary']):
-            detected_symptoms.append(symptom)
     
     return ConversationContext(
         conversation=conversation,
@@ -2593,7 +2297,7 @@ def create_conversation_context(
         detected_symptoms=detected_symptoms,
         current_dimension=conversation.dimension,
         current_term=conversation.assessment_state.get('current_term'),
-        recent_scores=[]  # TODO: Extract from conversation.assessment_state['scores']
+        recent_scores=[]
     )
 
 
@@ -2605,7 +2309,9 @@ def convert_to_conversation_response(dialogue_response: DialogueResponse) -> Dic
     """
     response_data = {
         "question_text": dialogue_response.content,
-        "question_type": "dialogue" if dialogue_response.response_type == ResponseType.CHAT else "summary",
+        "question_type": ("dialogue" if dialogue_response.response_type == ResponseType.CHAT
+                         else "assessment" if dialogue_response.response_type == ResponseType.QUESTION
+                         else "summary"),
         "options": dialogue_response.options or [],
         "allow_text_input": True,
         "dialogue_mode": dialogue_response.mode == ConversationMode.FREE_DIALOGUE,
@@ -2625,8 +2331,27 @@ def convert_to_conversation_response(dialogue_response: DialogueResponse) -> Dic
         response_data["detected_symptoms"] = dialogue_response.detected_symptoms
     if dialogue_response.info_cards:
         response_data["info_cards"] = dialogue_response.info_cards
-        
+
     return response_data
+
+
+# Add missing method to ResponseGenerator class
+def _get_conversation_history_for_response_generator(self, context: 'ConversationContext', num_turns: int = 3) -> str:
+    """Get recent conversation history for context"""
+    try:
+        messages = context.conversation.messages[-num_turns*2:] if context.conversation.messages else []
+        history = []
+
+        for msg in messages:
+            role = "Patient" if msg.role == 'user' else "Assistant"
+            history.append(f"{role}: {msg.content}")
+
+        return '\n'.join(history)
+    except Exception:
+        return "No conversation history available"
+
+# Monkey patch the method into ResponseGenerator class
+ResponseGenerator._get_conversation_history = _get_conversation_history_for_response_generator
 
 
 class FreeDialogueMode:
@@ -2722,49 +2447,197 @@ class DimensionAnalysisMode:
         self.qb = qb
         self.ai_router = ai_router
         self.scoring_engine = scoring_engine
-        self.enhanced_pnm_scorer = EnhancedPNMScorer()
-        self.ai_scorer = AIFreeTextScorer(ai_router)
-        self.stage_scorer = StageScorer()
-        self.profile_manager = UserProfileManager()
-        self.reliable_router = ReliableRoutingEngine()
-        self.response_generator = ResponseGenerator()
-        self.transition_detector = TransitionDetector(RAGQueryClient(), LLMClient())
+        self.ai_scorer = AIFreeTextScorer(ai_router)  # Add missing ai_scorer
+        self.response_generator = ResponseGenerator()  # Add for RAG AI summaries
+        # Simplified initialization - only use core components that exist
         
-    def process_assessment(self, context: ConversationContext) -> DialogueResponse:
+    async def process_assessment(self, context: ConversationContext) -> DialogueResponse:
         """
         Process dimension analysis with intelligent question selection and scoring.
-        
-        Flow: Check completion → Generate question/summary → Update state → Return
+
+        Flow:
+        1. Process user response if provided (score it)
+        2. Check completion → Generate question/summary → Update state → Return
         """
         try:
-            # Check if current term assessment is complete
+            # STEP 1: Process user response if provided (score and record it)
+            if context.user_input.strip():
+                print(f"[UC1] Processing user response: {context.user_input}")
+                await self._process_assessment_response(context)
+
+            # STEP 2: Check if current term assessment is complete
             if self._is_term_complete(context):
-                return self._generate_term_summary(context)
-            
-            # Generate next assessment question
+                print(f"[UC1] Term completion detected, generating summary")
+                summary_response = self._generate_term_summary(context)
+                print(f"[UC1] Summary generated: response_type={summary_response.response_type}, mode={summary_response.mode}")
+                return summary_response
+
+            # STEP 3: Generate next assessment question
             return self._generate_assessment_question(context)
-            
+
         except Exception as e:
             log.error(f"Dimension analysis processing error: {e}")
-            return self._fallback_dimension_analysis(context)
-    
+            # Return a working fallback instead of calling undefined method
+            return DialogueResponse(
+                content="How are you managing with your current condition?",
+                response_type=ResponseType.CHAT,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=True,
+                current_pnm="Physiological",
+                current_term="General health"
+            )
+
+    async def _process_assessment_response(self, context: ConversationContext):
+        """Process user's assessment response and record it"""
+        try:
+            # Get current question context from assessment state
+            question_context = context.conversation.assessment_state.get('question_context', {})
+            current_question_id = question_context.get('question_id')
+
+            if current_question_id:
+                # Mark this question as asked to avoid repetition
+                asked_questions = context.conversation.assessment_state.get('asked_questions', [])
+                if current_question_id not in asked_questions:
+                    asked_questions.append(current_question_id)
+                    context.conversation.assessment_state['asked_questions'] = asked_questions
+                    print(f"[UC1] Marked question {current_question_id} as asked. Total asked: {len(asked_questions)}")
+
+                # Score the response using the existing scoring engine
+                pnm = context.current_dimension or 'Physiological'
+                term = context.current_term or 'General'
+
+                # Try to get score from option first, then use AI scoring
+                score = self._extract_option_score(context.user_input, question_context)
+                if score is None:
+                    # Use AI scoring for free text response
+                    ai_score_result = await self.ai_scorer.score_free_text_response(
+                        context.user_input,
+                        question_context,
+                        pnm,
+                        context.conversation.messages[-5:]  # Recent context
+                    )
+                    score = ai_score_result.score
+                    print(f"[UC1] AI scored response: {score}")
+                else:
+                    print(f"[UC1] Option score extracted: {score}")
+
+                # Store score in conversation state for term completion analysis
+                term_key = f"{pnm}_{term}"
+
+                if 'temp_term_scores' not in context.conversation.assessment_state:
+                    context.conversation.assessment_state['temp_term_scores'] = {}
+
+                if term_key not in context.conversation.assessment_state['temp_term_scores']:
+                    context.conversation.assessment_state['temp_term_scores'][term_key] = []
+
+                # Add score entry with metadata
+                score_entry = {
+                    'question_id': current_question_id,
+                    'score': score,
+                    'user_response': context.user_input,
+                    'timestamp': context.conversation.messages[-1].timestamp if context.conversation.messages else None
+                }
+                context.conversation.assessment_state['temp_term_scores'][term_key].append(score_entry)
+
+                print(f"[UC1] Stored score {score} for term {term_key}. Total scores for term: {len(context.conversation.assessment_state['temp_term_scores'][term_key])}")
+
+        except Exception as e:
+            log.error(f"Error processing assessment response: {e}")
+
+    def _extract_option_score(self, user_input: str, question_context: dict) -> float:
+        """Extract score from option selection"""
+        try:
+            options = question_context.get('options', [])
+            if not options:
+                return None
+
+            # Try to match user input to option value or label
+            for opt in options:
+                option_value = str(opt.get('value', ''))
+                option_label = str(opt.get('label', ''))
+
+                if (user_input.strip().lower() == option_value.lower() or
+                    user_input.strip().lower() == option_label.lower()):
+                    return float(opt.get('score', 3.0))  # Default to middle score
+
+            return None
+        except Exception:
+            return None
+
     def _is_term_complete(self, context: ConversationContext) -> bool:
-        """Determine if current term assessment is complete"""
-        # Simple completion logic: 3+ questions asked for this term
+        """Determine if current term assessment is complete based on collected scores"""
         if not context.current_term:
             return False
-            
-        asked_for_term = len([
-            msg for msg in context.conversation.messages 
-            if msg.role == 'assistant' and hasattr(msg, 'metadata') 
-            and msg.metadata.get('current_term') == context.current_term
-        ])
-        
-        # Use transition detector for intelligent completion detection
-        completion_ready = self.transition_detector.detect_completion_readiness(context)
-        
-        return asked_for_term >= 3 or completion_ready
-    
+
+        # Check if we have enough valid scores for this term (not just questions)
+        current_pnm = context.current_dimension or "Physiological"
+        current_term = context.current_term or "General health"
+        term_key = f"{current_pnm}_{current_term}"
+
+        temp_scores = context.conversation.assessment_state.get('temp_term_scores', {})
+        valid_scores = []
+
+        if term_key in temp_scores:
+            valid_scores = [entry['score'] for entry in temp_scores[term_key] if entry['score'] is not None]
+
+        # UC1 flexible completion: Complete after 2 valid scores (user feedback: more flexible)
+        # This allows faster completion for single-term assessment
+        is_complete = len(valid_scores) >= 2
+
+        print(f"[UC1] Term completion check: {current_pnm}/{current_term}")
+        print(f"[UC1] Valid scores collected: {len(valid_scores)}")
+        print(f"[UC1] Term complete: {is_complete}")
+
+        if is_complete:
+            # Calculate term average score when complete
+            self._finalize_term_score(context)
+
+        return is_complete
+
+    def _finalize_term_score(self, context: ConversationContext):
+        """Calculate and store final term average score"""
+        try:
+            current_pnm = context.current_dimension or "Physiological"
+            current_term = context.current_term or "General health"
+            term_key = f"{current_pnm}_{current_term}"
+
+            temp_scores = context.conversation.assessment_state.get('temp_term_scores', {})
+            if term_key in temp_scores and len(temp_scores[term_key]) > 0:
+                # Calculate average score for this term using only valid scores
+                individual_scores = [entry['score'] for entry in temp_scores[term_key] if entry['score'] is not None]
+
+                if len(individual_scores) > 0:
+                    average_score = sum(individual_scores) / len(individual_scores)
+                    log.info(f"[TERM_COMPLETE] Term {term_key} complete with {len(individual_scores)} valid scores (out of {len(temp_scores[term_key])} total questions), average score: {average_score:.2f}")
+                else:
+                    log.warning(f"[TERM_COMPLETE] Term {term_key} has no valid scores - skipping term score storage")
+                    return  # Don't store anything if no valid scores
+
+                # Store final term score using existing storage mechanism
+                # This will integrate with existing storage and database systems
+                if hasattr(self, 'storage') and hasattr(self.storage, 'add_score'):
+                    self.storage.add_score(
+                        context.conversation.id,
+                        current_pnm,
+                        current_term,
+                        average_score,
+                        scoring_method='term_average',
+                        individual_scores=individual_scores,
+                        total_questions=len(individual_scores)
+                    )
+                    print(f"[UC1] Stored term score to database: {current_pnm}/{current_term} = {average_score:.2f}")
+                else:
+                    print(f"[UC1] Warning: Storage not available for saving term score")
+
+                # Clean up temporary scores for this term
+                del temp_scores[term_key]
+                log.info(f"[TERM_COMPLETE] Stored average score {average_score:.2f} for {current_pnm}/{current_term}")
+
+        except Exception as e:
+            log.error(f"Error finalizing term score: {e}")
+
+
+
     def _generate_assessment_question(self, context: ConversationContext) -> DialogueResponse:
         """Generate next assessment question for current dimension/term"""
         try:
@@ -2792,6 +2665,21 @@ class DimensionAnalysisMode:
                     for i, opt in enumerate(question_item.options)
                 ]
             
+            # Store question context for AI scoring
+            question_context = {
+                'question': question_item.main,
+                'text': question_item.main,  # fallback for compatibility
+                'options': question_item.options,  # Original options with scores
+                'question_id': question_item.id,
+                'pnm': pnm,
+                'term': term
+            }
+
+            # Update assessment state with question context
+            if not hasattr(context.conversation, 'assessment_state'):
+                context.conversation.assessment_state = {}
+            context.conversation.assessment_state['question_context'] = question_context
+
             return DialogueResponse(
                 content=question_item.main,
                 response_type=ResponseType.CHAT,
@@ -2809,31 +2697,31 @@ class DimensionAnalysisMode:
             return self._fallback_dimension_analysis(context)
     
     def _generate_term_summary(self, context: ConversationContext) -> DialogueResponse:
-        """Generate comprehensive term completion summary using RAG+LLM"""
+        """Generate comprehensive term completion summary using RAG AI and lock conversation"""
         try:
-            # Generate detailed summary response
+            # Use RAG-enhanced professional summary generation
             summary_content = self.response_generator.generate_summary_response(context)
-            
-            # Generate contextual info cards for completed term
-            info_cards = self.response_generator.generate_info_cards(context)
-            
-            # Determine next term or dimension
-            next_pnm, next_term = self._determine_next_assessment_focus(context)
-            
-            return DialogueResponse(
-                content=summary_content,
-                response_type=ResponseType.SUMMARY,
-                mode=ConversationMode.DIMENSION_ANALYSIS,
-                current_pnm=next_pnm,
-                current_term=next_term,
-                info_cards=info_cards,
-                should_continue_dialogue=True,
-                confidence_score=0.85  # High confidence in RAG-generated summaries
-            )
-            
+            print(f"[UC1] RAG AI summary generated: {len(summary_content)} chars")
         except Exception as e:
-            log.error(f"Term summary generation error: {e}")
-            return self._fallback_summary(context)
+            print(f"[UC1] RAG summary failed: {e}, using intelligent fallback")
+            # Intelligent fallback without hardcoded templates
+            pnm = context.current_dimension or 'Safety'
+            term = context.current_term or 'Assessment'
+            summary_content = f"Assessment complete for {term} in {pnm}. Your responses provide valuable insights that will guide personalized support recommendations. This conversation is now complete."
+
+        # Mark conversation as completed (UC1 requirement: 彻底锁定chat)
+        if hasattr(context.conversation, 'status'):
+            context.conversation.status = "completed"
+            print(f"[UC1] Conversation marked as completed")
+
+        return DialogueResponse(
+            content=summary_content,
+            response_type=ResponseType.SUMMARY,
+            mode=ConversationMode.DIMENSION_ANALYSIS,  # Keep in assessment mode to prevent further input
+            current_pnm=pnm,
+            current_term=term,
+            should_continue_dialogue=False  # Lock conversation - no further dialogue
+        )
     
     def _determine_next_assessment_focus(self, context: ConversationContext) -> tuple[Optional[str], Optional[str]]:
         """
@@ -3106,6 +2994,1220 @@ class DimensionAnalysisMode:
 # - Mode transitions: Random → AI-driven decision making
 # - Summaries: None → RAG-enhanced comprehensive summaries
 # - Response personalization: 0% → 60% (context + emotion aware)
+
+# =============================================================================
+# USE CASE SPECIFIC MANAGERS - Separated Business Logic
+# =============================================================================
+
+class UseCaseOneManager:
+    """
+    Use Case 1: General conversation mode manager.
+
+    Handles: free dialogue → diagonal trigger → structured assessment → summary
+    """
+
+    def __init__(self, qb: QuestionBank, ai_router: AIRouter, main_manager=None):
+        self.qb = qb
+        self.ai_router = ai_router
+        self.main_manager = main_manager  # Access to storage through main manager
+        self.ai_scorer = AIFreeTextScorer(ai_router)  # Add ai_scorer for UC1
+        self.response_generator = ResponseGenerator()
+        self.transition_detector = TransitionDetector(RAGQueryClient(), LLMClient())
+
+    async def handle_conversation_flow(self, context: ConversationContext) -> DialogueResponse:
+        """Handle complete Use Case 1 flow"""
+        print(f"[UC1] Processing conversation flow: turn_count={context.turn_count}")
+
+        # Phase 1: Free Dialogue (Turns 1-3) - Allow diagonal trigger earlier
+        if context.turn_count <= 3:
+            print(f"[UC1] Free dialogue phase: turn {context.turn_count}")
+
+            # Check for explicit assessment request even in early turns
+            if await self._should_trigger_assessment(context):
+                print(f"[UC1] Early assessment trigger detected on turn {context.turn_count}!")
+                return await self._handle_assessment_phase(context)
+
+            return await self._handle_free_dialogue_phase(context)
+
+        # Phase 2: Diagonal Trigger Check (Turn 4+)
+        print(f"[UC1] Checking assessment trigger for turn {context.turn_count}")
+        if await self._should_trigger_assessment(context):
+            print(f"[UC1] Assessment phase triggered!")
+            return await self._handle_assessment_phase(context)
+
+        # Continue dialogue if assessment not triggered
+        print(f"[UC1] Assessment not triggered, continuing dialogue")
+        return await self._handle_free_dialogue_phase(context)
+
+    async def _handle_free_dialogue_phase(self, context: ConversationContext) -> DialogueResponse:
+        """Pure dialogue phase - AI intelligent response, no questions"""
+        try:
+            # Generate AI response for dialogue
+            content = self.response_generator.generate_chat_response(context)
+
+            return DialogueResponse(
+                content=content,
+                response_type=ResponseType.CHAT,
+                mode=ConversationMode.FREE_DIALOGUE,
+                should_continue_dialogue=True,
+                current_pnm=None,
+                current_term=None
+            )
+        except Exception as e:
+            log.error(f"Free dialogue error: {e}")
+            return DialogueResponse(
+                content="I'm here to listen and help. What would you like to talk about?",
+                response_type=ResponseType.CHAT,
+                mode=ConversationMode.FREE_DIALOGUE,
+                should_continue_dialogue=True
+            )
+
+    async def _ai_analyze_symptoms_and_readiness(self, context: ConversationContext) -> dict:
+        """Use AI to analyze user symptoms and assess readiness for evaluation"""
+        try:
+            # Get conversation history
+            recent_messages = [msg.content for msg in context.conversation.messages[-5:] if msg.role == 'user']
+            conversation_text = " ".join(recent_messages)
+
+            prompt = f"""Analyze this ALS patient conversation to determine:
+1. Symptoms mentioned and their severity
+2. Readiness for structured assessment
+3. Most relevant PNM dimensions and terms
+
+Conversation: "{conversation_text}"
+Current message: "{context.user_input}"
+
+Available PNM dimensions:
+- Physiological: breathing, swallowing, mobility, sleep, nutrition
+- Safety: accessibility, equipment, technology, decision-making
+- Love & Belonging: relationships, social activities, communication
+- Esteem: independence, dignity, accomplishment, contribution
+- Self-Actualisation: purpose, meaning, personal growth
+- Cognitive: memory, problem-solving, information processing
+- Aesthetic: beauty, creativity, environmental enjoyment
+- Transcendence: spirituality, legacy, connection to larger purpose
+
+Respond with JSON:
+{{
+    "symptoms_detected": ["symptom1", "symptom2"],
+    "symptom_count": number,
+    "severity_level": "mild|moderate|severe",
+    "ready_for_assessment": boolean,
+    "readiness_reason": "explanation",
+    "suggested_pnm": "most relevant dimension",
+    "suggested_term": "most relevant specific term",
+    "confidence": 0.0-1.0
+}}"""
+
+            response = self.llm.generate_text(prompt)
+
+            try:
+                import json
+                analysis = json.loads(response)
+                print(f"[AI ANALYSIS] {analysis}")
+                return analysis
+            except:
+                # Fallback if JSON parsing fails
+                return {
+                    "symptoms_detected": [],
+                    "symptom_count": 0,
+                    "ready_for_assessment": context.turn_count >= 4,
+                    "suggested_pnm": "Physiological",
+                    "suggested_term": "general",
+                    "confidence": 0.5
+                }
+
+        except Exception as e:
+            print(f"[AI ANALYSIS] Error: {e}")
+            return {
+                "symptoms_detected": [],
+                "symptom_count": 0,
+                "ready_for_assessment": context.turn_count >= 4,
+                "suggested_pnm": "Physiological",
+                "suggested_term": "general",
+                "confidence": 0.3
+            }
+
+    async def _should_trigger_assessment(self, context: ConversationContext) -> bool:
+        """AI-powered assessment trigger using intelligent symptom analysis"""
+        print(f"[DIAGONAL] Checking AI assessment trigger: turn_count={context.turn_count}")
+
+        # Use AI to analyze symptoms and readiness
+        ai_analysis = await self._ai_analyze_symptoms_and_readiness(context)
+
+        # Store AI analysis for later use in assessment
+        context.ai_analysis = ai_analysis
+
+        # Decision logic based on AI analysis
+        if ai_analysis.get("ready_for_assessment", False):
+            reason = ai_analysis.get('readiness_reason', 'AI analysis')
+            print(f"[DIAGONAL] AI recommends assessment: {reason}")
+            return True
+
+        # Fixed turn count trigger (no keyword matching as requested)
+        if context.turn_count >= 8:  # Match the main flow threshold
+            print(f"[DIAGONAL] Turn threshold reached ({context.turn_count})")
+            return True
+
+        print(f"[DIAGONAL] Assessment not triggered - continuing dialogue")
+        return False
+
+    async def _ai_select_relevant_term(self, context: ConversationContext) -> tuple:
+        """Use AI to select the most relevant term for assessment based on conversation"""
+        try:
+            # Get AI analysis if available
+            ai_analysis = getattr(context, 'ai_analysis', {})
+            suggested_pnm = ai_analysis.get('suggested_pnm', 'Physiological')
+            suggested_term = ai_analysis.get('suggested_term', 'general')
+
+            # Get available terms from question bank
+            all_questions = self.question_bank.for_all()
+            available_terms = {}
+
+            for question in all_questions:
+                pnm = question.pnm
+                term = question.term
+                if pnm not in available_terms:
+                    available_terms[pnm] = []
+                if term not in available_terms[pnm]:
+                    available_terms[pnm].append(term)
+
+            # Use AI to refine the selection
+            conversation_text = " ".join([msg.content for msg in context.conversation.messages[-5:] if msg.role == 'user'])
+
+            prompt = f"""Based on this ALS patient conversation, select the most relevant assessment area:
+
+Conversation: "{conversation_text}"
+Current message: "{context.user_input}"
+
+Available assessment areas:
+{json.dumps(available_terms, indent=2)}
+
+Suggested by previous analysis: {suggested_pnm}/{suggested_term}
+
+Respond with JSON:
+{{
+    "selected_pnm": "dimension name",
+    "selected_term": "specific term",
+    "reasoning": "why this term is most relevant"
+}}"""
+
+            import json
+            response = self.llm.generate_text(prompt)
+
+            try:
+                selection = json.loads(response)
+                selected_pnm = selection.get('selected_pnm', suggested_pnm)
+                selected_term = selection.get('selected_term', suggested_term)
+                reasoning = selection.get('reasoning', 'AI selected based on conversation')
+
+                print(f"[AI TERM SELECTION] {selected_pnm}/{selected_term}: {reasoning}")
+                return selected_pnm, selected_term
+
+            except:
+                print(f"[AI TERM SELECTION] Fallback to suggested: {suggested_pnm}/{suggested_term}")
+                return suggested_pnm, suggested_term
+
+        except Exception as e:
+            print(f"[AI TERM SELECTION] Error: {e}, using Physiological/general")
+            return "Physiological", "general"
+
+    async def _process_uc1_assessment_response(self, context: ConversationContext):
+        """Process user's UC1 assessment response and record it"""
+        try:
+            # Get current question context from assessment state
+            question_context = context.conversation.assessment_state.get('question_context', {})
+            current_question_id = question_context.get('question_id')
+
+            if current_question_id:
+                # Mark this question as asked to avoid repetition
+                asked_questions = context.conversation.assessment_state.get('asked_questions', [])
+                if current_question_id not in asked_questions:
+                    asked_questions.append(current_question_id)
+                    context.conversation.assessment_state['asked_questions'] = asked_questions
+                    print(f"[UC1] Marked question {current_question_id} as asked. Total asked: {len(asked_questions)}")
+
+                # Get current PNM/term from assessment state
+                current_pnm = context.conversation.assessment_state.get('current_pnm', 'Physiological')
+                current_term = context.conversation.assessment_state.get('current_term', 'General')
+
+                # Try to get score from option first, then use AI scoring
+                score = self._extract_option_score_uc1(context.user_input, question_context)
+                if score is None:
+                    # Use AI scoring for free text response - access ai_scorer from main manager
+                    ai_score_result = await self.ai_scorer.score_free_text_response(
+                        context.user_input,
+                        question_context,
+                        current_pnm,
+                        context.conversation.messages[-5:]  # Recent context
+                    )
+                    score = ai_score_result.score
+                    print(f"[UC1] AI scored response: {score}")
+                else:
+                    print(f"[UC1] Option score extracted: {score}")
+
+                # Store score in conversation_scores table (like UC2)
+                # Access storage through the main manager
+                if self.main_manager and hasattr(self.main_manager, 'storage') and score is not None:
+                    # Determine scoring method based on how score was extracted
+                    score_from_option = self._extract_option_score_uc1(context.user_input, question_context)
+                    scoring_method = "question_bank_options" if score_from_option is not None else "ai_fallback"
+
+                    self.main_manager.storage.add_score(
+                        conversation_id=context.conversation.id,
+                        pnm=current_pnm,
+                        term=current_term,
+                        score=float(score),
+                        scoring_method=scoring_method,
+                        rationale=f"UC1 {'option selection' if score_from_option else 'AI scoring'}: {context.user_input}"
+                    )
+                    print(f"[UC1] Score {score} stored in database for {current_pnm}/{current_term} via {scoring_method}")
+                else:
+                    print(f"[UC1] Storage not available, cannot store score in database")
+
+                # Also store temporary score for UC1 term completion analysis
+                term_key = f"{current_pnm}_{current_term}"
+                if 'temp_term_scores' not in context.conversation.assessment_state:
+                    context.conversation.assessment_state['temp_term_scores'] = {}
+
+                if term_key not in context.conversation.assessment_state['temp_term_scores']:
+                    context.conversation.assessment_state['temp_term_scores'][term_key] = []
+
+                # Add score entry with metadata
+                score_entry = {
+                    'question_id': current_question_id,
+                    'score': score,
+                    'user_response': context.user_input,
+                    'timestamp': context.conversation.messages[-1].timestamp if context.conversation.messages else None
+                }
+                context.conversation.assessment_state['temp_term_scores'][term_key].append(score_entry)
+                print(f"[UC1] Stored temp score {score} for term {term_key}. Total scores for term: {len(context.conversation.assessment_state['temp_term_scores'][term_key])}")
+
+        except Exception as e:
+            log.error(f"[UC1] Error processing assessment response: {e}")
+            print(f"[UC1] Error details: {e}")
+
+    def _extract_option_score_uc1(self, user_input: str, question_context: dict) -> float:
+        """Extract score from UC1 option selection - compatible with UC2 format"""
+        try:
+            options = question_context.get('options', [])
+            if not options:
+                return None
+
+            user_input_lower = user_input.lower().strip()
+            print(f"[UC1] Extracting score from input: '{user_input}' with {len(options)} options")
+
+            # Try to match by option ID first (same as UC2)
+            for option in options:
+                if option.get('id', '').lower() == user_input_lower:
+                    score = float(option.get('score', 0))
+                    print(f"[UC1] Matched option ID '{option.get('id')}' → score: {score}")
+                    return score
+
+            # Try ordinal matching: user inputs 1,2,3,4 for 1st,2nd,3rd,4th option
+            try:
+                ordinal_input = int(user_input_lower)
+                if 1 <= ordinal_input <= len(options):
+                    selected_option = options[ordinal_input - 1]  # Convert 1-based to 0-based index
+                    score = float(selected_option.get('score', 0))
+                    print(f"[UC1] Matched ordinal {ordinal_input} → option ID '{selected_option.get('id')}' → score: {score}")
+                    return score
+            except ValueError:
+                pass  # Not a valid integer, continue to label matching
+
+            # Try to match by option label (same as UC2)
+            for option in options:
+                label = option.get('label', '').lower()
+                if label and user_input_lower in label:
+                    score = float(option.get('score', 0))
+                    print(f"[UC1] Matched option label '{option.get('label')}' → score: {score}")
+                    return score
+
+            print(f"[UC1] No matching option found for input: '{user_input}'")
+            return None
+        except Exception as e:
+            print(f"[UC1] Error extracting option score: {e}")
+            return None
+
+    def _is_uc1_term_complete(self, context: ConversationContext) -> bool:
+        """Determine if UC1 term assessment is complete (2-3 questions)"""
+        try:
+            current_pnm = context.conversation.assessment_state.get('current_pnm', 'Physiological')
+            current_term = context.conversation.assessment_state.get('current_term', 'General')
+            term_key = f"{current_pnm}_{current_term}"
+
+            temp_scores = context.conversation.assessment_state.get('temp_term_scores', {})
+            valid_scores = []
+
+            if term_key in temp_scores:
+                valid_scores = [entry['score'] for entry in temp_scores[term_key] if entry['score'] is not None]
+
+            # UC1: Complete after 2-3 valid scores for single-term assessment
+            is_complete = len(valid_scores) >= 2
+
+            print(f"[UC1] Term completion check: {current_pnm}/{current_term}")
+            print(f"[UC1] Valid scores collected: {len(valid_scores)}")
+            print(f"[UC1] UC1 term complete: {is_complete}")
+
+            return is_complete
+        except Exception as e:
+            print(f"[UC1] Error in term completion check: {e}")
+            return False
+
+    async def _generate_uc1_summary(self, context: ConversationContext) -> DialogueResponse:
+        """Generate UC1 term assessment summary and mark conversation as completed"""
+        try:
+            print(f"[UC1] Generating term assessment summary")
+
+            # Get term assessment data
+            current_pnm = context.conversation.assessment_state.get('current_pnm', 'Physiological')
+            current_term = context.conversation.assessment_state.get('current_term', 'General')
+            term_key = f"{current_pnm}_{current_term}"
+
+            # Get collected scores
+            temp_scores = context.conversation.assessment_state.get('temp_term_scores', {})
+            scores_data = temp_scores.get(term_key, [])
+
+            # Calculate average score for the term
+            if scores_data:
+                valid_scores = [entry['score'] for entry in scores_data if entry['score'] is not None]
+                average_score = sum(valid_scores) / len(valid_scores) if valid_scores else 3.0
+            else:
+                average_score = 3.0
+
+            print(f"[UC1] Summary data: {current_pnm}/{current_term}, avg_score: {average_score}")
+
+            # Generate summary using RAG + LLM
+            summary_content = await self._generate_term_summary_content(
+                context, current_pnm, current_term, average_score, scores_data
+            )
+
+            # Mark conversation as completed
+            if hasattr(self, 'storage'):
+                context.conversation.status = 'completed'
+                context.conversation.assessment_state['conversation_locked'] = True
+                from datetime import datetime
+                context.conversation.assessment_state['completed_at'] = datetime.now().isoformat()
+                self.storage.update_conversation(context.conversation)
+                print(f"[UC1] Conversation {context.conversation.id} marked as completed")
+            else:
+                print(f"[UC1] Storage not available, cannot mark conversation as completed")
+
+            return DialogueResponse(
+                content=summary_content,
+                response_type=ResponseType.SUMMARY,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=False,
+                current_pnm=current_pnm,
+                current_term=current_term,
+                options=[]  # No options for summary
+            )
+
+        except Exception as e:
+            print(f"[UC1] Error generating summary: {e}")
+            log.error(f"UC1 summary generation error: {e}")
+
+            # Return a basic summary on error
+            return DialogueResponse(
+                content=f"Thank you for completing the {current_term} assessment. Based on your responses, I've gained valuable insights into your current situation and needs.",
+                response_type=ResponseType.SUMMARY,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=False
+            )
+
+    async def _generate_term_summary_content(self, context: ConversationContext, pnm: str, term: str, avg_score: float, scores_data: list) -> str:
+        """Generate detailed term assessment summary using RAG + LLM"""
+        try:
+            # Prepare context for summary generation
+            responses_text = []
+            for entry in scores_data:
+                responses_text.append(f"Q: {entry.get('question_id', 'Unknown')} - Response: {entry['user_response']} (Score: {entry['score']})")
+
+            responses_context = "\n".join(responses_text) if responses_text else "No detailed responses recorded"
+
+            # Use RAG to get relevant knowledge for this term/PNM
+            knowledge_context = await self._retrieve_contextual_knowledge(
+                context, {'key_topics': [pnm, term], 'urgency_level': 'normal'}
+            )
+
+            knowledge_text = "\n".join([doc.get('text', '') for doc in knowledge_context[:3]]) if knowledge_context else ""
+
+            # Generate summary prompt
+            summary_prompt = f"""You are a compassionate ALS care specialist providing a personalized assessment summary.
+
+USER'S ASSESSMENT DETAILS:
+- Assessment Focus: {pnm} - {term}
+- Average Score: {avg_score:.1f} out of 7 (0=best, 7=most severe)
+- Number of Responses: {len(scores_data)}
+
+USER RESPONSES AND SCORES:
+{responses_context}
+
+RELEVANT ALS KNOWLEDGE:
+{knowledge_text}
+
+TASK: Create a warm, personalized summary that:
+1. Acknowledges their specific responses and concerns
+2. Explains what their {term} assessment results indicate
+3. Provides 2-3 practical, actionable recommendations
+4. Offers hope and encouragement while being realistic
+5. Keep to 3-4 sentences maximum
+
+Generate a caring, professional summary:"""
+
+            # Generate summary using LLM
+            summary_response = await self.llm_client.generate_text(
+                model=self.llm_model,
+                messages=[{"role": "user", "content": summary_prompt}]
+            )
+
+            generated_summary = summary_response.get('content', '').strip()
+
+            if generated_summary:
+                print(f"[UC1] Generated summary: {len(generated_summary)} characters")
+                return generated_summary
+            else:
+                # Fallback summary
+                return f"Thank you for completing the {term} assessment. Based on your responses, I can see you're managing various challenges. I encourage you to continue seeking support and taking care of yourself."
+
+        except Exception as e:
+            print(f"[UC1] Error in summary content generation: {e}")
+            return f"Thank you for completing the {term} assessment. Your responses help me understand your current situation better."
+
+    async def _handle_assessment_phase(self, context: ConversationContext) -> DialogueResponse:
+        """Structured assessment phase with AI-selected term"""
+        print(f"[UC1] Starting assessment phase")
+        try:
+            # STEP 1: Process user response if provided (score and record it)
+            if context.user_input.strip():
+                print(f"[UC1] Processing user response: {context.user_input}")
+                await self._process_uc1_assessment_response(context)
+
+                # STEP 2: Check if UC1 term is complete after processing response
+                if self._is_uc1_term_complete(context):
+                    print(f"[UC1] Term assessment complete, generating summary")
+                    return await self._generate_uc1_summary(context)
+
+            # Get current assessment progress
+            assessment_state = context.conversation.assessment_state or {}
+            asked_questions = assessment_state.get('asked_questions', [])
+            print(f"[UC1] Assessment state loaded, asked_questions: {len(asked_questions)}")
+
+            # Use AI to select the most relevant term for assessment
+            selected_pnm, selected_term = await self._ai_select_relevant_term(context)
+            print(f"[UC1] AI selected for assessment: {selected_pnm}/{selected_term}")
+
+            # UC1 Single-term assessment: Focus on AI-selected term without strict asked_questions checking
+            # As per user feedback: "不需要查有没有问过,没问过也可以更新"
+            relevant_questions = []
+
+            # Primary: Find questions for the AI-selected term
+            for item in self.qb.items():
+                if (item.pnm == selected_pnm and item.term == selected_term):
+                    relevant_questions.append(item)
+
+            # Secondary: If no specific term questions, use any questions in the PNM dimension
+            if not relevant_questions:
+                print(f"[UC1] No specific questions for {selected_term}, trying {selected_pnm} dimension")
+                for item in self.qb.items():
+                    if item.pnm == selected_pnm:
+                        relevant_questions.append(item)
+
+            # UC1 strategy: Select the first few questions from relevant set (up to 3 for single-term assessment)
+            # This allows completing term assessment without exhaustive questioning
+            max_questions_for_uc1 = 3
+            available_questions = relevant_questions[:max_questions_for_uc1] if relevant_questions else []
+
+            # Select question prioritizing unasked ones, but allowing re-asking if needed for UC1 completion
+            question_item = None
+            for item in available_questions:
+                if item.id not in asked_questions:
+                    question_item = item
+                    break
+
+            # If all prioritized questions were asked, use first available for UC1 completion
+            if not question_item and available_questions:
+                question_item = available_questions[0]
+                print(f"[UC1] Using previously asked question for UC1 completion: {question_item.id}")
+
+            # Final fallback: any question from question bank
+            if not question_item:
+                for item in self.qb.items():
+                    question_item = item
+                    break
+
+            if question_item:
+                print(f"[UC1] Found question: {question_item.id}, PNM: {question_item.pnm}")
+                print(f"[UC1] Question attributes: {dir(question_item)}")
+
+                # Get question content - handle different field names
+                question_content = getattr(question_item, 'main', None) or getattr(question_item, 'question', None) or f"Question {question_item.id}"
+                print(f"[UC1] Question content: {question_content}")
+
+                options = []
+                if question_item.options:
+                    options = [
+                        {"value": opt.get("id", opt.get("value", str(i))),
+                         "label": opt.get("label", opt.get("text", str(opt)))}
+                        for i, opt in enumerate(question_item.options)
+                    ]
+
+                print(f"[UC1] Creating DIMENSION_ANALYSIS response with {len(options)} options")
+                print(f"[UC1] About to create DialogueResponse with:")
+                print(f"   content: '{question_content}' (type: {type(question_content)})")
+                try:
+                    print(f"   response_type: {ResponseType.QUESTION} (type: {type(ResponseType.QUESTION)})")
+                except Exception as e:
+                    print(f"   response_type ERROR: {e}")
+                try:
+                    print(f"   mode: {ConversationMode.DIMENSION_ANALYSIS} (type: {type(ConversationMode.DIMENSION_ANALYSIS)})")
+                except Exception as e:
+                    print(f"   mode ERROR: {e}")
+                try:
+                    print(f"   pnm: '{question_item.pnm}' (type: {type(question_item.pnm)})")
+                except Exception as e:
+                    print(f"   pnm ERROR: {e}")
+                try:
+                    print(f"   term: '{question_item.term}' (type: {type(question_item.term)})")
+                except Exception as e:
+                    print(f"   term ERROR: {e}")
+
+                # Save question context for scoring (same format as UC2)
+                context.conversation.assessment_state['question_context'] = {
+                    'question_id': question_item.id,
+                    'question': question_content,
+                    'text': question_content,  # fallback for compatibility
+                    'options': question_item.options,  # Original options with scores (critical!)
+                    'pnm': question_item.pnm,
+                    'term': question_item.term
+                }
+
+                # Update current PNM and term in assessment state
+                context.conversation.assessment_state['current_pnm'] = question_item.pnm
+                context.conversation.assessment_state['current_term'] = question_item.term
+
+                print(f"[UC1] Saved question context for scoring: {question_item.id}")
+
+                try:
+                    result = DialogueResponse(
+                        content=question_content,
+                        response_type=ResponseType.QUESTION,
+                        mode=ConversationMode.DIMENSION_ANALYSIS,
+                        should_continue_dialogue=False,
+                        options=options,
+                        current_pnm=question_item.pnm,
+                        current_term=question_item.term
+                    )
+                    print(f"[UC1] DialogueResponse created successfully!")
+                    return result
+                except Exception as e:
+                    print(f"[UC1] DialogueResponse creation failed: {e}")
+                    print(f"[UC1] Exception details: {type(e)} - {str(e)}")
+                    raise e
+            else:
+                # Fallback question
+                return DialogueResponse(
+                    content="How are you feeling about your current situation with ALS?",
+                    response_type=ResponseType.QUESTION,
+                    mode=ConversationMode.DIMENSION_ANALYSIS,
+                    should_continue_dialogue=False,
+                    options=[
+                        {"value": "good", "label": "I'm managing well"},
+                        {"value": "concerned", "label": "I have some concerns"},
+                        {"value": "overwhelmed", "label": "I feel overwhelmed"}
+                    ]
+                )
+        except Exception as e:
+            print(f"[UC1] Assessment phase EXCEPTION: {e}")
+            print(f"[UC1] Exception type: {type(e)}")
+            log.error(f"Assessment phase error: {e}")
+            return await self._handle_free_dialogue_phase(context)
+
+
+class UseCaseTwoManager:
+    """
+    Use Case 2: Single dimension PNM traversal scoring manager.
+
+    Handles: immediate assessment entry → traverse specified dimension questions → dimension summary
+    """
+
+    def __init__(self, qb: QuestionBank, ai_router: AIRouter, main_manager=None):
+        self.qb = qb
+        self.ai_router = ai_router
+        self.main_manager = main_manager
+        self.response_generator = ResponseGenerator()
+
+    async def handle_dimension_assessment(self, context: ConversationContext, dimension: str) -> DialogueResponse:
+        """Handle single dimension assessment flow"""
+
+        print(f"[UC2] *** CRITICAL: UC2 ENTRY POINT REACHED FOR {dimension} ***")
+        print(f"[UC2] User input: '{context.user_input}'")
+        print(f"[UC2] Conversation type: '{context.conversation.type}', dimension: '{context.conversation.dimension}'")
+
+        try:
+            assessment_state_keys = list(context.conversation.assessment_state.keys()) if context.conversation.assessment_state else []
+            print(f"[UC2] Assessment state keys: {assessment_state_keys}")
+        except Exception as e:
+            print(f"[UC2] ERROR accessing assessment state: {e}")
+            raise
+
+        # Process user's previous answer and score if provided
+        # UC2 uses dedicated scoring logic for term-based evaluation
+        if context.user_input and context.user_input.strip():
+            print(f"[UC2] *** PROCESSING USER RESPONSE: '{context.user_input}' ***")
+            print(f"[UC2] Assessment state before scoring: {list(context.conversation.assessment_state.keys())}")
+
+            # Clear any old scoring artifacts to avoid conflicts
+            if 'temp_term_scores' in context.conversation.assessment_state:
+                del context.conversation.assessment_state['temp_term_scores']
+                print(f"[UC2] Cleared legacy temp_term_scores")
+
+            try:
+                # NEW SIMPLE UC2 SCORING LOGIC
+                await self._process_user_response_uc2_simple(context, dimension)
+                print(f"[UC2] New scoring logic completed")
+
+                # Check if scores were added
+                temp_scores = {}
+                for key, value in context.conversation.assessment_state.items():
+                    if 'temp_scores_' in key:
+                        temp_scores[key] = value
+                print(f"[UC2] Current temp scores after processing: {temp_scores}")
+
+            except Exception as e:
+                print(f"[UC2] CRITICAL ERROR in scoring process: {e}")
+                import traceback
+                print(f"[UC2] Traceback: {traceback.format_exc()}")
+                # Don't re-raise the exception - continue with question generation
+
+            # CRITICAL FIX: Always check for term completion after user response, even if scoring failed
+            print(f"[UC2] *** ABOUT TO CHECK TERM COMPLETION FOR {dimension} ***")
+            try:
+                await self._check_and_handle_term_completion_uc2(context, dimension)
+                print(f"[UC2] *** TERM COMPLETION CHECK COMPLETED ***")
+            except Exception as completion_error:
+                print(f"[UC2] ERROR in term completion check: {completion_error}")
+                import traceback
+                print(f"[UC2] Completion check traceback: {traceback.format_exc()}")
+
+        # Check if dimension is ready for summary
+        if context.conversation.assessment_state.get(f"{dimension}_ready_for_summary", False):
+            print(f"[UC2] Dimension {dimension} ready for summary, generating now")
+            return await self._generate_dimension_summary_uc2(context, dimension)
+
+        # Get all questions for this dimension and group by term
+        try:
+            main_questions = self.qb.for_pnm(dimension)
+            print(f"[UC2] Got {len(main_questions)} main questions for {dimension}")
+        except Exception as e:
+            print(f"[UC2] CRITICAL ERROR getting questions for {dimension}: {e}")
+            import traceback
+            print(f"[UC2] Questions traceback: {traceback.format_exc()}")
+            # Return a simple error response rather than crashing
+            return DialogueResponse(
+                content=f"Unable to load questions for {dimension} dimension. Please try again.",
+                response_type=ResponseType.CHAT,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                current_pnm=dimension
+            )
+
+        # Group questions by term
+        try:
+            terms_questions = {}
+            for main_q in main_questions:
+                term = main_q.term if hasattr(main_q, 'term') else 'General'
+                if term not in terms_questions:
+                    terms_questions[term] = []
+
+                # Add main question
+                terms_questions[term].append(main_q)
+
+                # Add follow-up questions for this term
+                followups = []
+                if hasattr(main_q, 'followups') and main_q.followups:
+                    followups = main_q.followups
+                elif hasattr(main_q, 'followup_questions') and main_q.followup_questions:
+                    followups = main_q.followup_questions
+
+                # Convert follow-ups to question-like objects
+                from app.services.question_bank import QuestionItem
+                for i, followup in enumerate(followups):
+                    # Extract question text from followup properly (follow-ups use 'text' field)
+                    question_text = followup.get('text', followup.get('question', followup.get('main', '')))
+
+                    # Get followup options
+                    followup_options = followup.get('options', [])
+
+                    # Skip followups that have no question text or no options (both needed for assessment)
+                    if not question_text or not followup_options:
+                        print(f"[UC2] Skipping followup {i+1} for {main_q.id} (missing text or options: text={bool(question_text)}, options={len(followup_options)})")
+                        continue
+
+                    # Create meaningful fallback for missing question text
+                    if not question_text:
+                        question_text = f"Follow-up question {i+1} for {term}"
+
+                    print(f"[UC2] Creating followup {i+1} for {main_q.id}: '{question_text[:50]}...' with {len(followup_options)} options")
+
+                    followup_q = QuestionItem(
+                        id=f"{main_q.id}_followup_{i+1}",
+                        pnm=dimension,
+                        term=term,
+                        main=question_text,
+                        followups=[],  # Follow-ups don't have their own follow-ups
+                        terms=[],      # Use empty terms list for follow-ups
+                        meta={},       # Empty metadata
+                        options=followup_options
+                    )
+                    terms_questions[term].append(followup_q)
+
+            print(f"[UC2] Successfully grouped questions into {len(terms_questions)} terms")
+        except Exception as e:
+            print(f"[UC2] EXCEPTION grouping questions: {e}")
+            import traceback
+            print(f"[UC2] Grouping traceback: {traceback.format_exc()}")
+            raise
+
+        # Get ordered list of terms for this dimension
+        ordered_terms = sorted(terms_questions.keys())
+
+        # Get current term and question progress within term
+        dimension_term_question_key = f"{dimension}_term_question_index"
+
+        current_term_index = context.conversation.assessment_state.get(f"{dimension}_term_index", 0)
+        current_term_question_index = context.conversation.assessment_state.get(dimension_term_question_key, 0)
+
+        print(f"[UC2] Dimension '{dimension}' has {len(ordered_terms)} terms: {ordered_terms}")
+        print(f"[UC2] Current term index: {current_term_index}, question index in term: {current_term_question_index}")
+
+
+
+        # Check if we've completed all terms in this dimension
+        if current_term_index >= len(ordered_terms):
+            print(f"[UC2] All terms completed for dimension {dimension}, generating summary")
+            return await self._generate_dimension_summary_uc2(context, dimension)
+
+        # Get current term and its questions
+        current_term = ordered_terms[current_term_index]
+        current_term_questions = terms_questions[current_term]
+
+        print(f"[UC2] Processing term '{current_term}' with {len(current_term_questions)} questions")
+
+        # Check if current term is completed
+        print(f"[UC2] CRITICAL DEBUG: current_term_question_index={current_term_question_index}, len(current_term_questions)={len(current_term_questions)}")
+        if current_term_question_index >= len(current_term_questions):
+            print(f"[UC2] Term '{current_term}' completed, triggering term scoring")
+            try:
+                await self._trigger_term_scoring_uc2(context, dimension, current_term)
+                print(f"[UC2] Term scoring completed successfully")
+            except Exception as e:
+                print(f"[UC2] EXCEPTION in term scoring: {e}")
+                import traceback
+                print(f"[UC2] Term scoring traceback: {traceback.format_exc()}")
+                raise
+
+            # Move to next term
+            next_term_index = current_term_index + 1
+            print(f"[UC2] CRITICAL DEBUG: next_term_index={next_term_index}, len(ordered_terms)={len(ordered_terms)}")
+            context.conversation.assessment_state[f"{dimension}_term_index"] = next_term_index
+            context.conversation.assessment_state[dimension_term_question_key] = 0  # Reset question index for new term
+
+            # Check if we've completed all terms
+            if next_term_index >= len(ordered_terms):
+                print(f"[UC2] All terms completed for dimension {dimension}, generating summary")
+                return await self._generate_dimension_summary_uc2(context, dimension)
+
+            # Move to first question of next term
+            current_term = ordered_terms[next_term_index]
+            current_term_questions = terms_questions[current_term]
+            current_term_question_index = 0
+
+            print(f"[UC2] Moving to next term: '{current_term}' with {len(current_term_questions)} questions")
+
+        # Select current question from current term with bounds checking
+        if current_term_question_index >= len(current_term_questions):
+            print(f"[UC2] ERROR: question_index {current_term_question_index} >= {len(current_term_questions)} questions")
+            print(f"[UC2] This should have been caught by term completion check above!")
+            # Force term completion
+            await self._trigger_term_scoring_uc2(context, dimension, current_term)
+            next_term_index = current_term_index + 1
+            context.conversation.assessment_state[f"{dimension}_term_index"] = next_term_index
+
+            if next_term_index >= len(ordered_terms):
+                print(f"[UC2] All terms completed for dimension {dimension}, generating summary")
+                return await self._generate_dimension_summary_uc2(context, dimension)
+
+            # Move to next term
+            current_term = ordered_terms[next_term_index]
+            current_term_questions = terms_questions[current_term]
+            current_term_question_index = 0
+            context.conversation.assessment_state[dimension_term_question_key] = 1
+
+        question_item = current_term_questions[current_term_question_index]
+        print(f"[UC2] Selected question {current_term_question_index} from term '{current_term}': {question_item.id} - {question_item.main[:50]}...")
+
+        # DO NOT pre-increment question index - let scoring logic handle progression
+        # This allows multiple responses to the same question for score accumulation
+        print(f"[UC2] Question index remains at {current_term_question_index} to allow score accumulation")
+
+        return self._generate_dimension_question(question_item, dimension, context)
+
+    def _generate_dimension_question(self, question_item, dimension: str, context: ConversationContext = None) -> DialogueResponse:
+        """Generate dimension question with proper question_context setup"""
+        options = []
+        if question_item.options:
+            options = [
+                {"value": opt.get("id", opt.get("value", str(i))),
+                 "label": opt.get("label", opt.get("text", str(opt)))}
+                for i, opt in enumerate(question_item.options)
+            ]
+
+        # Set question_context for scoring (CRITICAL for UC2 scoring)
+        if context:
+            question_context = {
+                'question': question_item.main,
+                'text': question_item.main,  # fallback for compatibility
+                'options': question_item.options,  # Original options with scores
+                'question_id': question_item.id,
+                'pnm': dimension,
+                'term': question_item.term
+            }
+            context.conversation.assessment_state['question_context'] = question_context
+            print(f"[UC2] Set question_context for scoring: {question_item.id}")
+
+        return DialogueResponse(
+            content=question_item.main,
+            response_type=ResponseType.QUESTION,
+            mode=ConversationMode.DIMENSION_ANALYSIS,
+            should_continue_dialogue=False,
+            options=options,
+            current_pnm=dimension,
+            current_term=question_item.term,
+            question_id=question_item.id
+        )
+
+    async def _generate_dimension_summary(self, context: ConversationContext, dimension: str) -> DialogueResponse:
+        """Generate professional RAG AI summary for dimension completion"""
+        try:
+            # Use RAG-enhanced professional summary generation
+            summary_content = self.response_generator.generate_summary_response(context)
+            print(f"[UC2] RAG AI summary generated for {dimension}: {len(summary_content)} chars")
+        except Exception as e:
+            print(f"[UC2] RAG summary failed: {e}, using AI fallback")
+            # AI fallback without hardcoded templates
+            scores = context.conversation.assessment_state.get('scores', {}).get(dimension, {})
+            if scores:
+                avg_score = sum(score_data['score'] for score_data in scores.values()) / len(scores)
+                summary_content = f"Assessment complete for {dimension}. Average score: {avg_score:.1f}/7. Your responses provide valuable insights into your current situation and will guide personalized support recommendations."
+            else:
+                summary_content = f"Your {dimension} assessment has been completed. Thank you for sharing your experiences. This information will help us better understand your needs and provide appropriate support."
+
+        return DialogueResponse(
+            content=summary_content,
+            response_type=ResponseType.SUMMARY,
+            mode=ConversationMode.DIMENSION_ANALYSIS,
+            should_continue_dialogue=False,
+            current_pnm=dimension
+        )
+
+    def _extract_score_from_user_input(self, user_input: str, question_context: dict) -> float:
+        """Extract score from user input using question context options"""
+        if not user_input or not question_context or 'options' not in question_context:
+            return None
+
+        options = question_context.get('options', [])
+        user_input_lower = user_input.lower().strip()
+
+        print(f"[UC2] Extracting score from input: '{user_input}' with {len(options)} options")
+
+        # Try to match by option ID first
+        for option in options:
+            if option.get('id', '').lower() == user_input_lower:
+                score = float(option.get('score', 0))
+                print(f"[UC2] Matched option ID '{option.get('id')}' → score: {score}")
+                return score
+
+        # Try ordinal matching: user inputs 1,2,3,4 for 1st,2nd,3rd,4th option
+        try:
+            ordinal_input = int(user_input_lower)
+            if 1 <= ordinal_input <= len(options):
+                selected_option = options[ordinal_input - 1]  # Convert 1-based to 0-based index
+                score = float(selected_option.get('score', 0))
+                print(f"[UC2] Matched ordinal {ordinal_input} → option ID '{selected_option.get('id')}' → score: {score}")
+                return score
+        except ValueError:
+            pass  # Not a valid integer, continue to label matching
+
+        # Try to match by option label
+        for option in options:
+            label = option.get('label', '').lower()
+            if label and user_input_lower in label:
+                score = float(option.get('score', 0))
+                print(f"[UC2] Matched option label '{option.get('label')}' → score: {score}")
+                return score
+
+        print(f"[UC2] No matching option found for input: '{user_input}'")
+        return None
+
+    async def _process_user_response_uc2_simple(self, context: ConversationContext, dimension: str) -> None:
+        """
+        Simple UC2 scoring logic based on user requirements:
+        1. Extract score from main question options
+        2. Store immediately for term completion
+        3. Trigger term scoring when term is complete
+        """
+        if not context.user_input or not context.user_input.strip():
+            return
+
+        user_input = context.user_input.strip()
+        print(f"[UC2] SIMPLE SCORING: Processing input '{user_input}' for {dimension}")
+
+        # Get question context with options
+        question_context = context.conversation.assessment_state.get('question_context', {})
+
+        # Extract score from user input using existing method
+        score = self._extract_score_from_user_input(user_input, question_context)
+
+        if score is not None:
+            # Get current term from question context
+            current_term = question_context.get('term', 'Unknown')
+
+            print(f"[UC2] SIMPLE SCORING: Extracted score {score} for {dimension}/{current_term}")
+
+            # Store term score directly in database (immediate storage)
+            await self._store_term_score_immediate(context, dimension, current_term, score)
+
+            # Mark this term as completed
+            completed_terms = context.conversation.assessment_state.get('completed_terms', [])
+            term_key = f"{dimension}_{current_term}"
+            if term_key not in completed_terms:
+                completed_terms.append(term_key)
+                context.conversation.assessment_state['completed_terms'] = completed_terms
+                print(f"[UC2] SIMPLE SCORING: Marked term {current_term} as completed")
+        else:
+            print(f"[UC2] SIMPLE SCORING: No score extracted from '{user_input}'")
+
+    async def _store_term_score_immediate(self, context: ConversationContext, dimension: str, term: str, score: float) -> bool:
+        """
+        Immediately store term score to database
+        Returns True if successful, False otherwise
+        """
+        try:
+            from datetime import datetime
+            import sqlite3
+            from pathlib import Path
+
+            print(f"[UC2] IMMEDIATE STORAGE: Storing {dimension}/{term} = {score}")
+
+            # Database path
+            db_path = Path(__file__).parent.parent / "data" / "als.db"
+
+            if not db_path.exists():
+                print(f"[UC2] ERROR: Database not found at {db_path}")
+                return False
+
+            # Connect and store
+            with sqlite3.connect(str(db_path)) as conn:
+                conn.execute("""
+                    INSERT OR REPLACE INTO conversation_scores
+                    (conversation_id, pnm, term, score, status, updated_at)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                """, (
+                    context.conversation.id,
+                    dimension,
+                    term,
+                    float(score),
+                    'completed',
+                    datetime.now().isoformat()
+                ))
+
+                # Verify storage
+                result = conn.execute(
+                    "SELECT score FROM conversation_scores WHERE conversation_id = ? AND pnm = ? AND term = ?",
+                    (context.conversation.id, dimension, term)
+                ).fetchone()
+
+                if result:
+                    print(f"[UC2] SUCCESS: Score {result[0]} verified in database for {dimension}/{term}")
+                    return True
+                else:
+                    print(f"[UC2] ERROR: Score verification failed for {dimension}/{term}")
+                    return False
+
+        except Exception as e:
+            print(f"[UC2] CRITICAL ERROR storing score: {e}")
+            return False
+
+    async def _trigger_term_scoring_uc2(self, context: ConversationContext, dimension: str, term: str) -> None:
+        """
+        Simple term completion for UC2 - just mark term as completed
+        Score has already been stored directly in database
+        """
+        print(f"[UC2] TERM SCORING: Term {dimension}/{term} marked as completed")
+
+        # Mark this term as completed in assessment state
+        completed_terms = context.conversation.assessment_state.get('completed_terms', [])
+        term_key = f"{dimension}_{term}"
+        if term_key not in completed_terms:
+            completed_terms.append(term_key)
+            context.conversation.assessment_state['completed_terms'] = completed_terms
+            print(f"[UC2] TERM SCORING: Added {term_key} to completed terms")
+
+    async def _generate_dimension_summary_uc2(self, context: ConversationContext, dimension: str) -> DialogueResponse:
+        """Generate professional RAG AI summary for dimension completion and lock conversation"""
+        print(f"[UC2] Generating dimension summary for {dimension}")
+
+        # Check if summary already generated to prevent duplicate
+        dimension_completed_key = f"{dimension}_completed"
+        if context.conversation.assessment_state.get(dimension_completed_key, False):
+            print(f"[UC2] Summary already generated for {dimension}, conversation locked")
+            return DialogueResponse(
+                content=f"Assessment for {dimension} dimension has been completed. Thank you for your responses.",
+                response_type=ResponseType.SUMMARY,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=False,
+                current_pnm=dimension
+            )
+
+        try:
+            # Use RAG-enhanced professional summary generation
+            summary_content = self.response_generator.generate_summary_response(context)
+            print(f"[UC2] RAG AI summary generated for {dimension}: {len(summary_content)} chars")
+
+            # Mark this dimension as completed and lock conversation
+            context.conversation.assessment_state[dimension_completed_key] = True
+            context.conversation.assessment_state['conversation_locked'] = True
+
+            return DialogueResponse(
+                content=summary_content,
+                response_type=ResponseType.SUMMARY,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=False,
+                current_pnm=dimension
+            )
+
+        except Exception as e:
+            print(f"[UC2] Error generating dimension summary: {e}")
+            # Fallback summary
+            context.conversation.assessment_state[dimension_completed_key] = True
+            context.conversation.assessment_state['conversation_locked'] = True
+
+            return DialogueResponse(
+                content=f"Thank you for completing the {dimension} assessment. Your responses have been recorded and will help provide personalized support recommendations.",
+                response_type=ResponseType.SUMMARY,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=False,
+                current_pnm=dimension
+            )
+
+    async def _check_and_handle_term_completion_uc2(self, context: ConversationContext, dimension: str) -> None:
+        """Check if current term is completed after user response and trigger scoring if needed"""
+        print(f"[UC2] *** FUNCTION ENTRY: _check_and_handle_term_completion_uc2 for {dimension} ***")
+
+        try:
+            # Get term progress information
+            main_questions = self.qb.for_pnm(dimension)
+            terms_questions = {}
+            for main_q in main_questions:
+                term = main_q.term if hasattr(main_q, 'term') else 'General'
+                if term not in terms_questions:
+                    terms_questions[term] = []
+                terms_questions[term].append(main_q)
+
+            ordered_terms = sorted(terms_questions.keys())
+            current_term_index = context.conversation.assessment_state.get(f"{dimension}_term_index", 0)
+
+            if current_term_index >= len(ordered_terms):
+                print(f"[UC2] All terms completed, skipping completion check")
+                return
+
+            current_term = ordered_terms[current_term_index]
+            current_term_questions = terms_questions[current_term]
+            dimension_term_question_key = f"{dimension}_term_question_index"
+            current_term_question_index = context.conversation.assessment_state.get(dimension_term_question_key, 0)
+
+            print(f"[UC2] Term '{current_term}': question {current_term_question_index}/{len(current_term_questions)}")
+            print(f"[UC2] DETAILED STATE:")
+            print(f"  - current_term_index: {current_term_index}")
+            print(f"  - current_term: {current_term}")
+            print(f"  - current_term_question_index: {current_term_question_index}")
+            print(f"  - len(current_term_questions): {len(current_term_questions)}")
+            print(f"  - Completion condition: {current_term_question_index} >= {len(current_term_questions)} = {current_term_question_index >= len(current_term_questions)}")
+
+            # SIMPLIFIED UC2: Check if this term has been completed
+            completed_terms = context.conversation.assessment_state.get('completed_terms', [])
+            term_key = f"{dimension}_{current_term}"
+
+            if term_key in completed_terms:
+                print(f"[UC2] Term {current_term} already completed, moving to next term")
+
+                # Move to next term
+                next_term_index = current_term_index + 1
+                context.conversation.assessment_state[f"{dimension}_term_index"] = next_term_index
+                context.conversation.assessment_state[dimension_term_question_key] = 0
+
+                print(f"[UC2] Advanced to next term index: {next_term_index}/{len(ordered_terms)}")
+
+                # Check if all terms completed
+                if next_term_index >= len(ordered_terms):
+                    print(f"[UC2] ALL TERMS COMPLETED for dimension {dimension}")
+                    # Set flag to trigger summary generation on next response
+                    context.conversation.assessment_state[f"{dimension}_ready_for_summary"] = True
+
+        except Exception as e:
+            print(f"[UC2] ERROR in term completion check: {e}")
+            import traceback
+            print(f"[UC2] Traceback: {traceback.format_exc()}")
+
+    async def _evaluate_term_with_ai(self, dimension: str, term: str, responses: list, main_score: float) -> float:
+        """AI-powered evaluation of term responses to complement main question score"""
+        print(f"[UC2] AI evaluating term {dimension}/{term} with {len(responses)} responses")
+
+        if not responses:
+            print(f"[UC2] No responses to evaluate, returning main score")
+            return main_score
+
+        try:
+            # Use existing AI scoring engine with focused prompt
+            evaluation_prompt = f"""
+            Evaluate the user's responses for {dimension} dimension, {term} term.
+
+            Main question score: {main_score}/7 (0=best condition, 7=most challenging)
+
+            User responses: {' | '.join(responses[-3:])}
+
+            Consider:
+            - Consistency with main question score
+            - Quality of life impact indicated in responses
+            - Practical challenges mentioned
+            - Overall functioning level
+
+            Return a score from 0-7 where:
+            0 = Excellent functioning, minimal challenges
+            3.5 = Moderate challenges, some impact
+            7 = Severe challenges, significant impact
+
+            Score:"""
+
+            # Use AI scorer for consistent evaluation
+            ai_result = await self.ai_scorer.score_free_text_response(
+                ' '.join(responses[-3:]),  # Last 3 responses
+                {"prompt": evaluation_prompt},
+                dimension,
+                []  # No context needed for term evaluation
+            )
+
+            ai_score = float(ai_result.score) if ai_result.score is not None else main_score
+            print(f"[UC2] AI evaluation result: {ai_score:.2f}")
+
+            # Ensure score is in valid range
+            ai_score = max(0.0, min(7.0, ai_score))
+            return ai_score
+
+        except Exception as e:
+            print(f"[UC2] AI evaluation error: {e}")
+            return main_score
+
 
 # NEXT STEP 3 OPPORTUNITIES:
 # 1. Response quality optimization (emotion analysis, personality adaptation)

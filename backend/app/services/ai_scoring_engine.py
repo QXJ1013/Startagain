@@ -77,45 +77,47 @@ class AIFreeTextScorer:
             return self._fallback_rule_based_scoring(user_response, pnm_domain)
     
     def _build_scoring_prompt(
-        self, 
-        user_response: str, 
+        self,
+        user_response: str,
         question_context: Dict[str, Any],
         pnm_domain: str,
         conversation_history: List[Dict] = None
     ) -> str:
-        """Build comprehensive scoring prompt for AI"""
-        
-        prompt = f"""
-You are an expert in ALS (Amyotrophic Lateral Sclerosis) patient assessment. Score this patient response on a 0-7 scale.
+        """Build comprehensive scoring prompt for AI using question-specific options"""
 
-SCORING SCALE (0=best, 7=worst):
-0: No impact on quality of life - Fully prepared/optimal management
-1: 90% quality of life - Excellent management  
-2: 75% quality of life - Good management
-3: 65% quality of life - Moderate management
-4: 50% quality of life - Some challenges
-5: 35% quality of life - Significant challenges
-6: 25% quality of life - Major difficulties
-7: <10% quality of life - Extreme impact/no preparation
+        # Extract question and options from context
+        question_text = question_context.get('question', question_context.get('text', 'N/A'))
+        options = question_context.get('options', [])
+
+        # Build question-specific scoring scale
+        scoring_scale = self._build_question_specific_scale(options)
+
+        prompt = f"""
+You are an expert in ALS (Amyotrophic Lateral Sclerosis) patient assessment. Score this patient response based on the specific question's scoring criteria.
+
+QUESTION: {question_text}
+
+QUESTION-SPECIFIC SCORING SCALE:
+{scoring_scale}
 
 CONTEXT:
 - PNM Domain: {pnm_domain}
-- Question Context: {question_context.get('question', {}).get('text', 'N/A')}
+- This is a free-text response that should be mapped to the above scale
 
 PATIENT RESPONSE:
 "{user_response}"
 
 ANALYSIS REQUIREMENTS:
-1. Assess preparedness, awareness, and coping level
-2. Consider ALS-specific challenges and progression
-3. Evaluate quality of life impact
-4. Extract key insights about patient state
+1. Compare the patient's response to the question's specific options
+2. Find the closest match based on preparedness, awareness, and coping level
+3. Consider the specific context of this question
+4. Map to the appropriate score from the question's scale
 
 Respond in JSON format:
 {{
-    "score": <0-7 integer>,
+    "score": <score from question scale>,
     "confidence": <0-1 float>,
-    "reasoning": "<detailed explanation>",
+    "reasoning": "<detailed explanation of which option this response matches>",
     "quality_of_life_impact": "<impact description>",
     "extracted_insights": ["<insight1>", "<insight2>"]
 }}
@@ -124,11 +126,30 @@ Respond in JSON format:
         # Add conversation history context if available
         if conversation_history:
             recent_context = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
-            context_summary = "\n".join([f"- {msg.get('content', '')}" for msg in recent_context])
+            context_summary = "\n".join([f"- {msg.content if hasattr(msg, 'content') else str(msg)}" for msg in recent_context])
             prompt += f"\n\nRECENT CONVERSATION CONTEXT:\n{context_summary}"
         
         return prompt
-    
+
+    def _build_question_specific_scale(self, options: List[Dict]) -> str:
+        """Build scoring scale text from question options"""
+        if not options:
+            # Fallback to general scale if no options
+            scale_lines = []
+            for score, info in self.score_mapping.items():
+                scale_lines.append(f"{score}: {info['level']} - {info['qol']}")
+            return "\n".join(scale_lines)
+
+        # Build scale from question options
+        scale_lines = []
+        for option in options:
+            score = option.get('score', 0)
+            label = option.get('label', 'Unknown option')
+            qol_impact = option.get('qol_impact', 'Quality of life impact not specified')
+            scale_lines.append(f"Score {score}: {label} - {qol_impact}")
+
+        return "\n".join(scale_lines)
+
     def _parse_ai_scoring_response(self, ai_response: str, original_response: str) -> AIScoreResult:
         """Parse AI response into structured score result"""
         try:
@@ -187,45 +208,16 @@ Respond in JSON format:
         )
     
     def _fallback_rule_based_scoring(self, user_response: str, pnm_domain: str) -> AIScoreResult:
-        """Rule-based fallback when AI scoring fails"""
-        response_lower = user_response.lower()
-        
-        # Positive indicators (lower scores)
-        positive_keywords = [
-            "prepared", "ready", "plan", "strategy", "team", "support",
-            "managing well", "under control", "confident", "equipped"
-        ]
-        
-        # Negative indicators (higher scores)  
-        negative_keywords = [
-            "not prepared", "no plan", "worried", "scared", "don't know",
-            "struggling", "difficult", "overwhelming", "unprepared"
-        ]
-        
-        # Scoring logic
-        positive_count = sum(1 for keyword in positive_keywords if keyword in response_lower)
-        negative_count = sum(1 for keyword in negative_keywords if keyword in response_lower)
-        response_length = len(user_response)
-        
-        if positive_count >= 2 and negative_count == 0:
-            score = 1  # Excellent
-        elif positive_count > negative_count:
-            score = 2  # Good
-        elif negative_count > positive_count:
-            score = 6  # Major difficulties
-        elif response_length < 20:
-            score = 5  # Minimal engagement suggests challenges
-        else:
-            score = 4  # Moderate default
-        
-        confidence = 0.5  # Lower confidence for rule-based
-        
+        """Simple fallback when AI scoring fails - uses middle score"""
+        # Use middle score from general scale as ultimate fallback
+        fallback_score = 3.0  # Middle of 0-7 scale
+
         return AIScoreResult(
-            score=float(score),
-            confidence=confidence,
-            reasoning=f"Rule-based analysis: {positive_count} positive, {negative_count} negative indicators",
-            quality_of_life_impact=self.score_mapping[score]['qol'],
-            extracted_insights=[f"Response length: {response_length} characters"]
+            score=fallback_score,
+            confidence=0.5,  # Low confidence for fallback
+            reasoning=f"Fallback scoring used due to AI analysis failure. Response: {user_response[:100]}...",
+            quality_of_life_impact=self.score_mapping[int(fallback_score)]['qol'],
+            extracted_insights=[f"Requires manual review for proper scoring in {pnm_domain} domain"]
         )
 
 

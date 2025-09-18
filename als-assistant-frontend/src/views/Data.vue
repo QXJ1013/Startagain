@@ -11,18 +11,19 @@
       <div class="dimensions-section">
         <h2>Eight Dimension Scores</h2>
         <div class="dimensions-chart">
-          <div 
-            v-for="dim in eightDimensions" 
+          <div
+            v-for="dim in eightDimensions"
             :key="dim.name"
             class="dimension-bar"
             @mouseenter="showDimensionHover(dim.name)"
             @mouseleave="hideDimensionHover"
+            @click="startDimensionChat(dim.name)"
           >
             <div class="dimension-label">{{ dim.name }}</div>
             <div class="bar-container">
               <div class="bar-background">
-                <div 
-                  class="bar-fill" 
+                <div
+                  class="bar-fill"
                   :class="{ 'bar-zero': dim.score === 0 }"
                   :style="{ width: dim.score === 0 ? '3%' : `${(dim.score / 7) * 100}%` }"
                 ></div>
@@ -31,7 +32,7 @@
                 {{ dim.score.toFixed(1) }}
               </span>
             </div>
-            <!-- Hover button - simplified to single assessment -->
+            <!-- Hover button -->
             <div v-if="hoveredDimension === dim.name" class="dimension-hover-btn">
               <button @click="startDimensionChat(dim.name)" class="start-chat-btn">
                 📋 Start Assessment
@@ -47,13 +48,12 @@
         <div class="terms-table" v-if="recentTerms.length > 0">
           <div v-for="term in recentTerms" :key="term.name" class="term-row">
             <span class="term-name">{{ term.name }}</span>
-            <span class="term-score">{{ term.score }}/7</span>
-            <span class="term-date">(Last: {{ term.lastDate }})</span>
+            <span class="term-score">{{ term.score.toFixed(1) }}/7</span>
+            <span class="term-date">{{ term.lastDate }}</span>
           </div>
         </div>
-        <div v-else class="empty-terms">
-          <p>No assessments completed yet.</p>
-          <p class="hint">Click on a dimension bar to start your first assessment.</p>
+        <div v-else class="no-terms">
+          No completed assessments yet
         </div>
       </div>
     </div>
@@ -73,22 +73,6 @@
       <p>Loading data...</p>
     </div>
 
-    <!-- Interrupt Warning Dialog -->
-    <div v-if="showInterruptWarning" class="interrupt-dialog-overlay">
-      <div class="interrupt-dialog">
-        <h3>Active Conversation Warning</h3>
-        <p>You have an active conversation in progress. Starting a new assessment will interrupt it.</p>
-        <p class="conversation-title">Current: {{ activeConversation?.title || 'Untitled Conversation' }}</p>
-        <div class="dialog-actions">
-          <button @click="cancelInterrupt()" class="btn-cancel">
-            Continue Current
-          </button>
-          <button @click="confirmInterrupt()" class="btn-confirm">
-            Start New Assessment
-          </button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -104,39 +88,8 @@ const sessionStore = useSessionStore();
 const router = useRouter();
 const authStore = useAuthStore();
 const chatStore = useChatStore();
-const showInterruptWarning = ref(false);
-const activeConversation = ref<any>(null);
-const pendingDimension = ref<string | null>(null);
 const isLoading = ref(false);
 const hoveredDimension = ref<string | null>(null);
-
-// 8 dimensions data with realistic scores
-const eightDimensions = ref([
-  { name: "Physiological", score: 4.2 },
-  { name: "Safety", score: 3.8 },
-  { name: "Love & Belonging", score: 3.5 },
-  { name: "Esteem", score: 2.9 },
-  { name: "Self-Actualisation", score: 2.1 },
-  { name: "Cognitive", score: 4.5 },
-  { name: "Aesthetic", score: 3.2 },
-  { name: "Transcendence", score: 1.8 }
-]);
-
-// Define type for recent term data
-interface RecentTerm {
-  name: string;
-  score: number;  // Changed from string to number
-  lastDate: string;
-}
-
-// Recent completed terms with sample data
-const recentTerms = ref<RecentTerm[]>([
-  { name: "Walking and mobility", score: 4.2, lastDate: "Today" },
-  { name: "Muscle strength", score: 3.8, lastDate: "Yesterday" },
-  { name: "Speech clarity", score: 5.1, lastDate: "2 days ago" },
-  { name: "Swallowing ability", score: 4.7, lastDate: "3 days ago" },
-  { name: "Breathing comfort", score: 3.5, lastDate: "1 week ago" }
-]);
 
 function showDimensionHover(dimensionName: string) {
   hoveredDimension.value = dimensionName;
@@ -146,194 +99,178 @@ function hideDimensionHover() {
   hoveredDimension.value = null;
 }
 
+// 8 dimensions data - loaded from backend
+const eightDimensions = ref([
+  { name: "Physiological", score: 0.0, assessments_count: 0 },
+  { name: "Safety", score: 0.0, assessments_count: 0 },
+  { name: "Love & Belonging", score: 0.0, assessments_count: 0 },
+  { name: "Esteem", score: 0.0, assessments_count: 0 },
+  { name: "Self-Actualisation", score: 0.0, assessments_count: 0 },
+  { name: "Cognitive", score: 0.0, assessments_count: 0 },
+  { name: "Aesthetic", score: 0.0, assessments_count: 0 },
+  { name: "Transcendence", score: 0.0, assessments_count: 0 }
+]);
+
+const userStats = ref({
+  total_conversations: 0,
+  completed_assessments: 0
+});
+
+// Define type for recent term data
+interface RecentTerm {
+  name: string;
+  score: number;  // Changed from string to number
+  lastDate: string;
+}
+
+// Recent completed terms - loaded from backend
+const recentTerms = ref<RecentTerm[]>([]);
+
+
 async function startDimensionChat(dimensionName: string) {
   try {
-    if (!authStore.isAuthenticated) {
+    if (!authStore.isAuthenticated || !authStore.token) {
       sessionStore.setMessage('Please login to start assessment');
       router.push('/login');
       return;
     }
 
-    // Check for active conversation
-    try {
-      const activeConv = await conversationsApi.getActiveConversation(authStore.token!);
-      if (activeConv) {
-        // Show interrupt warning
-        activeConversation.value = activeConv;
-        showInterruptWarning.value = true;
-        // Store the dimension to start after interruption
-        pendingDimension.value = dimensionName;
-        return;
+    console.log(`[DATA.VUE] Starting fresh ${dimensionName} assessment`);
+
+    // STEP 1: Complete reset of all frontend state
+    chatStore.reset(); // This clears all messages and conversation state
+    sessionStore.resetSession(); // This clears session state
+
+    // STEP 2: Clear localStorage keys that might interfere
+    const sessionKeys = Object.keys(localStorage).filter(k => k.startsWith('als_session'));
+    sessionKeys.forEach(k => {
+      if (k !== 'als_session_id') { // Keep session ID but clear others
+        localStorage.removeItem(k);
       }
-    } catch (error) {
-      console.log('No active conversation found, proceeding with new one');
-    }
+    });
 
-    // Create new dimension-specific conversation
-    await startNewDimensionConversation(dimensionName);
-    
-    // If there's an active conversation, the warning will be shown
-    // The action will be executed if user confirms
-  } catch (error) {
-    console.error('Error starting dimension chat:', error);
-    sessionStore.setMessage(`Error starting ${dimensionName} assessment`);
-  }
-}
+    // STEP 3: Defensive delay to ensure frontend state clears
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-async function startNewDimensionConversation(dimensionName: string) {
-  try {
-    // Create new dimension conversation
-    await conversationsApi.createConversation(
-      authStore.token!,
+    console.log(`[DATA.VUE] Creating new conversation for ${dimensionName}`);
+
+    // STEP 4: Create fresh conversation using conversations API
+    const newConv = await conversationsApi.createConversation(
+      authStore.token,
       'dimension',
       dimensionName,
-      `${dimensionName} Assessment`
+      `${dimensionName} Assessment - ${new Date().toLocaleTimeString()}`
     );
-    
-    // Set dimension focus in session store
+
+    console.log(`[DATA.VUE] Created conversation ${newConv.id} for ${dimensionName}`);
+
+    // STEP 5: Set fresh conversation state in chat store
+    chatStore.setCurrentConversation(newConv.id);
+    chatStore.conversationType = 'dimension';
+    chatStore.dimensionName = dimensionName;
+
+    // STEP 6: Set dimension focus for Chat.vue to pick up
     sessionStore.setDimensionFocus(dimensionName);
-    
-    // Navigate to Chat page
+
+    // STEP 7: Navigate to chat page - it will handle the initial question
     router.push('/chat');
-    
-    // Show notification
-    sessionStore.setMessage(`Starting ${dimensionName} assessment`);
-  } catch (error: any) {
-    console.error('Failed to create dimension conversation:', error);
-    sessionStore.setMessage(`Failed to start ${dimensionName} assessment: ${error.message}`);
+
+    // STEP 8: Show notification with timestamp to confirm fresh start
+    sessionStore.setMessage(`Starting ${dimensionName} assessment (${new Date().toLocaleTimeString()})`);
+
+  } catch (error) {
+    console.error('Error starting dimension chat:', error);
+    if (error.message && error.message.includes('401')) {
+      authStore.logout();
+      sessionStore.setMessage('Session expired. Please login again.');
+      router.push('/login');
+    } else {
+      sessionStore.setMessage(`Error starting ${dimensionName} assessment`);
+    }
   }
 }
 
-function cancelInterrupt() {
-  showInterruptWarning.value = false;
-  activeConversation.value = null;
-  pendingDimension.value = null;
+
+// Load real user data from backend
+async function loadUserData() {
+  if (!authStore.token) return;
+
+  try {
+    isLoading.value = true;
+    const scoresData = await conversationsApi.getUserScoresSummary(authStore.token);
+
+    // Update dimensions with real data
+    eightDimensions.value = scoresData.dimensions;
+
+    // Update user stats
+    userStats.value = {
+      total_conversations: scoresData.total_conversations,
+      completed_assessments: scoresData.completed_assessments
+    };
+
+    // Load recent terms from conversations
+    await loadRecentTerms();
+
+  } catch (error: any) {
+    console.error('Failed to load user data:', error);
+    sessionStore.setMessage(`Failed to load data: ${error.message}`);
+  } finally {
+    isLoading.value = false;
+  }
 }
 
-async function confirmInterrupt() {
+// Load recent completed terms from database
+async function loadRecentTerms() {
   try {
-    if (activeConversation.value && authStore.token) {
-      // Interrupt the current conversation
-      await conversationsApi.interruptConversation(authStore.token, activeConversation.value.id);
+    if (!authStore.token) return;
+
+    // Get scores summary data which now includes term_scores
+    const scoresData = await conversationsApi.getUserScoresSummary(authStore.token);
+
+    // Extract term scores from API response
+    const termScores: RecentTerm[] = [];
+
+    if (scoresData.term_scores) {
+      for (const termScore of scoresData.term_scores.slice(0, 5)) {
+        // Parse date
+        let dateStr = 'Recent';
+        try {
+          const date = new Date(termScore.updated_at);
+          const now = new Date();
+          const daysAgo = Math.floor((now.getTime() - date.getTime()) / (24 * 60 * 60 * 1000));
+
+          if (daysAgo === 0) {
+            dateStr = 'Today';
+          } else if (daysAgo === 1) {
+            dateStr = 'Yesterday';
+          } else if (daysAgo < 7) {
+            dateStr = `${daysAgo} day${daysAgo > 1 ? 's' : ''} ago`;
+          } else {
+            dateStr = 'Last week';
+          }
+        } catch (error) {
+          dateStr = 'Recent';
+        }
+
+        termScores.push({
+          name: termScore.term, // Show actual term name, not PNM dimension
+          score: termScore.score,
+          lastDate: dateStr
+        });
+      }
     }
-    
-    // Close the warning dialog
-    showInterruptWarning.value = false;
-    
-    // Start the pending dimension if exists
-    if (pendingDimension.value) {
-      await startNewDimensionConversation(pendingDimension.value);
-    }
-    
-    // Clear state
-    activeConversation.value = null;
-    pendingDimension.value = null;
+
+    recentTerms.value = termScores;
+
   } catch (error: any) {
-    console.error('Failed to interrupt conversation:', error);
-    sessionStore.setMessage(`Failed to interrupt conversation: ${error.message}`);
+    console.error('Failed to load recent terms:', error);
+    recentTerms.value = [];
   }
 }
 
 async function loadData() {
-  try {
-    isLoading.value = true;
-    
-    // Load scores data from the backend - simplified approach
-    const conversationId = chatStore.currentConversationId;
-    if (conversationId) {
-      // Note: scores endpoint removed in backend simplification
-      // Using mock data for display - replace with conversation state later
-      const scoresResponse = { dimension_scores: [], term_scores: [] };
-      
-      // Update dimensions with real scores
-      if (scoresResponse.dimension_scores && scoresResponse.dimension_scores.length > 0) {
-      // Map backend PNM names to our 8 dimensions display
-      const pnmMapping: Record<string, string> = {
-        'Physiological': 'Physiological',
-        'physiological': 'Physiological',
-        'Safety': 'Safety',
-        'safety': 'Safety', 
-        'Love & Belonging': 'Love & Belonging',
-        'love': 'Love & Belonging',
-        'Love_Belonging': 'Love & Belonging',
-        'Esteem': 'Esteem',
-        'esteem': 'Esteem',
-        'Self-Actualisation': 'Self-Actualisation',
-        'self_actualisation': 'Self-Actualisation',
-        'Self_Actualisation': 'Self-Actualisation',
-        'Cognitive': 'Cognitive',
-        'cognitive': 'Cognitive',
-        'Aesthetic': 'Aesthetic',
-        'aesthetic': 'Aesthetic',
-        'Transcendence': 'Transcendence',
-        'transcendence': 'Transcendence'
-      };
-      
-      // Update scores based on dimension scores
-      scoresResponse.dimension_scores.forEach((dimScore: any) => {
-        const dimensionName = pnmMapping[dimScore.pnm] || pnmMapping[dimScore.pnm.toLowerCase()];
-        if (dimensionName) {
-          const dim = eightDimensions.value.find(d => d.name === dimensionName);
-          if (dim) {
-            // Use the score directly (already in 0-7 scale)
-            dim.score = dimScore.score_0_7 || 0;
-          }
-        }
-      });
-      }
-      
-      // Update recent terms from term scores
-      if (scoresResponse.term_scores && scoresResponse.term_scores.length > 0) {
-      // Sort by updated_at and get most recent terms
-      const sortedTerms = [...scoresResponse.term_scores]
-        .sort((a: any, b: any) => {
-          const dateA = new Date(a.updated_at || 0).getTime();
-          const dateB = new Date(b.updated_at || 0).getTime();
-          return dateB - dateA; // Most recent first
-        })
-        .slice(0, 5); // Get last 5 completed terms
-      
-      recentTerms.value = sortedTerms.map((termScore: any) => {
-        // Format the date
-        const date = termScore.updated_at ? new Date(termScore.updated_at) : new Date();
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        
-        let dateStr = 'Recent';
-        if (date.toDateString() === today.toDateString()) {
-          dateStr = 'Today';
-        } else if (date.toDateString() === yesterday.toDateString()) {
-          dateStr = 'Yesterday';
-        } else if (date > new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000)) {
-          dateStr = 'This week';
-        }
-        
-        return {
-          name: termScore.term,
-          score: termScore.score_0_7 || 0,  // Keep as number
-          lastDate: dateStr
-        };
-      }) as RecentTerm[];
-      }
-    }
-    
-  } catch (error: any) {
-    console.error('Error loading data:', error);
-    console.log('Conversation ID:', chatStore.currentConversationId);
-    
-    // Show empty state for new sessions or when no data exists
-    // Keep dimensions at 0 for new sessions
-    eightDimensions.value.forEach(dim => dim.score = 0);
-    recentTerms.value = [];
-    
-    // Only show error message for actual errors (not empty data)
-    if (error.message && !error.message.includes('404')) {
-      console.error('Failed to load scores:', error.message);
-    }
-  } finally {
-    isLoading.value = false;
-  }
+  // Use the new loadUserData function instead
+  await loadUserData();
 }
 
 onMounted(() => {
@@ -409,6 +346,7 @@ onMounted(() => {
 .dimension-bar:hover {
   border-color: #3b82f6;
   box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
+  cursor: pointer;
 }
 
 .dimension-label {
@@ -458,11 +396,12 @@ onMounted(() => {
   font-style: italic;
 }
 
+
 /* Dimension Hover Button */
 .dimension-hover-btn {
   position: absolute;
   top: 50%;
-  right: 16px;
+  right: 50px;
   transform: translateY(-50%);
   z-index: 10;
 }
@@ -478,6 +417,9 @@ onMounted(() => {
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 2px 4px rgba(59, 130, 246, 0.3);
+  pointer-events: auto;
+  z-index: 20;
+  position: relative;
 }
 
 .start-chat-btn:hover {
@@ -529,20 +471,11 @@ onMounted(() => {
   color: #6b7280;
 }
 
-/* Empty Terms State */
-.empty-terms {
+/* No Terms State */
+.no-terms {
   text-align: center;
-  padding: 24px;
+  padding: 20px;
   color: #6b7280;
-}
-
-.empty-terms p {
-  margin: 8px 0;
-}
-
-.empty-terms .hint {
-  font-size: 14px;
-  color: #9ca3af;
   font-style: italic;
 }
 
@@ -607,84 +540,6 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
-/* Interrupt Dialog */
-.interrupt-dialog-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-}
-
-.interrupt-dialog {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  max-width: 400px;
-  width: 90%;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
-}
-
-.interrupt-dialog h3 {
-  color: #ef4444;
-  margin-bottom: 16px;
-  font-size: 18px;
-  font-weight: 600;
-}
-
-.interrupt-dialog p {
-  color: #4b5563;
-  margin-bottom: 12px;
-  line-height: 1.5;
-}
-
-.interrupt-dialog .conversation-title {
-  font-weight: 600;
-  color: #1f2937;
-  background: #f3f4f6;
-  padding: 8px 12px;
-  border-radius: 6px;
-  margin: 16px 0;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-  margin-top: 24px;
-}
-
-.dialog-actions button {
-  padding: 8px 16px;
-  border-radius: 6px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  border: none;
-}
-
-.btn-cancel {
-  background: #e5e7eb;
-  color: #4b5563;
-}
-
-.btn-cancel:hover {
-  background: #d1d5db;
-}
-
-.btn-confirm {
-  background: #3b82f6;
-  color: white;
-}
-
-.btn-confirm:hover {
-  background: #2563eb;
-}
 
 /* Responsive Design */
 @media (max-width: 768px) {

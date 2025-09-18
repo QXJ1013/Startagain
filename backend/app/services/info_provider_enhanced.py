@@ -516,7 +516,7 @@ CONVERSATION HISTORY INSIGHTS:
 {f"- Recurring themes: {', '.join([q[:30] for q in context.question_history[-2:]])}" if context.question_history else ""}
 
 KNOWLEDGE BASE CONTENT:
-{text[:1500]}
+ {text[:1500]}
 
 CRITICAL INSTRUCTIONS:
 

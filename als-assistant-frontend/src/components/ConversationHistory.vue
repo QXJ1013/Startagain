@@ -33,118 +33,35 @@
             <p class="hint">Start a new conversation to begin</p>
           </div>
 
-          <!-- Conversation List -->
+          <!-- Simplified Conversation List -->
           <div v-else class="conversation-list">
-            <div 
-              v-for="conv in conversations" 
+            <div
+              v-for="conv in conversations"
               :key="conv.id"
               class="conversation-item"
-              :class="{ 
-                active: conv.status === 'active',
-                selected: selectedConversation?.id === conv.id 
-              }"
-              @click="selectConversation(conv)"
+              :class="conv.status"
+              @click="openConversation(conv)"
             >
-              <!-- Status Indicator -->
-              <div class="status-indicator" :class="conv.status"></div>
-              
-              <!-- Conversation Info -->
-              <div class="conv-info">
-                <div class="conv-title-row">
-                  <input 
-                    v-if="editingId === conv.id"
-                    v-model="editingTitle"
-                    @keyup.enter="saveTitle(conv.id)"
-                    @keyup.esc="cancelEdit"
-                    @click.stop
-                    class="title-input"
-                    ref="titleInput"
-                  />
-                  <h4 v-else class="conv-title">
-                    {{ conv.title || `Record ${conversations.indexOf(conv) + 1}` }}
-                  </h4>
-                  
-                  <!-- Edit Button -->
-                  <button 
-                    v-if="editingId !== conv.id"
-                    @click.stop="startEdit(conv)"
-                    class="edit-btn"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
-                            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                    </svg>
-                  </button>
-                </div>
-                
-                <div class="conv-meta">
-                  <span class="conv-type">
-                    {{ conv.type === 'dimension' ? 
-                       `Dimension: ${conv.dimension}` : 
-                       conv.type === 'assessment' ? 'Assessment' :
-                       'General Chat' }}
-                  </span>
-                  <span class="conv-date">
-                    {{ formatDate(conv.updated_at || conv.created_at || '') }}
-                  </span>
-                </div>
-                
-                <div class="conv-stats">
-                  <span>{{ conv.message_count || 0 }} messages</span>
-                  <span v-if="(conv.info_card_count || 0) > 0">
-                    {{ conv.info_card_count }} info cards
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <!-- Conversation Detail View -->
-          <div v-if="selectedConversation" class="conversation-detail">
-            <div class="detail-header">
-              <button @click="selectedConversation = null" class="back-btn">
-                ← Back to List
-              </button>
-              <h4>{{ selectedConversation.title || 'Conversation Detail' }}</h4>
-            </div>
-
-            <div class="detail-content">
-              <!-- Messages -->
-              <div v-if="conversationDetail.messages.length > 0" class="messages-section">
-                <h5>Messages ({{ conversationDetail.messages.length }})</h5>
-                <div 
-                  v-for="(msg, idx) in conversationDetail.messages" 
-                  :key="msg.id || idx"
-                  class="message-item"
-                  :class="msg.role"
-                >
-                  <div class="msg-role">{{ msg.role === 'user' ? 'You' : 'Assistant' }}</div>
-                  <div class="msg-text">{{ msg.content || 'No content available' }}</div>
-                  <div class="msg-time" v-if="msg.timestamp">{{ new Date(msg.timestamp).toLocaleString() }}</div>
-                </div>
-              </div>
-              <div v-else class="empty-messages">
-                <p>No messages in this conversation yet</p>
+              <!-- Simple Item Layout -->
+              <div class="conv-header">
+                <div class="status-dot" :class="conv.status"></div>
+                <h4 class="conv-title">
+                  {{ conv.title || `Chat ${conversations.indexOf(conv) + 1}` }}
+                </h4>
+                <span class="conv-date">
+                  {{ formatDate(conv.updated_at || conv.created_at || '') }}
+                </span>
               </div>
 
-              <!-- Info Cards -->
-              <div v-if="conversationDetail.infoCards.length > 0" class="info-cards-section">
-                <h5>Information Cards</h5>
-                <div 
-                  v-for="card in conversationDetail.infoCards" 
-                  :key="card.id"
-                  class="saved-info-card"
-                >
-                  <h6>{{ card.card_data.title }}</h6>
-                  <ul>
-                    <li v-for="(bullet, idx) in card.card_data.bullets" :key="idx">
-                      {{ bullet }}
-                    </li>
-                  </ul>
-                  <div v-if="card.card_data.url" class="card-link">
-                    <a :href="card.card_data.url" target="_blank">Learn More →</a>
-                  </div>
-                </div>
+              <div class="conv-meta">
+                <span class="conv-type">
+                  {{ conv.type === 'dimension' ? `${conv.dimension} Assessment` :
+                     conv.type === 'assessment' ? 'Assessment' : 'General Chat' }}
+                </span>
+                <span class="conv-stats">
+                  💬 {{ conv.message_count || 0 }}
+                  <span v-if="conv.info_card_count">• 📋 {{ conv.info_card_count }}</span>
+                </span>
               </div>
             </div>
           </div>
@@ -159,27 +76,14 @@
 <script setup lang="ts">
 import { ref, watch, nextTick } from 'vue';
 import { useAuthStore } from '../stores/auth';
-// Removed unused useChatStore import
-// import { conversationsApi } from '../services/api'; // Removed - endpoints no longer exist
+import { conversationsApi } from '../services/api';
 
 const authStore = useAuthStore();
 // Removed unused chatStore
 
 const showHistory = ref(false);
-const selectedConversation = ref<any>(null);
-const editingId = ref<string | null>(null);
-const editingTitle = ref('');
 const conversations = ref<any[]>([]);
 const loading = ref(false);
-const conversationDetail = ref<{
-  messages: any[];
-  infoCards: any[];
-}>({
-  messages: [],
-  infoCards: []
-});
-
-// Removed unused activeConvWarning computed
 
 // Load conversations when panel opens
 watch(showHistory, async (isOpen) => {
@@ -188,79 +92,52 @@ watch(showHistory, async (isOpen) => {
   }
 });
 
-// Load conversation details when selected
-watch(selectedConversation, async (conv) => {
-  if (conv && authStore.token) {
-    try {
-      // Note: Backend conversation endpoints were removed during simplification
-      // Using fallback behavior for now
-      console.log('Conversation history detail not available - backend endpoints removed');
-      conversationDetail.value = {
-        messages: [],
-        infoCards: []
-      };
-    } catch (error) {
-      console.error('Failed to load conversation detail:', error);
-      conversationDetail.value = {
-        messages: [],
-        infoCards: []
-      };
-    }
-  }
-});
-
 // Add missing functions
 async function fetchConversations() {
   loading.value = true;
   try {
-    // Note: Backend conversation endpoints were removed during simplification
-    // Using empty conversation list for now
-    console.log('Conversation history not available - backend endpoints removed');
-    conversations.value = [];
+    if (!authStore.token) {
+      conversations.value = [];
+      return;
+    }
+
+    // Fetch conversations from backend API
+    const response = await conversationsApi.getConversations(
+      authStore.token,
+      undefined, // No status filter
+      20,        // Limit
+      0          // Offset
+    );
+
+    conversations.value = response.conversations.map(conv => ({
+      id: conv.id,
+      title: conv.title || `${conv.type === 'dimension' ? conv.dimension + ' Assessment' : 'General Chat'}`,
+      type: conv.type,
+      dimension: conv.dimension,
+      status: conv.status,
+      created_at: conv.created_at,
+      updated_at: conv.updated_at,
+      message_count: conv.message_count,
+      last_message_at: conv.last_message_at,
+      current_pnm: conv.current_pnm,
+      current_term: conv.current_term
+    }));
+
+    console.log(`✅ Loaded ${conversations.value.length} conversations`);
   } catch (error) {
     console.error('Failed to fetch conversations:', error);
+    conversations.value = [];
   } finally {
     loading.value = false;
   }
 }
 
-function selectConversation(conv: any) {
-  selectedConversation.value = conv;
-}
-
-function startEdit(conv: any) {
-  editingId.value = conv.id;
-  editingTitle.value = conv.title || `Record ${conversations.value.indexOf(conv) + 1}`;
-  nextTick(() => {
-    const input = document.querySelector('.title-input') as HTMLInputElement;
-    if (input) {
-      input.focus();
-      input.select();
-    }
-  });
-}
-
-function cancelEdit() {
-  editingId.value = null;
-  editingTitle.value = '';
-}
-
-async function saveTitle(conversationId: string) {
-  if (editingTitle.value.trim() && authStore.token) {
-    try {
-      // Note: Backend conversation endpoints were removed during simplification
-      // Title editing not available for now
-      console.log('Conversation title editing not available - backend endpoints removed');
-      // Update local state
-      const conv = conversations.value.find(c => c.id === conversationId);
-      if (conv) {
-        conv.title = editingTitle.value.trim();
-      }
-    } catch (error) {
-      console.error('Failed to update conversation title:', error);
-    }
-  }
-  cancelEdit();
+function openConversation(conv: any) {
+  // Simple action - just emit or navigate to the conversation
+  // This would typically emit an event to parent component or use router
+  console.log('Opening conversation:', conv.id);
+  // You could add router navigation here if needed
+  // router.push(`/chat/${conv.id}`)
 }
 
 function formatDate(dateStr: string) {
@@ -382,242 +259,90 @@ function formatDate(dateStr: string) {
 .conversation-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 8px;
 }
 
 .conversation-item {
-  border: 1px solid #eee;
+  border: 1px solid #e5e7eb;
   border-radius: 8px;
   padding: 12px;
   cursor: pointer;
   transition: all 0.2s ease;
-  position: relative;
-  padding-left: 24px;
+  background: white;
 }
 
 .conversation-item:hover {
-  border-color: #0066ff;
-  background: #f8f9ff;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(59, 130, 246, 0.1);
 }
 
-.conversation-item.selected {
-  border-color: #0066ff;
-  background: #f0f5ff;
+.conversation-item.active {
+  border-color: #10b981;
+  background: #f0fdf4;
 }
 
-.status-indicator {
-  position: absolute;
-  left: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #999;
+.conversation-item.completed {
+  border-color: #8b5cf6;
+  background: #faf5ff;
 }
 
-.status-indicator.active {
-  background: #00c851;
-}
-
-.status-indicator.completed {
-  background: #0066ff;
-}
-
-.status-indicator.interrupted {
-  background: #ff9800;
-}
-
-.conv-info {
-  flex: 1;
-}
-
-.conv-title-row {
+.conv-header {
   display: flex;
   align-items: center;
   gap: 8px;
+  margin-bottom: 6px;
+}
+
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.active {
+  background: #10b981;
+}
+
+.status-dot.completed {
+  background: #8b5cf6;
+}
+
+.status-dot.paused {
+  background: #f59e0b;
 }
 
 .conv-title {
   margin: 0;
-  font-size: 16px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 600;
+  color: #1f2937;
   flex: 1;
 }
 
-.title-input {
-  flex: 1;
-  padding: 4px 8px;
-  border: 1px solid #0066ff;
-  border-radius: 4px;
-  font-size: 16px;
-  font-weight: 500;
-}
-
-.edit-btn {
-  background: none;
-  border: none;
-  cursor: pointer;
-  padding: 4px;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-
-.conversation-item:hover .edit-btn {
-  opacity: 1;
-}
-
-.edit-btn svg {
-  width: 16px;
-  height: 16px;
-  stroke: #999;
-}
-
-.edit-btn:hover svg {
-  stroke: #0066ff;
+.conv-date {
+  font-size: 11px;
+  color: #9ca3af;
 }
 
 .conv-meta {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
-  font-size: 12px;
-  color: #999;
-}
-
-.conv-stats {
-  display: flex;
-  gap: 12px;
-  margin-top: 8px;
-  font-size: 13px;
-  color: #666;
-}
-
-.conversation-detail {
-  position: fixed;
-  top: 0;
-  right: 0;
-  width: 600px;
-  height: 100vh;
-  background: white;
-  box-shadow: -2px 0 10px rgba(0,0,0,0.15);
-  z-index: 251;  /* Increased z-index */
-  display: flex;
-  flex-direction: column;
-}
-
-.detail-header {
-  display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 20px;
-  border-bottom: 1px solid #eee;
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  color: #0066ff;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.detail-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 20px;
-}
-
-.messages-section,
-.info-cards-section {
-  margin-bottom: 30px;
-}
-
-.messages-section h5,
-.info-cards-section h5 {
-  margin: 0 0 16px 0;
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.message-item {
-  margin-bottom: 16px;
-  padding: 12px;
-  border-radius: 8px;
-  background: #f5f5f5;
-}
-
-.message-item.user {
-  background: #e3f2ff;
-}
-
-.msg-role {
   font-size: 12px;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 4px;
 }
 
-.msg-text {
-  font-size: 14px;
-  line-height: 1.5;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-}
-
-.msg-time {
-  font-size: 11px;
-  color: #999;
-  margin-top: 4px;
-}
-
-.empty-messages {
-  padding: 40px 20px;
-  text-align: center;
-  color: #9ca3af;
-  font-size: 14px;
-}
-
-.saved-info-card {
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 12px;
-}
-
-.saved-info-card h6 {
-  margin: 0 0 12px 0;
-  font-size: 15px;
-  font-weight: 600;
-}
-
-.saved-info-card ul {
-  margin: 0;
-  padding-left: 20px;
-}
-
-.saved-info-card li {
-  margin-bottom: 8px;
-  font-size: 14px;
-  line-height: 1.5;
-}
-
-.card-link {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid #eee;
-}
-
-.card-link a {
-  color: #0066ff;
-  text-decoration: none;
-  font-size: 14px;
+.conv-type {
+  color: #6b7280;
   font-weight: 500;
 }
 
-.card-link a:hover {
-  text-decoration: underline;
+.conv-stats {
+  color: #9ca3af;
 }
+
+/* Removed complex conversation detail view styles for simplicity */
 
 /* Interrupt Warning Dialog */
 .interrupt-dialog-overlay {

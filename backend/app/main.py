@@ -8,9 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.config import get_settings
 
 # Routers
-from app.routers import chat_unified as chat_router     
+from app.routers import chat_unified as chat_router
 from app.routers import health as health_router
 from app.routers import auth as auth_router
+from app.routers import conversations as conversations_router
 
 # Optional warmup
 try:
@@ -37,7 +38,8 @@ def create_app() -> FastAPI:
     # Include routers
     app.include_router(health_router.router)
     app.include_router(auth_router.router)  # Auth routes with /api/auth prefix
-    app.include_router(chat_router.router)  # Unified simple conversation API
+    app.include_router(chat_router.router)  # Unified conversation processing
+    app.include_router(conversations_router.router)  # Conversation management API
     
     # Add error handling middleware
     from app.core.error_handler import error_handling_middleware

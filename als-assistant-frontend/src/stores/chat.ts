@@ -114,10 +114,14 @@ export const useChatStore = defineStore("chat", {
   actions: {
     // Conversation Management
     setCurrentConversation(conversationId: string | null) {
+      const previousConversationId = this.currentConversationId;
       this.currentConversationId = conversationId;
       if (conversationId) {
-        // Clear messages when switching conversations
-        this.messages = [];
+        // Only clear messages if switching to a different conversation
+        // Don't clear if setting conversation ID for the first time in current session
+        if (previousConversationId && previousConversationId !== conversationId && this.messages.length > 0) {
+          this.messages = [];
+        }
         this.error = null;
       }
     },
