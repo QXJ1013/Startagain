@@ -1,8 +1,7 @@
 <template>
   <aside class="sidebar">
     <div class="sidebar-header">
-      <h1 class="logo">🧠 ALS Assistant</h1>
-      <p class="subtitle">Self-Awareness Assessment</p>
+      <h1 class="logo">ALS Assistant</h1>
       <div v-if="authStore.user" class="user-info">
         <span class="user-name">{{ authStore.user.display_name || authStore.user.email }}</span>
       </div>

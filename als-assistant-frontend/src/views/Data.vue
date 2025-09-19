@@ -66,12 +66,19 @@
       </div>
     </div>
 
-    <!-- Next Steps Suggestions -->
-    <div class="next-steps-section">
-      <h3>Suggested Next Steps</h3>
-      <div class="suggestions">
-        <div class="suggestion">Continue with Physiological - Mobility or Sleep</div>
-        <div class="suggestion">If experiencing frequent choking, consider discussing thickened liquids and swallowing exercises with your team</div>
+    <!-- Scoring Standards Explanation -->
+    <div class="scoring-standards-section">
+      <h3>Assessment Scoring Standards</h3>
+      <div class="scoring-explanations">
+        <div class="scoring-explanation">
+          <strong>Score Scale:</strong> All assessments use a 0-7 point scale where 0 represents optimal functioning and 7 indicates significant challenges requiring immediate attention.
+        </div>
+        <div class="scoring-explanation">
+          <strong>Evaluation Method:</strong> Scores are determined through either structured multiple-choice responses or AI-powered analysis of your detailed answers, ensuring comprehensive and personalized assessment.
+        </div>
+        <div class="scoring-explanation">
+          <strong>Progress Tracking:</strong> Your scores help identify areas of strength and concern across eight key life dimensions, enabling targeted support and care planning.
+        </div>
       </div>
     </div>
 
@@ -520,8 +527,8 @@ onMounted(() => {
   font-style: italic;
 }
 
-/* Next Steps Section */
-.next-steps-section {
+/* Scoring Standards Section */
+.scoring-standards-section {
   background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
   border: 1px solid #bfdbfe;
   border-radius: 12px;
@@ -529,34 +536,30 @@ onMounted(() => {
   margin-bottom: 32px;
 }
 
-.next-steps-section h3 {
+.scoring-standards-section h3 {
   color: #1e40af;
   margin-bottom: 16px;
   font-size: 18px;
   font-weight: 600;
 }
 
-.suggestions {
+.scoring-explanations {
   display: grid;
   gap: 12px;
 }
 
-.suggestion {
+.scoring-explanation {
   background: white;
   border: 1px solid #e0e7ff;
   border-radius: 8px;
-  padding: 12px 16px;
+  padding: 16px;
   color: #1e40af;
-  position: relative;
-  padding-left: 32px;
+  line-height: 1.5;
 }
 
-.suggestion::before {
-  content: "•";
-  color: #3b82f6;
-  position: absolute;
-  left: 16px;
-  font-weight: bold;
+.scoring-explanation strong {
+  color: #1d4ed8;
+  font-weight: 600;
 }
 
 /* Loading */

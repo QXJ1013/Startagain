@@ -3,7 +3,7 @@
     <!-- Initial Menu View -->
     <div v-if="viewMode === 'menu'" class="chat-menu">
       <div class="menu-header">
-        <h1>💬 ALS Assistant Chat</h1>
+        <h1> ALS Assistant Chat</h1>
         <p>Choose how you'd like to start your conversation</p>
       </div>
 
@@ -107,7 +107,7 @@
       <div class="chat-header">
         <button @click="backToMenu" class="back-btn">← Menu</button>
         <div class="header-content">
-          <h1>💬 ALS Assistant Chat</h1>
+          <h1> ALS Assistant Chat</h1>
           <div class="header-indicators">
             <div class="mode-indicator" v-if="isInDialogueMode">
               <span class="mode-badge dialogue">🗣️ Dialogue Mode</span>
