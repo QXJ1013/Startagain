@@ -74,7 +74,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, nextTick } from 'vue';
+import { ref, watch } from 'vue';
 import { useAuthStore } from '../stores/auth';
 import { conversationsApi } from '../services/api';
 

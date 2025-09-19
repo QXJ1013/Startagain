@@ -40,7 +40,7 @@ class Settings(BaseSettings):
             return v
 
     # ---------- database ----------
-    DB_PATH: str = "app/data/app.db"
+    DB_PATH: str = "app/data/als.db"  # Use als.db which contains the actual data
     SCHEMA_PATH: str = "app/data/schema.sql"
 
     # ---------- IBM watsonx / vector indices ----------

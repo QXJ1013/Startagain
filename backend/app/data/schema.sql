@@ -1,167 +1,237 @@
--- app/data/schema.sql
--- SQLite schema for ALS assistant backend (production-ready).
--- Enable foreign keys.
-PRAGMA foreign_keys = ON;
+-- ALS Assistant System - Unified Complete Schema
+-- Generated from current working database structure
+-- 数据库统一完整Schema - 基于当前实际工作数据库结构生成
 
--- ---------- users ----------
+-- Users table - 用户表
 CREATE TABLE IF NOT EXISTS users (
-  id              TEXT PRIMARY KEY,
-  email           TEXT UNIQUE NOT NULL,
-  password_hash   TEXT NOT NULL,
-  display_name    TEXT NOT NULL,
-  is_active       BOOLEAN DEFAULT 1,
-  last_login      DATETIME,
-  created_at      DATETIME DEFAULT (datetime('now')),
-  updated_at      DATETIME DEFAULT (datetime('now'))
+    id TEXT PRIMARY KEY,
+    email TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    display_name TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    is_active BOOLEAN DEFAULT 1
 );
 
--- ---------- sessions ----------
--- Note: session_id is unique and used as business key (not the INTEGER rowid).
+-- Sessions table - 会话表
 CREATE TABLE IF NOT EXISTS sessions (
-  id                INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id        TEXT UNIQUE NOT NULL,
-  user_id           TEXT,
-  status            TEXT DEFAULT 'active',
-  fsm_state         TEXT DEFAULT 'ROUTE',
-  current_pnm       TEXT,
-  current_term      TEXT,
-  current_qid       TEXT,                -- NEW: stick to a single questionnaire across followups
-  asked_qids        TEXT DEFAULT '[]',   -- JSON array
-  followup_ptr      INTEGER DEFAULT 0,
-  lock_until_turn   INTEGER DEFAULT 0,
-  turn_index        INTEGER DEFAULT 0,
-  last_info_turn    INTEGER DEFAULT -999,
-  pnm_scores        TEXT DEFAULT '[]',   -- JSON array of PNM scores
-  evidence_count    TEXT DEFAULT '{}',   -- JSON object of evidence counts
-  keyword_pool      TEXT DEFAULT '[]',   -- JSON array of routing keywords
-  ai_confidence     REAL DEFAULT 0.0,    -- AI routing confidence score
-  routing_method    TEXT DEFAULT 'exact', -- Routing method used
-  last_policy_decision TEXT DEFAULT 'structured', -- Policy decision type
-  last_dialogue_prompt TEXT,              -- Last dialogue prompt
-  created_at        DATETIME DEFAULT (datetime('now')),
-  updated_at        DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(user_id) REFERENCES users(id)
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    expires_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_sessions_session_id ON sessions(session_id);
-
--- ---------- turns ----------
-CREATE TABLE IF NOT EXISTS turns (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id      TEXT NOT NULL,
-  conversation_id TEXT,                   -- Link to conversations table
-  turn_index      INTEGER NOT NULL,       -- real turn id used by scorer
-  role            TEXT NOT NULL,          -- 'user' | 'assistant' | ...
-  text            TEXT,
-  meta            TEXT,                   -- JSON object
-  created_at      DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
-  FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+-- Conversation Documents - 对话文档表 (JSON存储)
+CREATE TABLE IF NOT EXISTS conversation_documents (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    type TEXT NOT NULL DEFAULT 'general_chat',
+    dimension TEXT,
+    title TEXT NOT NULL,
+    status TEXT DEFAULT 'active',
+    messages TEXT NOT NULL DEFAULT '[]',
+    assessment_state TEXT NOT NULL DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_turns_session ON turns(session_id);
-CREATE INDEX IF NOT EXISTS idx_turns_conversation_id ON turns(conversation_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_turns_sid_idx ON turns(session_id, turn_index);
+-- Conversation Scores - 对话评分表
+CREATE TABLE IF NOT EXISTS conversation_scores (
+    conversation_id TEXT,
+    pnm TEXT,
+    term TEXT,
+    score REAL,
+    status TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY(conversation_id, pnm, term),
+    FOREIGN KEY(conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
+);
 
--- ---------- term_scores ----------
+-- Term Scores - 术语评分表
 CREATE TABLE IF NOT EXISTS term_scores (
-  id                 INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id         TEXT NOT NULL,
-  pnm                TEXT NOT NULL,
-  term               TEXT NOT NULL,
-  score_0_7          REAL NOT NULL,
-  rationale          TEXT,
-  evidence_turn_ids  TEXT,                -- JSON array of real turn_index
-  status             TEXT,                -- 'complete' | 'pending'
-  method_version     TEXT,
-  updated_at         DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    pnm TEXT NOT NULL,
+    term TEXT NOT NULL,
+    score REAL NOT NULL,
+    scoring_method TEXT,
+    rationale TEXT,
+    confidence REAL,
+    quality_of_life_impact TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Upsert key
-CREATE UNIQUE INDEX IF NOT EXISTS idx_term_scores_sid_dim_term
-  ON term_scores(session_id, pnm, term);
-
--- ---------- dimension_scores ----------
+-- Dimension Scores - 维度评分表
 CREATE TABLE IF NOT EXISTS dimension_scores (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id      TEXT NOT NULL,
-  pnm             TEXT NOT NULL,
-  score_0_7       REAL NOT NULL,
-  coverage_ratio  REAL NOT NULL,
-  stage           TEXT,
-  method_version  TEXT,
-  updated_at      DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    dimension TEXT NOT NULL,
+    avg_score REAL NOT NULL,
+    assessment_count INTEGER DEFAULT 0,
+    last_assessment DATETIME,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
-CREATE UNIQUE INDEX IF NOT EXISTS idx_dim_scores_sid_pnm
-  ON dimension_scores(session_id, pnm);
-
--- ---------- evidence_log (optional trace) ----------
+-- Evidence Log - 证据日志表
 CREATE TABLE IF NOT EXISTS evidence_log (
-  id              INTEGER PRIMARY KEY AUTOINCREMENT,
-  session_id      TEXT NOT NULL,
-  conversation_id TEXT,                    -- Link to conversations
-  pnm             TEXT,
-  term            TEXT,
-  turn_id         INTEGER,                 -- optional FK to turns(id)
-  snippet         TEXT,
-  tag             TEXT,                    -- e.g., 'info', 'scoring', 'info_card'
-  card_type       TEXT,                    -- Type of info card
-  card_data       TEXT,                    -- JSON data for info cards
-  display_order   INTEGER DEFAULT 0,       -- Display order for cards
-  created_at      DATETIME DEFAULT (datetime('now')),
-  FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE,
-  FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id TEXT NOT NULL,
+    conversation_id TEXT,
+    pnm TEXT,
+    term TEXT,
+    evidence_type TEXT NOT NULL,
+    evidence_content TEXT NOT NULL,
+    confidence_score REAL,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
 );
 
-CREATE INDEX IF NOT EXISTS idx_evidence_sid ON evidence_log(session_id);
-CREATE INDEX IF NOT EXISTS idx_evidence_conversation_id ON evidence_log(conversation_id);
-
--- ---------- conversations ----------
--- Table for managing conversation history and state
+-- Conversations - 旧版对话表 (保留向后兼容)
 CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
-    title TEXT DEFAULT NULL,
-    conversation_type TEXT DEFAULT 'general',
-    dimension_name TEXT,
+    title TEXT,
+    type TEXT DEFAULT 'general',
+    dimension TEXT,
     status TEXT DEFAULT 'active',
-    session_id TEXT UNIQUE,
-    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    completed_at DATETIME,
-    last_activity DATETIME DEFAULT CURRENT_TIMESTAMP,
-    metadata TEXT DEFAULT '{}',
-    summary TEXT,
-    message_count INTEGER DEFAULT 0,
-    info_card_count INTEGER DEFAULT 0,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
-    FOREIGN KEY(session_id) REFERENCES sessions(session_id) ON DELETE CASCADE
-);
-
-CREATE INDEX IF NOT EXISTS idx_conversations_user_id ON conversations(user_id);
-CREATE INDEX IF NOT EXISTS idx_conversations_status ON conversations(status);
-CREATE INDEX IF NOT EXISTS idx_conversations_user_status ON conversations(user_id, status);
-CREATE INDEX IF NOT EXISTS idx_conversations_last_activity ON conversations(last_activity DESC);
-
--- ---------- user conversation preferences ----------
-CREATE TABLE IF NOT EXISTS user_conversation_preferences (
-    user_id TEXT PRIMARY KEY,
-    auto_title_format TEXT DEFAULT 'Record %d',
-    max_active_conversations INTEGER DEFAULT 1,
-    warn_on_interrupt BOOLEAN DEFAULT 1,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- ---------- conversation tags ----------
+-- Turns - 对话轮次表 (旧版，保留向后兼容)
+CREATE TABLE IF NOT EXISTS turns (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT NOT NULL,
+    role TEXT NOT NULL,
+    content TEXT NOT NULL,
+    type TEXT DEFAULT 'text',
+    metadata TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
+);
+
+-- User Preferences - 用户偏好表
+CREATE TABLE IF NOT EXISTS user_preferences (
+    user_id TEXT PRIMARY KEY,
+    notification_settings TEXT DEFAULT '{}',
+    ui_preferences TEXT DEFAULT '{}',
+    assessment_preferences TEXT DEFAULT '{}',
+    privacy_settings TEXT DEFAULT '{}',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- User Conversation Preferences - 用户对话偏好表
+CREATE TABLE IF NOT EXISTS user_conversation_preferences (
+    user_id TEXT,
+    conversation_id TEXT,
+    preferences TEXT DEFAULT '{}',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, conversation_id),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
+);
+
+-- Conversation Tags - 对话标签表
 CREATE TABLE IF NOT EXISTS conversation_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     conversation_id TEXT NOT NULL,
     tag TEXT NOT NULL,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
-    UNIQUE(conversation_id, tag)
+    FOREIGN KEY (conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
 );
+
+-- User Direct Routes - 用户直接路由表
+CREATE TABLE IF NOT EXISTS user_direct_routes (
+    user_id TEXT,
+    dimension TEXT,
+    route_data TEXT DEFAULT '{}',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, dimension),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- User PNM Status - 用户PNM状态表
+CREATE TABLE IF NOT EXISTS user_pnm_status (
+    user_id TEXT,
+    pnm TEXT,
+    status_data TEXT DEFAULT '{}',
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, pnm),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- User Profiles - 用户档案表
+CREATE TABLE IF NOT EXISTS user_profiles (
+    user_id TEXT PRIMARY KEY,
+    profile_data TEXT DEFAULT '{}',
+    medical_history TEXT DEFAULT '{}',
+    preferences TEXT DEFAULT '{}',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Old Conversation Data - 旧对话数据表 (保留历史数据)
+CREATE TABLE IF NOT EXISTS old_conversation_data (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    conversation_id TEXT,
+    data_type TEXT,
+    data_content TEXT,
+    migrated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indexes for Performance - 性能索引
+CREATE INDEX IF NOT EXISTS idx_conversation_documents_user_id ON conversation_documents(user_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_documents_type ON conversation_documents(type);
+CREATE INDEX IF NOT EXISTS idx_conversation_documents_dimension ON conversation_documents(dimension);
+CREATE INDEX IF NOT EXISTS idx_conversation_documents_status ON conversation_documents(status);
+CREATE INDEX IF NOT EXISTS idx_conversation_documents_created_at ON conversation_documents(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_conv_scores_conv_id ON conversation_scores(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conv_scores_pnm ON conversation_scores(pnm);
+CREATE INDEX IF NOT EXISTS idx_conv_scores_updated_at ON conversation_scores(updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_term_scores_user_id ON term_scores(user_id);
+CREATE INDEX IF NOT EXISTS idx_term_scores_pnm ON term_scores(pnm);
+CREATE INDEX IF NOT EXISTS idx_term_scores_term ON term_scores(term);
+CREATE INDEX IF NOT EXISTS idx_term_scores_updated_at ON term_scores(updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_dimension_scores_user_id ON dimension_scores(user_id);
+CREATE INDEX IF NOT EXISTS idx_dimension_scores_dimension ON dimension_scores(dimension);
+
+CREATE INDEX IF NOT EXISTS idx_evidence_log_user_id ON evidence_log(user_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_log_conversation_id ON evidence_log(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_evidence_log_pnm ON evidence_log(pnm);
+CREATE INDEX IF NOT EXISTS idx_evidence_log_timestamp ON evidence_log(timestamp);
+
+CREATE INDEX IF NOT EXISTS idx_turns_conversation_id ON turns(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_turns_created_at ON turns(created_at);
+
+CREATE INDEX IF NOT EXISTS idx_conversation_tags_conversation_id ON conversation_tags(conversation_id);
+CREATE INDEX IF NOT EXISTS idx_conversation_tags_tag ON conversation_tags(tag);
+
+-- Triggers for Automatic Updates - 自动更新触发器
+CREATE TRIGGER IF NOT EXISTS update_conversation_documents_timestamp
+    AFTER UPDATE ON conversation_documents
+    BEGIN
+        UPDATE conversation_documents SET updated_at = CURRENT_TIMESTAMP WHERE id = NEW.id;
+    END;
+
+CREATE TRIGGER IF NOT EXISTS update_user_preferences_timestamp
+    AFTER UPDATE ON user_preferences
+    BEGIN
+        UPDATE user_preferences SET updated_at = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id;
+    END;
+
+CREATE TRIGGER IF NOT EXISTS update_user_profiles_timestamp
+    AFTER UPDATE ON user_profiles
+    BEGIN
+        UPDATE user_profiles SET updated_at = CURRENT_TIMESTAMP WHERE user_id = NEW.user_id;
+    END;

@@ -806,7 +806,10 @@ class ConversationModeManager:
         self.profile_manager = UserProfileManager()
         self.reliable_router = ReliableRoutingEngine()
 
-        # Use Case specific managers - clean separation
+        # Initialize LLM BEFORE UC managers to ensure dependency access
+        self.llm = LLMClient()
+
+        # Use Case specific managers - clean separation (initialize AFTER LLM)
         self.uc1_manager = UseCaseOneManager(qb, ai_router, self)  # Pass main manager for storage access
         self.uc2_manager = UseCaseTwoManager(qb, ai_router, self)  # Pass main manager for scoring access
         
@@ -2104,6 +2107,9 @@ Generate your response:"""
             
         except Exception as e:
             log.error(f"Summary generation error: {e}")
+            print(f"[UC1_DEBUG] Main summary generation failed, using fallback: {e}")
+            import traceback
+            print(f"[UC1_DEBUG] Main summary generation traceback: {traceback.format_exc()}")
             return self._generate_fallback_summary(context)
     
     def _analyze_assessment_completion(self, context: ConversationContext) -> Dict[str, Any]:
@@ -2158,6 +2164,9 @@ Generate a supportive summary response:"""
             
         except Exception as e:
             log.error(f"Summary LLM generation error: {e}")
+            print(f"[UC1_DEBUG] Summary generation failed, using fallback: {e}")
+            import traceback
+            print(f"[UC1_DEBUG] Summary generation traceback: {traceback.format_exc()}")
             return self._generate_fallback_summary(context)
     
     def _generate_fallback_summary(self, context: ConversationContext) -> str:
@@ -2283,7 +2292,17 @@ def create_conversation_context(
     
     # Count user messages for turn tracking
     turn_count = sum(1 for msg in conversation.messages if msg.role == 'user')
-    
+
+    # Debug: Log conversation state for new conversations
+    if turn_count == 1:  # First user message in this conversation
+        print(f"[CONVERSATION_DEBUG] New conversation {conversation.id[:8]}:")
+        print(f"[CONVERSATION_DEBUG] - Type: {conversation.type}")
+        print(f"[CONVERSATION_DEBUG] - Dimension: {conversation.dimension}")
+        print(f"[CONVERSATION_DEBUG] - Mode: {mode}")
+        print(f"[CONVERSATION_DEBUG] - Turn count: {turn_count}")
+        print(f"[CONVERSATION_DEBUG] - Messages: {len(conversation.messages)}")
+        print(f"[CONVERSATION_DEBUG] - Dialogue mode: {conversation.assessment_state.get('dialogue_mode', 'not_set')}")
+
     # Skip automatic symptom detection during free dialogue
     # Keywords should only be used for question bank retrieval, not symptom detection
     # This aligns with original design: AI-expanded keywords for question matching
@@ -3008,8 +3027,12 @@ class UseCaseOneManager:
 
     def __init__(self, qb: QuestionBank, ai_router: AIRouter, main_manager=None):
         self.qb = qb
+        self.question_bank = qb  # Alias for compatibility
         self.ai_router = ai_router
         self.main_manager = main_manager  # Access to storage through main manager
+        # Access LLM and storage through main manager
+        self.llm = main_manager.llm if main_manager else None
+        self.storage = main_manager.storage if main_manager else None
         self.ai_scorer = AIFreeTextScorer(ai_router)  # Add ai_scorer for UC1
         self.response_generator = ResponseGenerator()
         self.transition_detector = TransitionDetector(RAGQueryClient(), LLMClient())
@@ -3045,6 +3068,9 @@ class UseCaseOneManager:
             # Generate AI response for dialogue
             content = self.response_generator.generate_chat_response(context)
 
+            # AI dialogue response storage is handled by chat_unified.py centralized storage
+            print(f"[UC1] AI dialogue response will be stored by chat_unified.py: {len(content)} chars")
+
             return DialogueResponse(
                 content=content,
                 response_type=ResponseType.CHAT,
@@ -3055,8 +3081,13 @@ class UseCaseOneManager:
             )
         except Exception as e:
             log.error(f"Free dialogue error: {e}")
+            fallback_content = "I'm here to listen and help. What would you like to talk about?"
+
+            # AI fallback dialogue response storage is handled by chat_unified.py centralized storage
+            print(f"[UC1] Fallback AI dialogue response will be stored by chat_unified.py")
+
             return DialogueResponse(
-                content="I'm here to listen and help. What would you like to talk about?",
+                content=fallback_content,
                 response_type=ResponseType.CHAT,
                 mode=ConversationMode.FREE_DIALOGUE,
                 should_continue_dialogue=True
@@ -3153,64 +3184,97 @@ Respond with JSON:
         return False
 
     async def _ai_select_relevant_term(self, context: ConversationContext) -> tuple:
-        """Use AI to select the most relevant term for assessment based on conversation"""
+        """Use AI keyword expansion + vector search for intelligent question selection"""
         try:
-            # Get AI analysis if available
-            ai_analysis = getattr(context, 'ai_analysis', {})
-            suggested_pnm = ai_analysis.get('suggested_pnm', 'Physiological')
-            suggested_term = ai_analysis.get('suggested_term', 'general')
+            # Step 1: AI keyword expansion
+            conversation_text = " ".join([msg.content for msg in context.conversation.messages[-3:] if msg.role == 'user'])
+            current_input = context.user_input
 
-            # Get available terms from question bank
-            all_questions = self.question_bank.for_all()
-            available_terms = {}
-
-            for question in all_questions:
-                pnm = question.pnm
-                term = question.term
-                if pnm not in available_terms:
-                    available_terms[pnm] = []
-                if term not in available_terms[pnm]:
-                    available_terms[pnm].append(term)
-
-            # Use AI to refine the selection
-            conversation_text = " ".join([msg.content for msg in context.conversation.messages[-5:] if msg.role == 'user'])
-
-            prompt = f"""Based on this ALS patient conversation, select the most relevant assessment area:
+            keyword_prompt = f"""Based on this ALS patient conversation, expand key medical and emotional concepts for question bank search:
 
 Conversation: "{conversation_text}"
-Current message: "{context.user_input}"
+Current message: "{current_input}"
 
-Available assessment areas:
-{json.dumps(available_terms, indent=2)}
+Generate expanded search keywords focusing on:
+- Medical symptoms and conditions
+- Emotional states and concerns
+- Daily living activities
+- Support needs and challenges
 
-Suggested by previous analysis: {suggested_pnm}/{suggested_term}
+Respond with expanded keywords (comma-separated):"""
 
-Respond with JSON:
-{{
-    "selected_pnm": "dimension name",
-    "selected_term": "specific term",
-    "reasoning": "why this term is most relevant"
-}}"""
+            expanded_keywords = self.llm.generate_text(keyword_prompt)
+            search_query = f"{current_input} {expanded_keywords}".strip()
 
-            import json
-            response = self.llm.generate_text(prompt)
+            print(f"[AI_VECTOR_SEARCH] Original: {current_input[:50]}...")
+            print(f"[AI_VECTOR_SEARCH] Expanded: {expanded_keywords[:100]}...")
 
-            try:
-                selection = json.loads(response)
-                selected_pnm = selection.get('selected_pnm', suggested_pnm)
-                selected_term = selection.get('selected_term', suggested_term)
-                reasoning = selection.get('reasoning', 'AI selected based on conversation')
+            # Step 2: Vector search with expanded keywords
+            rag_client = RAGQueryClient()
+            search_results = rag_client.search(search_query, top_k=5, index_kind="question")
 
-                print(f"[AI TERM SELECTION] {selected_pnm}/{selected_term}: {reasoning}")
-                return selected_pnm, selected_term
+            if search_results:
+                print(f"[AI_VECTOR_SEARCH] Found {len(search_results)} relevant questions")
 
-            except:
-                print(f"[AI TERM SELECTION] Fallback to suggested: {suggested_pnm}/{suggested_term}")
-                return suggested_pnm, suggested_term
+                # DEBUG: Print all search result metadata to understand format
+                for i, result in enumerate(search_results):
+                    print(f"[AI_VECTOR_SEARCH] Result {i}: metadata = {result.get('metadata', {})}")
+
+                # Get asked questions from database (not strict avoidance)
+                asked_questions = context.conversation.assessment_state.get('asked_questions', [])
+
+                # Step 3: Find best matching question from vector results
+                for result in search_results:
+                    # Vector search filename is question ID
+                    question_id = result.get('metadata', {}).get('filename') or result.get('metadata', {}).get('id')
+                    print(f"[AI_VECTOR_SEARCH] Extracted question_id: {question_id}")
+
+                    if question_id:
+                        # Find corresponding question in question bank
+                        all_questions = self.question_bank.items()
+                        for question in all_questions:
+                            if question.id == question_id:
+                                # Prefer unasked questions, but don't strictly require it
+                                if question_id not in asked_questions:
+                                    print(f"[AI_VECTOR_SEARCH] Selected new: {question.pnm}/{question.term} (ID: {question_id})")
+                                    return question.pnm, question.term
+                                else:
+                                    # Question was asked before, but might still be relevant
+                                    print(f"[AI_VECTOR_SEARCH] Selected relevant: {question.pnm}/{question.term} (ID: {question_id}, asked before)")
+                                    return question.pnm, question.term
+
+            # Fallback: use first unasked question from question bank
+            print(f"[AI_VECTOR_SEARCH] Using fallback - first unasked question")
+            all_questions = self.question_bank.items()
+            asked_questions = context.conversation.assessment_state.get('asked_questions', [])
+
+            for question in all_questions:
+                if question.id not in asked_questions:
+                    print(f"[AI_VECTOR_SEARCH] Fallback selected: {question.pnm}/{question.term}")
+                    return question.pnm, question.term
+
+            # Ultimate fallback - use first available question
+            if all_questions:
+                first_question = all_questions[0]
+                print(f"[AI_VECTOR_SEARCH] Ultimate fallback: {first_question.pnm}/{first_question.term}")
+                return first_question.pnm, first_question.term
 
         except Exception as e:
-            print(f"[AI TERM SELECTION] Error: {e}, using Physiological/general")
-            return "Physiological", "general"
+            print(f"[AI_VECTOR_SEARCH] Error: {e}, using question bank fallback")
+
+            # Safe fallback: use first available question from question bank
+            try:
+                all_questions = self.question_bank.items()
+                if all_questions:
+                    first_question = all_questions[0]
+                    print(f"[AI_VECTOR_SEARCH] Error fallback: {first_question.pnm}/{first_question.term}")
+                    return first_question.pnm, first_question.term
+            except:
+                pass
+
+        # Last resort - but with real question bank term
+        print(f"[AI_VECTOR_SEARCH] Last resort - using first Physiological question")
+        return "Physiological", "Mobility and transfers"
 
     async def _process_uc1_assessment_response(self, context: ConversationContext):
         """Process user's UC1 assessment response and record it"""
@@ -3232,19 +3296,30 @@ Respond with JSON:
                 current_term = context.conversation.assessment_state.get('current_term', 'General')
 
                 # Try to get score from option first, then use AI scoring
+                print(f"[UC1_DEBUG] Starting scoring for user_input: '{context.user_input}'")
+                print(f"[UC1_DEBUG] Question context: {question_context}")
+
                 score = self._extract_option_score_uc1(context.user_input, question_context)
+                print(f"[UC1_DEBUG] Option score extraction result: {score}")
+
                 if score is None:
+                    print(f"[UC1_DEBUG] No option score found, using AI scoring...")
                     # Use AI scoring for free text response - access ai_scorer from main manager
-                    ai_score_result = await self.ai_scorer.score_free_text_response(
-                        context.user_input,
-                        question_context,
-                        current_pnm,
-                        context.conversation.messages[-5:]  # Recent context
-                    )
-                    score = ai_score_result.score
-                    print(f"[UC1] AI scored response: {score}")
+                    try:
+                        ai_score_result = await self.ai_scorer.score_free_text_response(
+                            context.user_input,
+                            question_context,
+                            current_pnm,
+                            context.conversation.messages[-5:]  # Recent context
+                        )
+                        score = ai_score_result.score
+                        print(f"[UC1_DEBUG] AI scored response: {score}")
+                    except Exception as e:
+                        print(f"[UC1_DEBUG] AI scoring failed: {e}")
+                        score = 3.0  # Fallback score
+                        print(f"[UC1_DEBUG] Using fallback score: {score}")
                 else:
-                    print(f"[UC1] Option score extracted: {score}")
+                    print(f"[UC1_DEBUG] Option score extracted: {score}")
 
                 # Store score in conversation_scores table (like UC2)
                 # Access storage through the main manager
@@ -3330,28 +3405,21 @@ Respond with JSON:
             return None
 
     def _is_uc1_term_complete(self, context: ConversationContext) -> bool:
-        """Determine if UC1 term assessment is complete (2-3 questions)"""
+        """Determine if UC1 assessment is complete (1 main question + follow up = 2 questions total)"""
         try:
-            current_pnm = context.conversation.assessment_state.get('current_pnm', 'Physiological')
-            current_term = context.conversation.assessment_state.get('current_term', 'General')
-            term_key = f"{current_pnm}_{current_term}"
+            # UC1: Complete after main question + follow up (2 questions total)
+            asked_questions = context.conversation.assessment_state.get('asked_questions', [])
+            total_questions_asked = len(asked_questions)
 
-            temp_scores = context.conversation.assessment_state.get('temp_term_scores', {})
-            valid_scores = []
+            # Complete after 2 questions: main question + follow up
+            is_complete = total_questions_asked >= 2
 
-            if term_key in temp_scores:
-                valid_scores = [entry['score'] for entry in temp_scores[term_key] if entry['score'] is not None]
-
-            # UC1: Complete after 2-3 valid scores for single-term assessment
-            is_complete = len(valid_scores) >= 2
-
-            print(f"[UC1] Term completion check: {current_pnm}/{current_term}")
-            print(f"[UC1] Valid scores collected: {len(valid_scores)}")
-            print(f"[UC1] UC1 term complete: {is_complete}")
+            print(f"[UC1] Assessment completion check: {total_questions_asked} questions asked")
+            print(f"[UC1] UC1 assessment complete: {is_complete}")
 
             return is_complete
         except Exception as e:
-            print(f"[UC1] Error in term completion check: {e}")
+            print(f"[UC1] Error in completion check: {e}")
             return False
 
     async def _generate_uc1_summary(self, context: ConversationContext) -> DialogueResponse:
@@ -3426,9 +3494,18 @@ Respond with JSON:
             responses_context = "\n".join(responses_text) if responses_text else "No detailed responses recorded"
 
             # Use RAG to get relevant knowledge for this term/PNM
-            knowledge_context = await self._retrieve_contextual_knowledge(
-                context, {'key_topics': [pnm, term], 'urgency_level': 'normal'}
-            )
+            # Access _retrieve_contextual_knowledge through main manager
+            try:
+                if self.main_manager and hasattr(self.main_manager, '_retrieve_contextual_knowledge'):
+                    knowledge_context = self.main_manager._retrieve_contextual_knowledge(
+                        context, {'key_topics': [pnm, term], 'urgency_level': 'normal'}
+                    )
+                else:
+                    print(f"[UC1_DEBUG] Main manager not available for knowledge retrieval")
+                    knowledge_context = []
+            except Exception as e:
+                print(f"[UC1_DEBUG] Knowledge retrieval failed: {e}")
+                knowledge_context = []
 
             knowledge_text = "\n".join([doc.get('text', '') for doc in knowledge_context[:3]]) if knowledge_context else ""
 
@@ -3456,12 +3533,7 @@ TASK: Create a warm, personalized summary that:
 Generate a caring, professional summary:"""
 
             # Generate summary using LLM
-            summary_response = await self.llm_client.generate_text(
-                model=self.llm_model,
-                messages=[{"role": "user", "content": summary_prompt}]
-            )
-
-            generated_summary = summary_response.get('content', '').strip()
+            generated_summary = self.llm.generate_text(summary_prompt).strip()
 
             if generated_summary:
                 print(f"[UC1] Generated summary: {len(generated_summary)} characters")
@@ -3875,6 +3947,9 @@ class UseCaseTwoManager:
             context.conversation.assessment_state['question_context'] = question_context
             print(f"[UC2] Set question_context for scoring: {question_item.id}")
 
+            # AI question storage is handled by chat_unified.py centralized storage
+            print(f"[UC2] AI question will be stored by chat_unified.py: {question_item.id}")
+
         return DialogueResponse(
             content=question_item.main,
             response_type=ResponseType.QUESTION,
@@ -4078,6 +4153,9 @@ class UseCaseTwoManager:
             context.conversation.assessment_state[dimension_completed_key] = True
             context.conversation.assessment_state['conversation_locked'] = True
 
+            # AI summary storage is handled by chat_unified.py centralized storage
+            print(f"[UC2] RAG AI summary will be stored by chat_unified.py for {dimension}")
+
             return DialogueResponse(
                 content=summary_content,
                 response_type=ResponseType.SUMMARY,
@@ -4092,8 +4170,13 @@ class UseCaseTwoManager:
             context.conversation.assessment_state[dimension_completed_key] = True
             context.conversation.assessment_state['conversation_locked'] = True
 
+            fallback_summary = f"Thank you for completing the {dimension} assessment. Your responses have been recorded and will help provide personalized support recommendations."
+
+            # AI fallback summary storage is handled by chat_unified.py centralized storage
+            print(f"[UC2] Fallback AI summary will be stored by chat_unified.py for {dimension}")
+
             return DialogueResponse(
-                content=f"Thank you for completing the {dimension} assessment. Your responses have been recorded and will help provide personalized support recommendations.",
+                content=fallback_summary,
                 response_type=ResponseType.SUMMARY,
                 mode=ConversationMode.DIMENSION_ANALYSIS,
                 should_continue_dialogue=False,

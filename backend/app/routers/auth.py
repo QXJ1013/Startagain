@@ -38,6 +38,16 @@ class UserResponse(BaseModel):
     display_name: str
 
 
+class UpdateProfileRequest(BaseModel):
+    display_name: Optional[str] = None
+    email: Optional[EmailStr] = None
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str
+    new_password: str = Field(..., min_length=8, description="New password must be at least 8 characters")
+
+
 # Use the centralized auth dependency
 # get_current_user is imported from deps.py
 
@@ -102,3 +112,51 @@ async def get_me(current_user: dict = Depends(get_auth_user)):
 async def verify_token(current_user: dict = Depends(get_auth_user)):
     """Verify if token is valid"""
     return {"valid": True, "user_id": current_user["id"]}
+
+
+@router.put("/profile", response_model=UserResponse)
+async def update_profile(
+    request: UpdateProfileRequest,
+    current_user: dict = Depends(get_auth_user),
+    storage = Depends(get_storage)
+):
+    """Update user profile information"""
+    try:
+        result = auth_service.update_user_profile(
+            storage=storage,
+            user_id=current_user["id"],
+            display_name=request.display_name,
+            email=request.email
+        )
+        return UserResponse(**result)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        print(f"Profile update error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Profile update failed: {str(e)}")
+
+
+@router.post("/change-password")
+async def change_password(
+    request: ChangePasswordRequest,
+    current_user: dict = Depends(get_auth_user),
+    storage = Depends(get_storage)
+):
+    """Change user password"""
+    try:
+        auth_service.change_user_password(
+            storage=storage,
+            user_id=current_user["id"],
+            current_password=request.current_password,
+            new_password=request.new_password
+        )
+        return {"message": "Password changed successfully"}
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        import traceback
+        print(f"Password change error: {e}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Password change failed: {str(e)}")

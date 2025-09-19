@@ -206,8 +206,16 @@
 
       <!-- Input Area -->
       <div class="input-area">
-        <!-- Always show text input for user to type -->
-        <div class="text-input-section">
+        <!-- Show completion notice for completed conversations -->
+        <div v-if="isConversationCompleted" class="completion-notice">
+          <div class="completion-message">
+            <span class="completion-icon">✅</span>
+            <span>This conversation has been completed. You can view the history but cannot add new messages.</span>
+          </div>
+        </div>
+
+        <!-- Always show text input for user to type (unless completed) -->
+        <div v-else class="text-input-section">
           <div class="input-container">
             <textarea
               v-model="userInput"
@@ -280,7 +288,6 @@ import { useRouter } from 'vue-router'
 import { useSessionStore } from '../stores/session'
 import { useChatStore } from '../stores/chat'
 import { api, conversationsApi } from '../services/api'
-import ConversationHistory from '../components/ConversationHistory.vue'
 import { useAuthStore } from '../stores/auth'
 
 // State
@@ -298,6 +305,7 @@ const error = ref<string | null>(null)
 const messagesContainer = ref<HTMLElement>()
 const hasInitialized = ref(false)
 const isInDialogueMode = ref(false)
+const isConversationCompleted = ref(false) // Track if current conversation is completed
 const mainInputRef = ref<HTMLTextAreaElement>()
 const loadingText = ref('Analyzing your response...')
 const autoFocusInput = ref(true)
@@ -312,10 +320,10 @@ const historyConversations = ref<any[]>([])
 
 // Use messages from chat store and transform for display
 const messages = computed(() => {
-  return chatStore.messages.map(msg => ({
+  const transformedMessages = chatStore.messages.map(msg => ({
     ...msg,
-    // Transform for backward compatibility with template
-    type: msg.role,
+    // Keep original type, add role-based type for CSS classes
+    type: msg.role, // This is used for CSS classes in template
     options: msg.metadata?.options || msg.options || [],
     multiSelect: msg.metadata?.multiSelect || msg.multiSelect || false,
     allowTextInput: msg.metadata?.allowTextInput || msg.allowTextInput || false,
@@ -323,6 +331,9 @@ const messages = computed(() => {
     infoCards: msg.metadata?.infoCards || msg.infoCards || null,
     isDialogue: msg.metadata?.isDialogue || msg.isDialogue || false
   }))
+
+
+  return transformedMessages
 })
 
 // Computed
@@ -340,6 +351,8 @@ function startNewChat() {
   viewMode.value = 'chat'
   // Clear any existing conversation
   chatStore.startNewConversation('general_chat')
+  // Reset completion status for new chat
+  isConversationCompleted.value = false
   // Initialize the chat
   initializeNewChat()
 }
@@ -950,15 +963,66 @@ function formatHistoryDate(dateStr: string): string {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
 }
 
-function openHistoryConversation(conversation: any) {
-  // Load this conversation into the chat view
-  chatStore.setCurrentConversation(conversation.id)
-  // Load messages directly to the store instead of using non-existent method
-  chatStore.clearMessages()
-  if (conversation.messages) {
-    conversation.messages.forEach((msg: any) => chatStore.addMessage(msg))
+async function openHistoryConversation(conversation: any) {
+  try {
+    // Load this conversation into the chat view
+    chatStore.setCurrentConversation(conversation.id)
+    chatStore.clearMessages()
+
+    // Fetch full conversation details with messages from backend
+    historyLoading.value = true
+    const conversationDetail = await conversationsApi.getConversationDetail(authStore.token!, conversation.id)
+
+    // Load messages into the store - show original conversation history as-is
+    if (conversationDetail.messages && conversationDetail.messages.length > 0) {
+      conversationDetail.messages.forEach((msg: any) => {
+        chatStore.addMessage({
+          id: msg.id,
+          role: msg.role,
+          content: msg.content,
+          type: msg.role, // Use role for display type (user/assistant)
+          timestamp: msg.timestamp,
+          metadata: msg.metadata || {}
+        })
+      })
+    }
+
+    // Set conversation type and dimension if available
+    if (conversationDetail.type) {
+      chatStore.conversationType = conversationDetail.type as 'general_chat' | 'dimension' | 'assessment'
+    }
+    if (conversationDetail.dimension) {
+      chatStore.dimensionName = conversationDetail.dimension
+    }
+
+    // Switch to chat view and update state properly for continuation
+    viewMode.value = 'chat'
+    hasInitialized.value = true
+
+    // Update dialogue mode and completion status based on conversation status
+    isConversationCompleted.value = conversationDetail.status === 'completed'
+
+    if (conversationDetail.status === 'active') {
+      // For active conversations, check if last message was from user (waiting for AI response)
+      const lastMessage = conversationDetail.messages[conversationDetail.messages.length - 1]
+      isInDialogueMode.value = lastMessage?.role === 'assistant' // If last was assistant, we're in dialogue mode
+    } else {
+      // Completed conversations are not in dialogue mode
+      isInDialogueMode.value = false
+    }
+
+
+    // Scroll to bottom after a brief delay to ensure messages are rendered
+    setTimeout(() => {
+      scrollToBottom()
+    }, 100)
+
+  } catch (e: any) {
+    console.error('Failed to load conversation:', e)
+    error.value = `Failed to load conversation: ${e.message}`
+  } finally {
+    historyLoading.value = false
   }
-  viewMode.value = 'chat'
 }
 
 function getConversationType(conversation?: any) {
@@ -1616,6 +1680,29 @@ onUnmounted(() => {
   padding: 16px 24px;
   border-top: 1px solid #e2e8f0;
   background: white;
+}
+
+.completion-notice {
+  display: flex;
+  justify-content: center;
+  padding: 12px 0;
+}
+
+.completion-message {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  color: #0c4a6e;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.completion-icon {
+  font-size: 16px;
 }
 
 .text-input-section {

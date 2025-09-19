@@ -178,7 +178,7 @@ async function startDimensionChat(dimensionName: string) {
     // STEP 8: Show notification with timestamp to confirm fresh start
     sessionStore.setMessage(`Starting ${dimensionName} assessment (${new Date().toLocaleTimeString()})`);
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error starting dimension chat:', error);
     if (error.message && error.message.includes('401')) {
       authStore.logout();

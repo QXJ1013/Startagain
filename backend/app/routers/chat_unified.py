@@ -156,7 +156,41 @@ async def _process_user_input(
         
         # Convert to expected API response format
         response_data = convert_to_conversation_response(dialogue_response)
-        
+
+        # Store AI response in database (centralized storage for all response types)
+        try:
+            # CRITICAL: Preserve assessment_state before storage to prevent loss of question_context
+            preserved_assessment_state = conversation.assessment_state.copy()
+
+            ai_response_message = ConversationMessage(
+                id=len(conversation.messages) + 1,
+                role='assistant',
+                content=dialogue_response.content,
+                type=('question' if dialogue_response.response_type.value == 'question'
+                      else 'summary' if dialogue_response.response_type.value == 'summary'
+                      else 'response'),
+                metadata={
+                    'response_type': dialogue_response.response_type.value,
+                    'mode': dialogue_response.mode.value,
+                    'current_pnm': dialogue_response.current_pnm,
+                    'current_term': dialogue_response.current_term,
+                    'question_id': getattr(dialogue_response, 'question_id', None),
+                    'options': dialogue_response.options or []
+                }
+            )
+            # Add message to conversation and update conversation object
+            conversation = storage.add_message(conversation.id, ai_response_message)
+
+            # CRITICAL: Restore assessment_state to prevent loss of scoring context
+            conversation.assessment_state.update(preserved_assessment_state)
+            print(f"[CHAT_UNIFIED] Preserved assessment_state during AI response storage")
+
+            print(f"[CHAT_UNIFIED] Stored AI response message: {dialogue_response.content[:50]}...")
+        except Exception as e:
+            print(f"[CHAT_UNIFIED] Error storing AI response: {e}")
+            import traceback
+            print(f"[CHAT_UNIFIED] AI response storage traceback: {traceback.format_exc()}")
+
         # Update conversation mode in storage for persistence
         if hasattr(storage, 'update_assessment_state'):
             # Update the assessment state in the conversation object first

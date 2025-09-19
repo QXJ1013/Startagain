@@ -369,4 +369,53 @@ export const conversationsApi = {
   }
 };
 
+// User Management API
+export const userApi = {
+  // Update user profile
+  updateProfile(token: string, updates: { display_name?: string; email?: string }) {
+    return http<{
+      user_id: string;
+      email: string;
+      display_name: string;
+    }>("/api/auth/profile", {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify(updates)
+    });
+  },
+
+  // Change password
+  changePassword(token: string, currentPassword: string, newPassword: string) {
+    return http<{ message: string }>("/api/auth/change-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword
+      })
+    });
+  },
+
+  // Get user info
+  getMe(token: string) {
+    return http<{
+      user_id: string;
+      email: string;
+      display_name: string;
+    }>("/api/auth/me", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`
+      }
+    });
+  }
+};
+
 export default api;

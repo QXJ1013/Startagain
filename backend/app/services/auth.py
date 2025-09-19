@@ -157,6 +157,92 @@ class AuthService:
         
         return user
 
+    def update_user_profile(self, storage, user_id: str, display_name: Optional[str] = None, email: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Update user profile information
+        """
+        # Get current user
+        user = storage.get_user_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+
+        updates = {}
+
+        # Update email if provided
+        if email:
+            email = self.validate_email_address(email)
+            # Check if email is already taken by another user
+            existing = storage.get_user_by_email(email)
+            if existing and existing['id'] != user_id:
+                raise ValueError("Email already in use")
+            updates['email'] = email
+
+        # Update display name if provided
+        if display_name:
+            updates['display_name'] = display_name.strip()
+
+        if not updates:
+            raise ValueError("No updates provided")
+
+        # Update user in database
+        if hasattr(storage, 'update_user'):
+            storage.update_user(user_id, **updates)
+        else:
+            # Fallback to direct SQL update
+            import sqlite3
+            from pathlib import Path
+            db_path = Path(__file__).parent.parent / "data" / "als.db"
+
+            with sqlite3.connect(str(db_path)) as conn:
+                set_clause = ", ".join([f"{key} = ?" for key in updates.keys()])
+                values = list(updates.values()) + [user_id]
+
+                conn.execute(
+                    f"UPDATE users SET {set_clause}, updated_at = datetime('now') WHERE id = ?",
+                    values
+                )
+                conn.commit()
+
+        # Return updated user data
+        updated_user = storage.get_user_by_id(user_id)
+        return {
+            "user_id": updated_user['id'],
+            "email": updated_user['email'],
+            "display_name": updated_user['display_name']
+        }
+
+    def change_user_password(self, storage, user_id: str, current_password: str, new_password: str) -> None:
+        """
+        Change user password
+        """
+        # Get current user
+        user = storage.get_user_by_id(user_id)
+        if not user:
+            raise ValueError("User not found")
+
+        # Verify current password
+        if not self.verify_password(current_password, user['password_hash']):
+            raise ValueError("Current password is incorrect")
+
+        # Hash new password
+        new_hashed_password = self.hash_password(new_password)
+
+        # Update password in database
+        if hasattr(storage, 'update_user_password'):
+            storage.update_user_password(user_id, new_hashed_password)
+        else:
+            # Fallback to direct SQL update
+            import sqlite3
+            from pathlib import Path
+            db_path = Path(__file__).parent.parent / "data" / "als.db"
+
+            with sqlite3.connect(str(db_path)) as conn:
+                conn.execute(
+                    "UPDATE users SET password_hash = ?, updated_at = datetime('now') WHERE id = ?",
+                    (new_hashed_password, user_id)
+                )
+                conn.commit()
+
 
 # Global instance
 auth_service = AuthService()

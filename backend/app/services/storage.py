@@ -65,7 +65,8 @@ class ConversationDocument:
                 'turn_index': 0,
                 'asked_questions': [],
                 'completed_terms': [],
-                'scores': {}
+                'scores': {},
+                'dialogue_mode': 'free_dialogue'  # Ensure new conversations start in dialogue mode
             }
         if self.messages is None:
             self.messages = []
@@ -101,11 +102,14 @@ class DocumentStorage:
     
     def _init_db(self):
         """Initialize database with schema"""
-        if os.path.exists(self.schema_path):
-            with open(self.schema_path, 'r', encoding='utf-8') as f:
-                schema = f.read()
-                self.conn.executescript(schema)
-                self.conn.commit()
+        # Skip schema initialization if using existing als.db database
+        # Comment out to avoid conflicts with existing table structure
+        pass
+        # if os.path.exists(self.schema_path):
+        #     with open(self.schema_path, 'r', encoding='utf-8') as f:
+        #         schema = f.read()
+        #         self.conn.executescript(schema)
+        #         self.conn.commit()
     
     def ping(self) -> bool:
         """Test database connection"""
