@@ -131,38 +131,13 @@ class NaturalLanguageGenerator:
         tone_description = self._get_tone_description(context.tone_style)
         readability_level = self._get_readability_instructions(context.reading_level)
         
-        prompt = f"""Enhance this ALS information content for better clarity and engagement.
+        prompt = f"""Make this ALS information clearer and more supportive.
 
-ORIGINAL CONTENT:
-{content}
+Original: {content}
 
-ENHANCEMENT REQUIREMENTS:
-- Tone: {tone_description}
-- Reading Level: {readability_level}
-- User State: {context.user_emotional_state}
-- Content Type: {context.content_type.value}
-- Conversation Stage: {context.conversation_stage}
+Make it {tone_description} and {readability_level}. The person is feeling {context.user_emotional_state} and mentioned {', '.join(context.specific_mentions[:3]) if context.specific_mentions else 'general concerns'}.
 
-PERSONALIZATION CONTEXT:
-- User mentioned: {', '.join(context.specific_mentions[:3]) if context.specific_mentions else 'general concerns'}
-- Severity: {context.severity_level}
-- Cultural context: {context.cultural_context}
-
-ENHANCEMENT GOALS:
-1. Improve clarity and readability
-2. Add appropriate empathy and support
-3. Make language more accessible and less clinical
-4. Ensure actionable and specific guidance
-5. Maintain medical accuracy
-
-GUIDELINES:
-- Use "you" and "your" to make it personal
-- Replace medical jargon with simple terms
-- Add encouraging transition phrases
-- Include specific examples when helpful
-- Keep the same information structure
-
-Enhanced content:"""
+Rewrite it to be more personal, less clinical, and encouraging while keeping the same information:"""
 
         try:
             response = self.llm.generate(prompt)

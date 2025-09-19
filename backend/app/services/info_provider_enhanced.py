@@ -500,76 +500,18 @@ class EnhancedInfoProvider:
         if 'help' in context.last_answer.lower():
             challenges.append('needs assistance')
         
-        prompt = f"""You are an experienced ALS/MND specialist creating a personalized information card. Your goal is to provide IMMEDIATELY ACTIONABLE guidance that the patient can use TODAY.
+        prompt = f"""You're helping someone with ALS. They said: "{context.last_answer[:150]}"
 
-PATIENT PROFILE:
-- Topic: {context.current_term} ({context.current_pnm} needs)
-- Their exact words: "{context.last_answer[:150]}"
-- Frequency/Pattern: {user_frequency}
-- Severity: {severity_level} priority
-- Key challenges: {', '.join(challenges) if challenges else 'managing symptoms'}
-- Specific mentions: {', '.join(specific_mentions[:3]) if specific_mentions else 'none'}
+Here's helpful information about {context.current_term}:
+{text[:800]}
 
-CONVERSATION HISTORY INSIGHTS:
-- Session stage: {session_stage} (adjust detail level accordingly)
-- Previous questions: {len(context.question_history)} asked
-{f"- Recurring themes: {', '.join([q[:30] for q in context.question_history[-2:]])}" if context.question_history else ""}
+Create a helpful information card with:
+- A clear title that addresses their specific situation
+- 3-4 practical tips they can use today
 
-KNOWLEDGE BASE CONTENT:
- {text[:1500]}
+Make it personal, actionable, and easy to understand. Use their own words when possible.
 
-CRITICAL INSTRUCTIONS:
-
-1. TITLE (15-20 words):
-   - Must include their SPECIFIC situation (e.g., if they said "at night", include "nighttime")
-   - Use their language level (simple if answers are brief, detailed if elaborate)
-   - Focus on the BENEFIT, not the problem
-   - Good: "Managing Breathing Comfort When Lying Down at Night"
-   - Bad: "Breathing Difficulties Information"
-
-2. FOUR BULLETS (each 30-40 words, MUST be different approaches):
-   
-   Bullet 1 - IMMEDIATE RELIEF (what to do RIGHT NOW):
-   - Start with action verb (Try, Position, Use)
-   - Include specific measurements/angles/times
-   - Explain WHY it helps in simple terms
-   
-   Bullet 2 - DAILY ROUTINE INTEGRATION:
-   - Connect to their mentioned daily patterns
-   - Provide a structured approach (morning/evening/before meals)
-   - Include frequency and duration
-   
-   Bullet 3 - EQUIPMENT/TECHNIQUE OPTIMIZATION:
-   - Suggest specific tools or adaptations
-   - Include both no-cost and equipment options
-   - Mention how to obtain or alternatives
-   
-   Bullet 4 - MONITORING & PROGRESSION:
-   - How to track if it's working
-   - When to adjust the approach
-   - Include caregiver involvement if severity is high
-
-3. LANGUAGE RULES:
-   - Use "you" directly, be conversational
-   - Avoid medical jargon unless they used it first
-   - Include emotional reassurance naturally
-   - Acknowledge their specific situation
-
-4. BASED ON SEVERITY:
-   - Low: Focus on prevention and optimization
-   - Moderate: Balance management with adaptation
-   - High: Prioritize comfort and caregiver support
-
-OUTPUT FORMAT (JSON only):
-{{
-  "title": "[Specific, encouraging title with their context]",
-  "bullets": [
-    "[Action verb] [specific technique with measurement] because [simple explanation of benefit]",
-    "[Time-based routine] with [specific duration/frequency] to [clear outcome]",
-    "[Equipment/technique] using [specific item/method] which [practical benefit]",
-    "[Monitoring approach] by [specific indicator] and [adjustment strategy]"
-  ]
-}}"""
+Return JSON with "title" and "bullets" fields."""
 
         try:
             response = self.llm.generate_json(prompt)
