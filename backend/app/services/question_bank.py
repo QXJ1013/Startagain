@@ -76,11 +76,11 @@ class QuestionBank:
         """
         Map both schemas to QuestionItem. Return None if required fields are missing.
         """
-        # Try legacy first
+        # Try legacy first, with support for both 'main' and 'question' fields
         pnm = obj.get("pnm")
         term = obj.get("term")
-        main = obj.get("main")
-        followups = obj.get("followups")
+        main = obj.get("main") or obj.get("question")  # Support both field names
+        followups = obj.get("followups") or obj.get("followup_questions")  # Support both field names
         terms = obj.get("terms")
         options = obj.get("options")
 
@@ -94,7 +94,7 @@ class QuestionBank:
                 terms=self._as_list_of_str(terms),
                 options=options if isinstance(options, list) else None,
                 meta={k: v for k, v in obj.items()
-                      if k not in {"id","pnm","term","main","followups","terms","options"}}
+                      if k not in {"id","pnm","term","main","question","followups","followup_questions","terms","options"}}
             )
 
         # Fallback to new schema (v2_full format)

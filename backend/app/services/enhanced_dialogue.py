@@ -3739,6 +3739,14 @@ class UseCaseTwoManager:
                 await self._process_user_response_uc2_simple(context, dimension)
                 print(f"[UC2] New scoring logic completed")
 
+                # CRITICAL FIX: Increment question index after user response processing
+                # This ensures the next question selection uses the correct index
+                dimension_term_question_key = f"{dimension}_term_question_index"
+                current_question_index = context.conversation.assessment_state.get(dimension_term_question_key, 0)
+                next_question_index = current_question_index + 1
+                context.conversation.assessment_state[dimension_term_question_key] = next_question_index
+                print(f"[UC2] INCREMENTED question index from {current_question_index} to {next_question_index} after user response")
+
                 # Check if scores were added
                 temp_scores = {}
                 for key, value in context.conversation.assessment_state.items():
@@ -3804,11 +3812,26 @@ class UseCaseTwoManager:
                 # Convert follow-ups to question-like objects
                 from app.services.question_bank import QuestionItem
                 for i, followup in enumerate(followups):
+                    # Parse followup if it's a string (JSON string)
+                    parsed_followup = followup
+                    if isinstance(followup, str):
+                        try:
+                            import json
+                            parsed_followup = json.loads(followup.replace("'", '"'))  # Convert single quotes to double quotes
+                        except (json.JSONDecodeError, Exception) as e:
+                            print(f"[UC2] Skipping followup {i+1} for {main_q.id} (failed to parse string: {e})")
+                            continue
+
+                    # Skip if followup is not a dictionary
+                    if not isinstance(parsed_followup, dict):
+                        print(f"[UC2] Skipping followup {i+1} for {main_q.id} (not a dict: {type(parsed_followup)})")
+                        continue
+
                     # Extract question text from followup properly (follow-ups use 'text' field)
-                    question_text = followup.get('text', followup.get('question', followup.get('main', '')))
+                    question_text = parsed_followup.get('text', parsed_followup.get('question', parsed_followup.get('main', '')))
 
                     # Get followup options
-                    followup_options = followup.get('options', [])
+                    followup_options = parsed_followup.get('options', [])
 
                     # Skip followups that have no question text or no options (both needed for assessment)
                     if not question_text or not followup_options:
@@ -3918,9 +3941,8 @@ class UseCaseTwoManager:
         question_item = current_term_questions[current_term_question_index]
         print(f"[UC2] Selected question {current_term_question_index} from term '{current_term}': {question_item.id} - {question_item.main[:50]}...")
 
-        # DO NOT pre-increment question index - let scoring logic handle progression
-        # This allows multiple responses to the same question for score accumulation
-        print(f"[UC2] Question index remains at {current_term_question_index} to allow score accumulation")
+        # Question index will be incremented after user responds and scores question
+        print(f"[UC2] Question index is at {current_term_question_index}, will advance after user response")
 
         return self._generate_dimension_question(question_item, dimension, context)
 
@@ -4040,17 +4062,55 @@ class UseCaseTwoManager:
         # Get question context with options
         question_context = context.conversation.assessment_state.get('question_context', {})
 
+        # Check if question_context has term data
+        if not question_context.get('term'):
+            print(f"[UC2] WARNING: question_context missing 'term' field")
+
         # Extract score from user input using existing method
         score = self._extract_score_from_user_input(user_input, question_context)
+        scoring_method = "question_bank_options"
+
+        if score is None:
+            print(f"[UC2] SIMPLE SCORING: Option matching failed, using AI scoring fallback")
+            # AI scoring fallback for custom user input (as per CLAUDE.md requirements)
+            try:
+                if hasattr(self, 'ai_scorer') and self.ai_scorer:
+                    ai_score_result = await self.ai_scorer.score_free_text_response(
+                        user_input,
+                        question_context,
+                        dimension,
+                        context.conversation.messages[-5:]  # Recent context
+                    )
+                    score = ai_score_result.score
+                    scoring_method = "ai_fallback"
+                    print(f"[UC2] SIMPLE SCORING: AI scored response: {score}")
+                else:
+                    # Emergency fallback - prevents infinite loop
+                    score = 3.0  # Middle score
+                    scoring_method = "emergency_fallback"
+                    print(f"[UC2] SIMPLE SCORING: Using emergency fallback score: {score}")
+            except Exception as e:
+                print(f"[UC2] SIMPLE SCORING: AI scoring failed: {e}")
+                # Emergency fallback - prevents infinite loop
+                score = 3.0  # Middle score
+                scoring_method = "emergency_fallback"
+                print(f"[UC2] SIMPLE SCORING: Using emergency fallback score: {score}")
 
         if score is not None:
-            # Get current term from question context
-            current_term = question_context.get('term', 'Unknown')
+            # Get current term from question context with fallback to current context
+            current_term = question_context.get('term')
+            if not current_term:
+                # Fallback to context.current_term or dimension-based term
+                current_term = getattr(context, 'current_term', None)
+                if not current_term:
+                    # Skip scoring if no valid term is available - prevent wrong data
+                    print(f"[UC2] SIMPLE SCORING ERROR: No valid term found for scoring {dimension}. Skipping score storage.")
+                    return
 
-            print(f"[UC2] SIMPLE SCORING: Extracted score {score} for {dimension}/{current_term}")
+            print(f"[UC2] SIMPLE SCORING: Extracted score {score} for {dimension}/{current_term} via {scoring_method}")
 
             # Store term score directly in database (immediate storage)
-            await self._store_term_score_immediate(context, dimension, current_term, score)
+            await self._store_term_score_immediate(context, dimension, current_term, score, scoring_method)
 
             # Mark this term as completed
             completed_terms = context.conversation.assessment_state.get('completed_terms', [])
@@ -4060,9 +4120,9 @@ class UseCaseTwoManager:
                 context.conversation.assessment_state['completed_terms'] = completed_terms
                 print(f"[UC2] SIMPLE SCORING: Marked term {current_term} as completed")
         else:
-            print(f"[UC2] SIMPLE SCORING: No score extracted from '{user_input}'")
+            print(f"[UC2] SIMPLE SCORING: ERROR - No score could be determined from '{user_input}'")
 
-    async def _store_term_score_immediate(self, context: ConversationContext, dimension: str, term: str, score: float) -> bool:
+    async def _store_term_score_immediate(self, context: ConversationContext, dimension: str, term: str, score: float, scoring_method: str = "question_bank_options") -> bool:
         """
         Immediately store term score to database
         Returns True if successful, False otherwise
@@ -4072,7 +4132,7 @@ class UseCaseTwoManager:
             import sqlite3
             from pathlib import Path
 
-            print(f"[UC2] IMMEDIATE STORAGE: Storing {dimension}/{term} = {score}")
+            print(f"[UC2] IMMEDIATE STORAGE: Storing {dimension}/{term} = {score} via {scoring_method}")
 
             # Database path
             db_path = Path(__file__).parent.parent / "data" / "als.db"
@@ -4217,7 +4277,35 @@ class UseCaseTwoManager:
             print(f"  - len(current_term_questions): {len(current_term_questions)}")
             print(f"  - Completion condition: {current_term_question_index} >= {len(current_term_questions)} = {current_term_question_index >= len(current_term_questions)}")
 
-            # SIMPLIFIED UC2: Check if this term has been completed
+            # Check if current term is now completed (no more questions in this term)
+            # Note: question index has already been incremented after user response processing
+            if current_term_question_index >= len(current_term_questions):
+                print(f"[UC2] Term '{current_term}' completed! ({current_term_question_index}/{len(current_term_questions)} questions answered)")
+
+                # Mark this term as completed
+                completed_terms = context.conversation.assessment_state.get('completed_terms', [])
+                term_key = f"{dimension}_{current_term}"
+                if term_key not in completed_terms:
+                    completed_terms.append(term_key)
+                    context.conversation.assessment_state['completed_terms'] = completed_terms
+                    print(f"[UC2] Added {term_key} to completed_terms: {completed_terms}")
+
+                # Move to next term
+                next_term_index = current_term_index + 1
+                context.conversation.assessment_state[f"{dimension}_term_index"] = next_term_index
+                context.conversation.assessment_state[dimension_term_question_key] = 0
+
+                print(f"[UC2] Advanced to next term index: {next_term_index}/{len(ordered_terms)}")
+
+                # Check if all terms completed
+                if next_term_index >= len(ordered_terms):
+                    print(f"[UC2] ALL TERMS COMPLETED for dimension {dimension}")
+                    # Set flag to trigger summary generation on next response
+                    context.conversation.assessment_state[f"{dimension}_ready_for_summary"] = True
+
+                return
+
+            # SIMPLIFIED UC2: Check if this term has been completed (legacy code)
             completed_terms = context.conversation.assessment_state.get('completed_terms', [])
             term_key = f"{dimension}_{current_term}"
 
@@ -4292,9 +4380,3 @@ class UseCaseTwoManager:
             return main_score
 
 
-# NEXT STEP 3 OPPORTUNITIES:
-# 1. Response quality optimization (emotion analysis, personality adaptation)
-# 2. Advanced transition logic (user behavior learning, preference modeling)
-# 3. Knowledge base expansion (dynamic content updates, domain specialization)
-# 4. Performance optimization (response caching, query optimization)
-# 5. User experience refinement (conversation flow smoothing, coherence improvement)

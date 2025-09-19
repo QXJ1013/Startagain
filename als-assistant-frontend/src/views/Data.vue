@@ -42,14 +42,22 @@
         </div>
       </div>
 
-      <!-- Right: Recent Completed Terms -->
-      <div class="recent-terms-section">
-        <h3>Recently Completed Terms</h3>
-        <div class="terms-table" v-if="recentTerms.length > 0">
-          <div v-for="term in recentTerms" :key="term.name" class="term-row">
-            <span class="term-name">{{ term.name }}</span>
+      <!-- Right: All Term Scores -->
+      <div class="terms-scores-section">
+        <div class="terms-header">
+          <h3>All Term Scores</h3>
+          <button v-if="allTerms.length > 5" @click="showAllTermsModal = true" class="view-all-btn">
+            View All ({{ allTerms.length }})
+          </button>
+        </div>
+        <div class="terms-table" v-if="allTerms.length > 0">
+          <div v-for="term in displayedTerms" :key="term.name" class="term-row">
+            <span class="term-name" :title="term.name">{{ term.name }}</span>
             <span class="term-score">{{ term.score.toFixed(1) }}/7</span>
             <span class="term-date">{{ term.lastDate }}</span>
+          </div>
+          <div v-if="allTerms.length > 5" class="more-terms-indicator">
+            +{{ allTerms.length - 5 }} more terms
           </div>
         </div>
         <div v-else class="no-terms">
@@ -73,11 +81,35 @@
       <p>Loading data...</p>
     </div>
 
+    <!-- All Terms Modal -->
+    <div v-if="showAllTermsModal" class="modal-overlay" @click="showAllTermsModal = false">
+      <div class="modal-content" @click.stop>
+        <div class="modal-header">
+          <h3>All Term Scores ({{ allTerms.length }})</h3>
+          <button @click="showAllTermsModal = false" class="close-btn">×</button>
+        </div>
+        <div class="modal-body">
+          <div class="all-terms-grid">
+            <div v-for="term in allTerms" :key="term.name" class="modal-term-row">
+              <div class="modal-term-info">
+                <span class="modal-term-name">{{ term.name }}</span>
+                <span class="modal-term-dimension">{{ term.dimension }}</span>
+              </div>
+              <div class="modal-term-score">
+                <span class="score-value">{{ term.score.toFixed(1) }}/7</span>
+                <span class="score-date">{{ term.lastDate }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useSessionStore } from "../stores/session";
 import { useRouter } from "vue-router";
 import { useAuthStore } from '../stores/auth';
@@ -90,6 +122,7 @@ const authStore = useAuthStore();
 const chatStore = useChatStore();
 const isLoading = ref(false);
 const hoveredDimension = ref<string | null>(null);
+const showAllTermsModal = ref(false);
 
 function showDimensionHover(dimensionName: string) {
   hoveredDimension.value = dimensionName;
@@ -116,15 +149,22 @@ const userStats = ref({
   completed_assessments: 0
 });
 
-// Define type for recent term data
-interface RecentTerm {
+// Define type for term data
+interface TermData {
   name: string;
-  score: number;  // Changed from string to number
+  score: number;
   lastDate: string;
+  dimension?: string;
 }
 
-// Recent completed terms - loaded from backend
-const recentTerms = ref<RecentTerm[]>([]);
+// All terms data - loaded from backend
+const allTerms = ref<TermData[]>([]);
+
+// Computed property for displayed terms (first 5)
+const displayedTerms = computed(() => allTerms.value.slice(0, 5));
+
+// Keep recentTerms for backward compatibility
+const recentTerms = computed(() => allTerms.value.slice(0, 5));
 
 
 async function startDimensionChat(dimensionName: string) {
@@ -208,8 +248,8 @@ async function loadUserData() {
       completed_assessments: scoresData.completed_assessments
     };
 
-    // Load recent terms from conversations
-    await loadRecentTerms();
+    // Load all terms from conversations
+    await loadAllTerms();
 
   } catch (error: any) {
     console.error('Failed to load user data:', error);
@@ -219,19 +259,19 @@ async function loadUserData() {
   }
 }
 
-// Load recent completed terms from database
-async function loadRecentTerms() {
+// Load all completed terms from database
+async function loadAllTerms() {
   try {
     if (!authStore.token) return;
 
     // Get scores summary data which now includes term_scores
     const scoresData = await conversationsApi.getUserScoresSummary(authStore.token);
 
-    // Extract term scores from API response
-    const termScores: RecentTerm[] = [];
+    // Extract all term scores from API response
+    const termScores: TermData[] = [];
 
     if (scoresData.term_scores) {
-      for (const termScore of scoresData.term_scores.slice(0, 5)) {
+      for (const termScore of scoresData.term_scores) { // Remove slice to get all terms
         // Parse date
         let dateStr = 'Recent';
         try {
@@ -255,16 +295,17 @@ async function loadRecentTerms() {
         termScores.push({
           name: termScore.term, // Show actual term name, not PNM dimension
           score: termScore.score,
-          lastDate: dateStr
+          lastDate: dateStr,
+          dimension: termScore.pnm // Add dimension info for modal
         });
       }
     }
 
-    recentTerms.value = termScores;
+    allTerms.value = termScores;
 
   } catch (error: any) {
-    console.error('Failed to load recent terms:', error);
-    recentTerms.value = [];
+    console.error('Failed to load all terms:', error);
+    allTerms.value = [];
   }
 }
 
@@ -540,6 +581,164 @@ onMounted(() => {
   100% { transform: rotate(360deg); }
 }
 
+/* Terms Header */
+.terms-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.view-all-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.view-all-btn:hover {
+  background: #2563eb;
+}
+
+.more-terms-indicator {
+  text-align: center;
+  padding: 8px;
+  color: #6b7280;
+  font-size: 12px;
+  border-top: 1px solid #e5e7eb;
+  margin-top: 4px;
+}
+
+/* Modal Styles */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  border-radius: 12px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #1f2937;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+
+.close-btn:hover {
+  background: #f3f4f6;
+}
+
+.modal-body {
+  padding: 20px 24px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.all-terms-grid {
+  display: grid;
+  gap: 12px;
+}
+
+.modal-term-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+}
+
+.modal-term-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+}
+
+.modal-term-name {
+  font-weight: 500;
+  color: #1f2937;
+  font-size: 14px;
+}
+
+.modal-term-dimension {
+  font-size: 12px;
+  color: #6b7280;
+  background: #e5e7eb;
+  padding: 2px 6px;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.modal-term-score {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+}
+
+.score-value {
+  font-weight: 600;
+  color: #059669;
+  font-size: 14px;
+}
+
+.score-date {
+  font-size: 11px;
+  color: #9ca3af;
+}
+
+/* Terms name with tooltip */
+.term-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
 
 /* Responsive Design */
 @media (max-width: 768px) {
