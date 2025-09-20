@@ -108,12 +108,9 @@ def get_ai_router() -> AIRouter:
 
 
 def get_info_provider():
-    """Get enhanced info provider instance"""
-    global _info
-    if _info is None:
-        from app.services.info_provider_enhanced import EnhancedInfoProvider
-        _info = EnhancedInfoProvider()
-    return _info
+    """Deprecated: EnhancedInfoProvider was zombie code - now using FSM"""
+    # Return None as this was zombie code - system now uses summary mode via FSM
+    return None
 
 
 # ------------ app startup warmup ------------

@@ -18,7 +18,7 @@ from app.services.storage import DocumentStorage, ConversationDocument, Conversa
 from app.services.fsm import ConversationFSM
 from app.services.question_bank import QuestionBank
 from app.services.ai_routing import AIRouter
-from app.services.info_provider_enhanced import EnhancedInfoProvider
+# Removed import: EnhancedInfoProvider was zombie code
 from app.services.enhanced_dialogue import (
     ConversationModeManager, 
     create_conversation_context, 
