@@ -156,7 +156,16 @@
 
             <!-- Dialogue or Question Content -->
             <div class="question-content" :class="{ 'dialogue-mode': message.isDialogue }">
-              <div class="question-text" :class="{ 'dialogue-text': message.isDialogue }">{{ message.content }}</div>
+              <div
+                class="question-text"
+                :class="{
+                  'dialogue-text': message.isDialogue,
+                  'formatted-content': message.isDialogue || isMarkdownContent(message.content)
+                }"
+                v-if="message.isDialogue || isMarkdownContent(message.content)"
+                v-html="formatMarkdown(message.content)">
+              </div>
+              <div class="question-text" :class="{ 'dialogue-text': message.isDialogue }" v-else>{{ message.content }}</div>
 
               <!-- Button Options (hide in dialogue mode) -->
               <div v-if="!message.isDialogue && message.options && message.options.length" class="options-container">
@@ -346,6 +355,32 @@ function focusInput() {
 
 function setLoadingText(text: string) {
   loadingText.value = text
+}
+
+function isMarkdownContent(content: string): boolean {
+  if (!content) return false
+  // Check if content contains markdown patterns
+  return /^##\s/.test(content) || /^•\s/.test(content) || content.includes('## ')
+}
+
+function formatMarkdown(content: string): string {
+  if (!content) return ''
+
+  let formatted = content
+    // Convert ## headers to h2
+    .replace(/^## (.+$)/gm, '<h2>$1</h2>')
+    // Convert • bullets to li items
+    .replace(/^• (.+$)/gm, '<li>$1</li>')
+
+  // Wrap consecutive li items in ul
+  formatted = formatted.replace(/(<li>.*?<\/li>(\s*<li>.*?<\/li>)*)/gs, '<ul>$1</ul>')
+
+  // Convert line breaks to proper spacing
+  formatted = formatted
+    .replace(/\n\n+/g, '<br><br>')
+    .replace(/\n/g, '<br>')
+
+  return formatted
 }
 
 function formatTimestamp(timestamp: string): string {
@@ -1485,6 +1520,40 @@ onUnmounted(() => {
   color: #1e40af;
   font-style: normal;
   margin-bottom: 8px;
+}
+
+.formatted-content {
+  line-height: 1.6;
+  font-size: 15px;
+}
+
+.formatted-content h2 {
+  font-weight: bold;
+  font-size: 18px;
+  margin: 20px 0 12px 0;
+  color: #1e40af;
+  border-bottom: 2px solid #e5e7eb;
+  padding-bottom: 4px;
+}
+
+.formatted-content ul {
+  margin: 12px 0;
+  padding-left: 0;
+}
+
+.formatted-content li {
+  margin: 8px 0;
+  padding-left: 20px;
+  list-style: none;
+  position: relative;
+}
+
+.formatted-content li::before {
+  content: "•";
+  color: #3b82f6;
+  font-weight: bold;
+  position: absolute;
+  left: 0;
 }
 
 .options-container {

@@ -885,6 +885,11 @@ Be supportive, share useful information, and help them feel understood. Don't as
         user_responses = [msg.content for msg in all_messages if msg.role == 'user']
         assistant_questions = [msg.content for msg in all_messages if msg.role == 'assistant']
 
+        # Debug output to trace None values
+        print(f"[SUMMARY DEBUG] context.current_dimension: {context.current_dimension}")
+        print(f"[SUMMARY DEBUG] context.current_term: {context.current_term}")
+        print(f"[SUMMARY DEBUG] conversation ID: {context.conversation.id}")
+
         return {
             'completed_pnm': context.current_dimension,
             'completed_term': context.current_term,
@@ -900,13 +905,37 @@ Be supportive, share useful information, and help them feel understood. Don't as
             if not (analysis['completed_term'] and analysis['completed_pnm']):
                 return []
 
-            # Step 1: Hybrid Retrieval - get from both indexes
-            main_query = f"ALS {analysis['completed_pnm']} {analysis['completed_term']} support strategies"
+            # Step 1: Enhanced Query Generation for Small Database
+            base_query = f"ALS {analysis['completed_pnm']} {analysis['completed_term']} support strategies"
 
-            # Vector search from background knowledge
-            bg_results = self.rag.search(main_query, top_k=5, index_kind="background")
-            # Vector search from question bank
-            q_results = self.rag.search(main_query, top_k=3, index_kind="question")
+            # Query Expansion - add related terms
+            expanded_terms = {
+                'Physiological': 'physical mobility movement breathing nutrition pain management',
+                'Safety': 'home safety accessibility fall prevention emergency planning',
+                'Love & Belonging': 'family relationships social support communication intimacy',
+                'Esteem': 'confidence self-worth dignity respect independence',
+                'Cognitive': 'memory thinking planning decision-making mental stimulation',
+                'Aesthetic': 'environment beauty comfort meaningful spaces',
+                'Self-Actualisation': 'purpose goals fulfillment personal growth meaning',
+                'Transcendence': 'spirituality legacy values higher purpose'
+            }
+
+            expansion = expanded_terms.get(analysis['completed_pnm'], 'support care management')
+            expanded_query = f"{base_query} {expansion}"
+
+            # Multi-Query RAG - generate 2-3 different queries
+            queries = [
+                expanded_query,
+                f"{analysis['completed_term']} ALS management strategies resources",
+                f"ALS patients {analysis['completed_pnm'].lower()} needs support interventions"
+            ]
+
+            # Vector search from both indexes with multiple queries
+            bg_results = []
+            q_results = []
+            for query in queries:
+                bg_results.extend(self.rag.search(query, top_k=2, index_kind="background"))
+                q_results.extend(self.rag.search(query, top_k=1, index_kind="question"))
 
             # Step 2: Apply hybrid fusion using existing rerank utilities
             fused_results = self._apply_hybrid_fusion(bg_results, q_results)
@@ -1096,36 +1125,47 @@ Rate each piece of knowledge for relevance (1-5, where 5=highly relevant for thi
 
             conversation_summary = "\n".join(conversation_context[-10:])  # Last 10 exchanges
 
-            prompt = f"""Based on your {analysis['completed_pnm']} assessment conversation about {analysis['completed_term']}, here's what we discussed:
+            prompt = f"""You are providing a personalized assessment summary for someone with ALS about their {analysis['completed_pnm']} needs, specifically focusing on {analysis['completed_term']}.
 
+CONVERSATION CONTEXT:
 {conversation_summary}
 
-Professional support resources:
+PROFESSIONAL KNOWLEDGE BASE:
 {knowledge_text}
 
-Provide a professional assessment summary speaking directly to the person. Use proper line breaks and formatting:
+Create a comprehensive, well-formatted assessment summary:
 
-## Assessment Overview:
-Briefly summarize your current situation with {analysis['completed_term']}.
+## Assessment Overview
+Based on our conversation about {analysis['completed_term']}, provide a personalized 2-3 sentence summary of their current situation.
 
-## Key Findings:
-• Identify 2-3 specific areas where you're managing well
-• Highlight 2-3 areas that may need attention or support
+## Key Strengths
+• Identify specific areas where they are managing well (based on their actual responses)
+• Highlight positive coping strategies they mentioned
+• Acknowledge their resilience and adaptive approaches
 
-## Personalized Recommendations:
-• Provide specific, actionable strategies based on your responses
-• Reference appropriate support resources or interventions
-• Consider your individual circumstances and preferences
+## Areas for Enhancement
+• Point out specific challenges they shared that could benefit from support
+• Focus on practical, achievable improvements
+• Frame as opportunities rather than deficits
 
-## Next Steps:
-Suggest concrete actions you can take to improve your situation.
+## Tailored Recommendations
+• Provide 3-4 specific, actionable strategies based on their responses
+• Reference relevant professional resources or assistive technologies
+• Include both immediate steps and longer-term considerations
+• Consider their individual circumstances and expressed preferences
 
-IMPORTANT:
-- Use second person (you, your) throughout - speak directly to the person
-- Include proper line breaks between sections
-- Be specific about their actual responses rather than generic
-- Make each point targeted to what they actually shared
-- Use caring but professional tone"""
+## Next Steps
+• Suggest 2-3 concrete actions they can take in the next week
+• Include professional contacts or resources to explore
+• Mention any follow-up assessment that might be beneficial
+
+FORMATTING REQUIREMENTS:
+- Use markdown formatting (##, •, proper line breaks)
+- Write in second person (you, your) throughout
+- Be specific to their actual responses, not generic advice
+- Maintain a supportive yet professional tone
+- Ensure each bullet point is substantial (2-3 sentences)
+- Include proper spacing between sections"""
 
             return self.llm.generate_text(prompt)
             

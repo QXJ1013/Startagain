@@ -3,7 +3,6 @@
     <!-- Overall Stage Badge -->
     <div class="stage-header">
       <div class="stage-badge">Researching solutions</div>
-      <p class="stage-subtitle">Current Progress Stage</p>
     </div>
 
     <div class="main-content">
