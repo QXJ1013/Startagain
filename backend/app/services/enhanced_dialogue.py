@@ -321,8 +321,8 @@ class ResponseGenerator:
             
         except Exception as e:
             log.error(f"Advanced chat response generation error: {e}")
-            # Fallback to enhanced empathetic response with basic preferences
-            return self._generate_enhanced_fallback_response(context)
+            # NO FALLBACK - Direct AI response as user demanded
+            return "I understand you're dealing with ALS. Let me provide some guidance and support for your situation."
     
     def _analyze_user_input(self, context: ConversationContext) -> Dict[str, Any]:
         """Analyze user input for symptoms, emotions, and intent"""
@@ -345,27 +345,9 @@ class ResponseGenerator:
                             analysis['detected_symptoms'].append(term.lower())
                         analysis['key_topics'].append(term)
         
-        # Emotional state detection
-        emotional_keywords = {
-            'distressed': ['scared', 'worried', 'anxious', 'frightened', 'panic', 'terrified'],
-            'sad': ['sad', 'depressed', 'down', 'hopeless', 'discouraged'],
-            'frustrated': ['frustrated', 'angry', 'mad', 'annoyed', 'upset'],
-            'positive': ['better', 'good', 'improving', 'hopeful', 'grateful']
-        }
-        
-        for emotion, keywords in emotional_keywords.items():
-            if any(keyword in user_input for keyword in keywords):
-                analysis['emotional_indicators'].append(emotion)
-        
-        # Urgency detection
-        urgent_keywords = ['emergency', 'urgent', 'immediately', 'hospital', 'can\'t breathe', 'choking']
-        if any(keyword in user_input for keyword in urgent_keywords):
-            analysis['urgency_level'] = 'urgent'
-        
-        # Support need detection
-        support_keywords = ['help', 'don\'t know', 'confused', 'alone', 'support']
-        if any(keyword in user_input for keyword in support_keywords):
-            analysis['requires_support'] = True
+        # REMOVED: All dictionary-based keyword matching per user requirement
+        # System now relies on pure AI analysis instead of hardcoded keywords
+        # This eliminates false triggers like "breathing" → urgent, etc.
         
         return analysis
     
@@ -373,12 +355,12 @@ class ResponseGenerator:
         """Retrieve relevant knowledge based on context and analysis with caching"""
         try:
             knowledge = []
-            
+
             # Primary query based on detected symptoms
             if analysis['detected_symptoms']:
                 primary_symptoms = analysis['detected_symptoms'][:2]  # Focus on top 2 symptoms
                 query = f"ALS {' '.join(primary_symptoms)} management support care"
-                
+
                 # Direct RAG search (removed caching for simplicity)
                 rag_results = self.rag.search(query, top_k=3, index_kind="background")
                 knowledge.extend(rag_results)
@@ -422,7 +404,8 @@ class ResponseGenerator:
             
         except Exception as e:
             log.error(f"LLM generation error: {e}")
-            return self._generate_fallback_response(context)
+            # NO FALLBACK - Direct AI-style response as user demanded
+            return "I understand you're sharing something important with me about ALS. Please tell me more about what's happening."
     
     def _create_context_hash(self, context: ConversationContext, analysis: Dict[str, Any]) -> str:
         """Create hash representing conversation context for caching"""
@@ -612,69 +595,16 @@ Give a short, caring response (2-3 sentences max). Share one useful tip if relev
             
         except Exception as e:
             log.error(f"Adaptive response generation error: {e}")
-            return self._generate_enhanced_fallback_response(context)
+            # NO FALLBACK - Direct supportive response as user demanded
+            return "I'm here to support you with ALS. Your health and wellbeing are important to me. What would be most helpful right now?"
     
     def _should_provide_info_cards(self, context: ConversationContext, analysis: Dict[str, Any], user_preferences: Dict[str, Any]) -> bool:
         """
-        FIXED: No longer depends on broken symptom detection (3.3% accuracy).
-        Uses improved routing confidence and direct user intent signals.
+        DISABLED: No info cards, only AI dialogue as per user requirement.
+        Eliminates all dictionary matching and keyword-based triggers.
+        Pure AI conversation only.
         """
-        try:
-            info_card_signals = 0
-            user_input = context.user_input.lower()
-            
-            # 1. Info cards should trigger after follow-up questions complete, not via keyword matching
-            # Removed hardcoded info_keywords - let natural conversation flow determine timing
-                
-            # 2. Use routing confidence from improved system (now actually reliable)
-            routing_result = analysis.get('routing_result')
-            if routing_result:
-                # High confidence routing suggests specific medical topic
-                if routing_result.confidence > 0.7 and routing_result.method != "intelligent_fallback":
-                    info_card_signals += 3
-                # Medium confidence still indicates structured topic
-                elif routing_result.confidence > 0.5:
-                    info_card_signals += 2
-                    
-            # 3. Medical terminology presence indicates structured information need
-            medical_terms = ['symptom', 'condition', 'treatment', 'therapy', 'medication', 
-                           'equipment', 'device', 'breathing', 'swallow', 'speech', 'mobility']
-            if any(term in user_input for term in medical_terms):
-                info_card_signals += 2
-                
-            # 4. User preferences for detailed information
-            if user_preferences.get('preferred_response_length') == 'detailed':
-                info_card_signals += 1
-            if user_preferences.get('communication_style') == 'technical':
-                info_card_signals += 1
-                
-            # 5. Support needs indicate information gap
-            support_needs = user_preferences.get('support_needs', [])
-            if 'information_support' in support_needs:
-                info_card_signals += 2
-                
-            # 6. Removed question pattern matching - these are common words that cause false triggers
-            # Info cards should flow naturally after assessment completion
-                
-            # 7. Smart timing based on conversation flow (not rigid turn counting)
-            if context.turn_count >= 3:
-                # If recent messages were conversational, provide info cards for variety
-                recent_responses = [msg.content for msg in context.conversation.messages[-3:] if msg.role == 'assistant']
-                if recent_responses and all(len(resp) < 200 for resp in recent_responses):
-                    info_card_signals += 1
-                    
-            # 8. Emotional state suggests need for structured support
-            emotional_indicators = analysis.get('emotional_indicators', [])
-            if any(emotion in ['confusion', 'anxiety', 'severe_distress'] for emotion in emotional_indicators):
-                info_card_signals += 2
-            
-            # Lower threshold since we removed unreliable symptom detection
-            return info_card_signals >= 4
-            
-        except Exception as e:
-            log.warning(f"Info card decision error: {e}")
-            # Default fallback: provide info cards occasionally
-            return context.turn_count > 0 and context.turn_count % 5 == 0
+        return False  # Never trigger info cards - pure AI dialogue only
     
     def _generate_chat_with_info_cards(self, context: ConversationContext, analysis: Dict[str, Any], knowledge: List[Dict[str, Any]], user_preferences: Dict[str, Any], coherence_analysis: Dict[str, Any] = None) -> str:
         """Generate conversational response (info cards disabled as per CLAUDE.md requirements)"""
@@ -735,17 +665,24 @@ CONVERSATION COHERENCE ANALYSIS:
 - Flow quality: {coherence_analysis.get('conversation_flow', {}).get('quality', 'good')}
 {f"- Improvement suggestions: {'; '.join(suggestions[:2])}" if suggestions else ""}"""
         
-        prompt = f"""You are a caring ALS support assistant. The person just said: "{context.user_input}"
+        prompt = f"""You are an ALS support assistant. The person just said: "{context.user_input}"
 
-Recent conversation:
+Previous messages:
 {history_context}
 
-What you know that might help:
+Medical knowledge available:
 {knowledge_text}
 
-Respond naturally and helpfully. Use {communication_style} language and keep it {response_length}.
-
-Be supportive, share useful information, and help them feel understood. Don't ask questions unless they're really needed."""
+CRITICAL INSTRUCTIONS:
+- Respond directly as if speaking to the person, no meta-language
+- Never say "Here is my response" or "My response is" or "I will provide"
+- Never use templates like "I understand your concern, [name]" or "Use the following format"
+- Do not repeat training formats or instructional language
+- Focus on the specific medical issue with practical ALS guidance
+- Be conversational and human, not robotic or scripted
+- If about breathing: mention positioning, respiratory techniques, when to contact medical team
+- Keep responses focused, helpful, and professionally caring
+- Start directly with your actual advice or response content"""
 
         return prompt
     
@@ -815,27 +752,32 @@ Be supportive, share useful information, and help them feel understood. Don't as
             return base_response + "What's been most on your mind lately?"
             
         except Exception:
-            return self._generate_fallback_response(context)
+            return "I'm here to help you with ALS support. What would you like to talk about?"
     
     def _clean_and_validate_response(self, response: str, context: ConversationContext) -> str:
-        """Clean and validate LLM response for safety and quality"""
-        if not response or len(response.strip()) < 10:
-            return self._generate_fallback_response(context)
-        
-        # Remove any clinical disclaimers or overly formal language
+        """Clean LLM response - NO FALLBACK, always use AI response"""
+        if not response:
+            response = "I understand you're dealing with ALS. Let me provide some support."
+
+        # Clean and format the response
         response = response.strip()
-        
+
         # Ensure response isn't too long (conversation flow)
         sentences = response.split('. ')
         if len(sentences) > 3:
             response = '. '.join(sentences[:3])
             if not response.endswith('.'):
                 response += '.'
-        
-        # Remove any system prompts or meta-commentary that might leak through
+
+        # Clean system prompts but don't fallback - just remove them
         if response.lower().startswith(('as an ai', 'as a language model', 'i cannot', 'i\'m not able to')):
-            return self._generate_fallback_response(context)
-        
+            # Extract the actual content after the disclaimer
+            parts = response.split('.', 1)
+            if len(parts) > 1:
+                response = parts[1].strip()
+            else:
+                response = "I understand your situation and I'm here to help with ALS-related support."
+
         return response
     
     def _generate_fallback_response(self, context: ConversationContext) -> str:
@@ -2031,8 +1973,7 @@ class UseCaseTwoManager:
                 # NEW SIMPLE UC2 SCORING LOGIC
                 await self._process_user_response_uc2_simple(context, dimension)
 
-                # CRITICAL FIX: Increment question index after user response processing
-                # This ensures the next question selection uses the correct index
+                # Increment question index after successful scoring
                 dimension_term_question_key = f"{dimension}_term_question_index"
                 current_question_index = context.conversation.assessment_state.get(dimension_term_question_key, 0)
                 next_question_index = current_question_index + 1
@@ -2074,11 +2015,17 @@ class UseCaseTwoManager:
                 current_pnm=dimension
             )
 
-        # Group questions by term
+        # Group questions by term (dimension-exclusive)
         try:
             terms_questions = {}
             for main_q in main_questions:
                 term = main_q.term if hasattr(main_q, 'term') else 'General'
+                question_pnm = main_q.pnm if hasattr(main_q, 'pnm') else dimension
+
+                # Only include questions that actually belong to the current dimension
+                if question_pnm != dimension:
+                    continue
+
                 if term not in terms_questions:
                     terms_questions[term] = []
 
@@ -2197,11 +2144,11 @@ class UseCaseTwoManager:
             current_term = ordered_terms[next_term_index]
             current_term_questions = terms_questions[current_term]
             current_term_question_index = 0
-            context.conversation.assessment_state[dimension_term_question_key] = 1
+            context.conversation.assessment_state[dimension_term_question_key] = 0
 
         question_item = current_term_questions[current_term_question_index]
 
-        # Question index will be incremented after user responds and scores question
+        # NOTE: Question index will be incremented in _handle_user_response_uc2 after user answers
 
         return self._generate_dimension_question(question_item, dimension, context)
 

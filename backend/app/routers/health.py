@@ -6,7 +6,6 @@ from app.schemas.base import HealthProbeOut
 from app.deps import get_storage
 from app.services.storage import Storage
 from app.vendors.ibm_cloud import RAGQueryClient
-from app.vendors.bm25 import BM25Client
 from app.config import get_settings
 
 router = APIRouter(prefix="/health", tags=["health"])
@@ -22,7 +21,7 @@ def livez():
 def readyz(storage: Storage = Depends(get_storage)):
     """
     Readiness: core dependencies are ready.
-    We do lightweight checks: storage connectivity; IBM/BM25 best-effort.
+    We do lightweight checks: storage connectivity; IBM RAG best-effort.
     """
     cfg = get_settings()
 
@@ -42,19 +41,10 @@ def readyz(storage: Storage = Depends(get_storage)):
     except Exception:
         rag_ok = False
 
-    # bm25 check (best-effort)
-    bm_ok = False
-    try:
-        bm = BM25Client(cfg.BM25_BG_INDEX_DIR, cfg.BM25_Q_INDEX_DIR)
-        bm_ok = bm.healthy_bg() or bm.healthy_q()
-    except Exception:
-        bm_ok = False
-
-    status_overall = "ok" if (db_ok and (rag_ok or True) and (bm_ok or True)) else "degraded"
+    status_overall = "ok" if (db_ok and (rag_ok or True)) else "degraded"
     return HealthProbeOut(status=status_overall, checks={
         "db": db_ok,
-        "ragquery": rag_ok,
-        "bm25": bm_ok
+        "ragquery": rag_ok
     })
 
 
