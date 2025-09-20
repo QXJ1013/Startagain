@@ -549,7 +549,7 @@ async def get_user_scores_summary(
 
         return {
             "dimensions": summary,
-            "term_scores": term_scores[:10],  # Latest 10 term scores
+            "term_scores": term_scores,  # Return all term scores for frontend display
             "total_conversations": len(conversations_data),
             "completed_assessments": len([c for c in conversations_data if c.get("status") == "completed"])
         }

@@ -1595,10 +1595,14 @@ Respond with expanded keywords (comma-separated):"""
                 current_term = context.conversation.assessment_state.get('current_term', 'General')
 
                 # Try to get score from option first, then use AI scoring
+                print(f"[SCORING DEBUG] User input: '{context.user_input}'")
+                print(f"[SCORING DEBUG] Available options: {question_context.get('options', [])}")
 
                 score = self._extract_option_score_uc1(context.user_input, question_context)
+                print(f"[SCORING DEBUG] Option score result: {score}")
 
                 if score is None:
+                    print(f"[SCORING DEBUG] No option match, triggering AI scoring")
                     # Use AI scoring for free text response - access ai_scorer from main manager
                     try:
                         # Ensure ai_scorer is available
@@ -1613,12 +1617,14 @@ Respond with expanded keywords (comma-separated):"""
                             context.conversation.messages[-5:]  # Recent context
                         )
                         score = ai_score_result.score
+                        print(f"[SCORING DEBUG] AI scoring completed: {score}")
 
                     except Exception as e:
                         # Skip scoring instead of using hardcoded fallback as per user requirements
+                        print(f"[SCORING DEBUG] AI scoring failed: {e}")
                         score = None
                 else:
-                    pass  # Debug print removed
+                    print(f"[SCORING DEBUG] Option scoring successful: {score}")
 
                 # Store score in conversation_scores table (like UC2)
                 # Access storage through the main manager
@@ -1722,24 +1728,9 @@ Respond with expanded keywords (comma-separated):"""
             # Get term assessment data
             current_pnm = context.conversation.assessment_state.get('current_pnm', 'Physiological')
             current_term = context.conversation.assessment_state.get('current_term', 'General')
-            term_key = f"{current_pnm}_{current_term}"
 
-            # Get collected scores
-            temp_scores = context.conversation.assessment_state.get('temp_term_scores', {})
-            scores_data = temp_scores.get(term_key, [])
-
-            # Calculate average score for the term
-            if scores_data:
-                valid_scores = [entry['score'] for entry in scores_data if entry['score'] is not None]
-                average_score = sum(valid_scores) / len(valid_scores) if valid_scores else None
-            else:
-                average_score = None  # No fallback score
-
-
-            # Generate summary using RAG + LLM
-            summary_content = await self._generate_term_summary_content(
-                context, current_pnm, current_term, average_score, scores_data
-            )
+            # Generate summary using high-quality UC2-style RAG + LLM approach
+            summary_content = self.response_generator.generate_summary_response(context)
 
             # Mark conversation as completed
             if hasattr(self, 'storage'):

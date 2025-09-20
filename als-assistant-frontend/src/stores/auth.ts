@@ -7,6 +7,7 @@ interface User {
   id: string;
   email: string;
   display_name: string;
+  created_at?: string;
 }
 
 interface AuthState {
@@ -71,7 +72,8 @@ export const useAuthStore = defineStore("auth", {
         this.user = {
           id: data.user_id,
           email: data.email,
-          display_name: data.display_name
+          display_name: data.display_name,
+          created_at: data.created_at
         };
         this.isAuthenticated = true;
         
@@ -146,7 +148,8 @@ export const useAuthStore = defineStore("auth", {
         this.user = {
           id: data.user_id,
           email: data.email,
-          display_name: data.display_name
+          display_name: data.display_name,
+          created_at: data.created_at
         };
         this.isAuthenticated = true;
         
@@ -196,7 +199,8 @@ export const useAuthStore = defineStore("auth", {
         this.user = {
           id: data.user_id,
           email: data.email,
-          display_name: data.display_name
+          display_name: data.display_name,
+          created_at: data.created_at
         };
         
         return this.user;

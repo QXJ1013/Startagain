@@ -1,14 +1,20 @@
 <template>
   <div class="profile-container">
+    <!-- Loading state -->
+    <div v-if="userDataLoading" class="loading-container">
+      <div class="spinner"></div>
+      <p>Loading profile...</p>
+    </div>
+
     <!-- User Header -->
-    <div class="profile-header">
+    <div v-else class="profile-header">
       <div class="avatar-section">
         <div class="avatar">
           {{ getInitials() }}
         </div>
         <div class="user-details">
-          <h1>{{ userProfile.displayName }}</h1>
-          <p class="user-email">{{ userProfile.email }}</p>
+          <h1>{{ userProfile.displayName || 'Loading...' }}</h1>
+          <p class="user-email">{{ userProfile.email || 'Loading...' }}</p>
           <span class="user-status" :class="authStore.isAuthenticated ? 'status-active' : 'status-inactive'">
             {{ authStore.isAuthenticated ? 'Active' : 'Inactive' }}
           </span>
@@ -17,7 +23,7 @@
     </div>
 
     <!-- Basic Info Card -->
-    <div class="info-card">
+    <div v-if="!userDataLoading" class="info-card">
       <h2>Basic Information</h2>
       <div class="info-grid">
         <div class="info-item">
@@ -82,7 +88,7 @@
     </div>
 
     <!-- Password Change Card -->
-    <div class="info-card">
+    <div v-if="!userDataLoading" class="info-card">
       <h2>Security</h2>
       <div class="info-grid">
         <div class="info-item">
@@ -127,7 +133,7 @@
     </div>
 
     <!-- Activity Summary -->
-    <div class="info-card">
+    <div v-if="!userDataLoading" class="info-card">
       <h2>Activity Summary</h2>
       <div class="info-grid">
         <div class="info-item">
@@ -142,7 +148,7 @@
     </div>
 
     <!-- Actions -->
-    <div class="actions">
+    <div v-if="!userDataLoading" class="actions">
       <button class="action-btn primary" @click="logout">
         Logout
       </button>
@@ -162,7 +168,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, reactive } from 'vue'
+import { computed, ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
 import { useChatStore } from '../stores/chat'
 import { useRouter } from 'vue-router'
@@ -174,6 +180,7 @@ const router = useRouter()
 
 // Reactive state
 const loading = ref(false)
+const userDataLoading = ref(true)
 const message = ref('')
 const messageType = ref<'success' | 'error'>('success')
 
@@ -196,9 +203,9 @@ const passwordData = reactive({
 })
 
 const userProfile = computed(() => ({
-  displayName: authStore.displayName || 'User',
-  email: authStore.userEmail || 'user@example.com',
-  memberSince: 'March 2024'
+  displayName: authStore.displayName || '',
+  email: authStore.userEmail || '',
+  memberSince: authStore.user?.created_at ? new Date(authStore.user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Unknown'
 }))
 
 const activityStats = computed(() => ({
@@ -208,12 +215,13 @@ const activityStats = computed(() => ({
 
 function getInitials(): string {
   const name = userProfile.value.displayName
+  if (!name) return 'U'
   return name
     .split(' ')
     .map(word => word.charAt(0))
     .join('')
     .toUpperCase()
-    .slice(0, 2)
+    .slice(0, 2) || 'U'
 }
 
 // Edit functions
@@ -337,6 +345,20 @@ function logout() {
   authStore.logout()
   router.push('/login')
 }
+
+// Initialize user data
+onMounted(async () => {
+  try {
+    // If we have a token but no user data, fetch it
+    if (authStore.token && !authStore.user) {
+      await authStore.fetchCurrentUser()
+    }
+  } catch (error) {
+    console.error('Failed to load user data:', error)
+  } finally {
+    userDataLoading.value = false
+  }
+})
 </script>
 
 <style scoped>
@@ -348,6 +370,24 @@ function logout() {
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   position: relative;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
+}
+
+.loading-container p {
+  margin-top: 16px;
+  color: #6b7280;
+  font-size: 16px;
 }
 
 .profile-header {

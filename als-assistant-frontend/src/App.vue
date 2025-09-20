@@ -9,12 +9,19 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
+import { useAuthStore } from './stores/auth'
 import Sidebar from "./components/Sidebar.vue";
 
 const route = useRoute()
+const authStore = useAuthStore()
 const isLoginPage = computed(() => route.path === '/login')
+
+// Check authentication status on app startup
+onMounted(async () => {
+  await authStore.checkAuth()
+})
 </script>
 
 <style scoped>
