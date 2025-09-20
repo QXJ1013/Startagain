@@ -178,16 +178,6 @@
                   </button>
                 </div>
 
-                <!-- Optional text input (always show in dialogue mode) -->
-                <div v-if="message.allowTextInput || message.isDialogue" class="text-input-container">
-                  <div class="input-label">(Optional additional details)</div>
-                  <textarea
-                    v-model="supplementaryText"
-                    placeholder="Enter additional details..."
-                    rows="2"
-                    class="supplement-input"
-                  ></textarea>
-                </div>
               </div>
             </div>
           </div>
@@ -238,23 +228,6 @@
           </div>
         </div>
 
-        <!-- Action buttons when options are selected -->
-        <div v-if="hasCurrentQuestion && hasSelection" class="action-buttons">
-          <button
-            @click="submitSelection"
-            :disabled="!hasSelection || isLoading"
-            class="submit-btn primary"
-          >
-            Submit selected options
-          </button>
-
-          <button
-            @click="clearSelection"
-            class="clear-btn secondary"
-          >
-            Clear selection
-          </button>
-        </div>
       </div>
 
       <!-- Error Display -->
@@ -297,7 +270,6 @@ const chatStore = useChatStore()
 const authStore = useAuthStore()
 const viewMode = ref<'menu' | 'history' | 'chat'>('menu')
 const userInput = ref('')
-const supplementaryText = ref('')
 const selectedOptions = ref<{value: string, label: string}[]>([])
 const currentStage = ref('Processing diagnosis')
 const isLoading = ref(false)
@@ -337,10 +309,6 @@ const messages = computed(() => {
 })
 
 // Computed
-const hasCurrentQuestion = computed(() => {
-  const lastMessage = messages.value[messages.value.length - 1]
-  return lastMessage && lastMessage.role === 'assistant' && lastMessage.options && lastMessage.options.length > 0
-})
 
 const hasSelection = computed(() => {
   return selectedOptions.value.length > 0
@@ -473,7 +441,7 @@ function isOptionSelected(value: string, multiSelect: boolean = false): boolean 
   return selectedOptions.value.length > 0 && selectedOptions.value[0].value === value
 }
 
-function selectOption(option: {value: string, label: string}, multiSelect: boolean = false) {
+async function selectOption(option: {value: string, label: string}, multiSelect: boolean = false) {
   if (multiSelect) {
     const index = selectedOptions.value.findIndex(opt => opt.value === option.value)
     if (index > -1) {
@@ -481,15 +449,14 @@ function selectOption(option: {value: string, label: string}, multiSelect: boole
     } else {
       selectedOptions.value.push(option)
     }
+    // For multiSelect, wait for user to manually submit
   } else {
+    // For single select, immediately send the option
     selectedOptions.value = [option]
+    await submitSelection()
   }
 }
 
-function clearSelection() {
-  selectedOptions.value = []
-  supplementaryText.value = ''
-}
 
 async function sendMessage() {
   if (!userInput.value.trim() || isLoading.value) return
@@ -524,17 +491,12 @@ async function sendMessage() {
 async function submitSelection() {
   if (!hasSelection.value || isLoading.value) return
 
-  // Combine selected options with supplementary text - use labels for display, values for backend
+  // Use labels for display, values for backend - no additional text
   const selectedLabels = selectedOptions.value.map(opt => opt.label).join(', ')
   const selectedValues = selectedOptions.value.map(opt => opt.value).join(',')
 
-  let displayText = selectedLabels
-  let submitText = selectedValues  // Send values to backend for processing
-
-  if (supplementaryText.value.trim()) {
-    displayText += `\nAdditional details: ${supplementaryText.value.trim()}`
-    submitText += `\nAdditional details: ${supplementaryText.value.trim()}`
-  }
+  const displayText = selectedLabels
+  const submitText = selectedValues  // Send values to backend for processing
 
   // Add user message showing their selection with full labels
   chatStore.addMessage({
@@ -547,7 +509,6 @@ async function submitSelection() {
 
   // Clear selections
   selectedOptions.value = []
-  supplementaryText.value = ''
 
   // Send the actual values to backend for proper processing
   await processUserInput(submitText)

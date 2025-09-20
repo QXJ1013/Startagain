@@ -101,7 +101,7 @@ Score their response (0-7) based on how well they're managing this situation. Re
         # Add conversation context if available
         if conversation_history:
             recent_context = conversation_history[-3:] if len(conversation_history) > 3 else conversation_history
-            context_summary = "\n".join([f"- {msg.get('content', str(msg))}" for msg in recent_context])
+            context_summary = "\n".join([f"- {msg.content if hasattr(msg, 'content') else str(msg)}" for msg in recent_context])
             prompt += f"\n\nRECENT CONVERSATION CONTEXT:\n{context_summary}"
 
         return prompt

@@ -170,9 +170,6 @@ const allTerms = ref<TermData[]>([]);
 // Computed property for displayed terms (first 5)
 const displayedTerms = computed(() => allTerms.value.slice(0, 5));
 
-// Keep recentTerms for backward compatibility
-const recentTerms = computed(() => allTerms.value.slice(0, 5));
-
 
 async function startDimensionChat(dimensionName: string) {
   try {
