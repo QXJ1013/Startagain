@@ -46,14 +46,14 @@ class Settings(BaseSettings):
     # ---------- IBM watsonx / vector indices ----------
     WATSONX_URL: str = "https://eu-gb.ml.cloud.ibm.com"
     WATSONX_APIKEY: str = ""                 # set via env
-    SPACE_ID: str = ""
+    SPACE_ID: str = "367019f9-e126-4a8d-b054-26670084d62d"
     PROJECT_ID: Optional[str] = None
 
     ENABLE_SEMANTIC_BACKOFF: bool = True   # Enable semantic understanding
     ENABLE_AI_ENHANCEMENT: bool = True     # Enable AI-enhanced routing
-    BACKGROUND_VECTOR_INDEX_ID: str = ""     # knowledge base
-    QUESTION_VECTOR_INDEX_ID: str = ""       # question bank
-    VECTOR_INDEX_ID: str = ""                # legacy fallback (unused if both above provided)
+    BACKGROUND_VECTOR_INDEX_ID: str = "26ccfa50-3b7f-4ec3-b5f5-81a6d3b7f238"     # New knowledge base index
+    QUESTION_VECTOR_INDEX_ID: str = "6e39dc9f-b3f5-4403-a530-7dbc226fa3e1"       # New question bank index
+    VECTOR_INDEX_ID: str = "8ef82ae7-0818-4821-8d0f-f6a7ca3234d8"                # legacy fallback (unused if both above provided)
 
 
     

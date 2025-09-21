@@ -121,13 +121,11 @@ class ConversationModeManager:
             context.conversation.dimension):
             return ConversationMode.DIMENSION_ANALYSIS
 
-        # Use Case 1: Start with FREE_DIALOGUE for first 3 turns
-        # Only transition to assessment after sufficient dialogue
-        if context.turn_count <= 3:
-            # Force free dialogue for first 3 turns (turns 1, 2, 3)
+        # Use Case 1: Simple fixed turn trigger - transition at turn 4
+        if context.turn_count < 4:
             return ConversationMode.FREE_DIALOGUE
 
-        # After turn 3, allow transition based on should_transition_mode()
+        # Turn 4+: Allow transition to assessment
         return ConversationMode.FREE_DIALOGUE
     
     def should_transition_mode(self, context: ConversationContext) -> bool:
@@ -139,14 +137,13 @@ class ConversationModeManager:
         STEP 3: Refined transition logic
         """
         if context.mode == ConversationMode.FREE_DIALOGUE:
-            # Simple turn-based transition - no keyword matching
-            # After 3 turns of pure dialogue, transition to assessment
+            # Fixed turn trigger: transition at turn 4
             if context.turn_count >= 4:
-                return True  # Start assessment from turn 4
+                return True
 
-            # Optional: Keep only very explicit user requests for assessment
-            if "start assessment" in context.user_input.lower() or "begin evaluation" in context.user_input.lower():
-                return True  # User explicitly requests assessment
+            # Allow explicit user requests for early assessment
+            if "assess" in context.user_input.lower() or "evaluation" in context.user_input.lower():
+                return True
 
         return False
         
@@ -828,9 +825,6 @@ CRITICAL INSTRUCTIONS:
         assistant_questions = [msg.content for msg in all_messages if msg.role == 'assistant']
 
         # Debug output to trace None values
-        print(f"[SUMMARY DEBUG] context.current_dimension: {context.current_dimension}")
-        print(f"[SUMMARY DEBUG] context.current_term: {context.current_term}")
-        print(f"[SUMMARY DEBUG] conversation ID: {context.conversation.id}")
 
         return {
             'completed_pnm': context.current_dimension,
@@ -958,27 +952,124 @@ Rate each piece of knowledge for relevance (1-5, where 5=highly relevant):
             log.warning(f"Self-RAG filtering error: {e}")
             return results[:3]
 
+    def _generate_keyword_queries(self, pnm: str, term: str, user_responses: List[str]) -> List[str]:
+        """Generate keyword-enhanced queries for better question bank matching"""
+        queries = []
+
+        # Extract key phrases from user responses
+        user_keywords = []
+        if user_responses:
+            # Simple keyword extraction from user responses
+            combined_responses = ' '.join(user_responses).lower()
+            common_terms = ['difficulty', 'pain', 'trouble', 'help', 'support', 'manage', 'unable', 'struggle']
+            user_keywords = [word for word in common_terms if word in combined_responses]
+
+        # Generate targeted queries
+        base_terms = [term.lower(), pnm.lower()]
+
+        # Query 1: Direct term + ALS
+        queries.append(f"ALS {term}")
+
+        # Query 2: PNM dimension + specific issues
+        if user_keywords:
+            queries.append(f"ALS {pnm} {' '.join(user_keywords[:2])}")
+
+        # Query 3: Symptom-focused query
+        symptom_terms = {
+            'breathing': ['breathe', 'respiratory', 'oxygen'],
+            'swallowing': ['swallow', 'eating', 'choking'],
+            'mobility': ['move', 'walk', 'transfer'],
+            'communication': ['speak', 'voice', 'talk'],
+            'cognitive': ['memory', 'thinking', 'concentration']
+        }
+
+        for symptom, related in symptom_terms.items():
+            if symptom in term.lower():
+                queries.append(f"ALS {symptom} {related[0]}")
+                break
+
+        return queries[:3]  # Limit to 3 keyword queries
+
+    def _deduplicate_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Remove duplicate results based on text similarity"""
+        if not results:
+            return []
+
+        unique_results = []
+        seen_texts = set()
+
+        for result in results:
+            text = result.get('text', '').strip()
+            if not text:
+                continue
+
+            # Simple deduplication based on first 100 characters
+            text_key = text[:100].lower()
+            if text_key not in seen_texts:
+                seen_texts.add(text_key)
+                unique_results.append(result)
+
+        return unique_results
+
     def _retrieve_uc1_support_knowledge(self, pnm: str, term: str, avg_score: float, user_responses: List[str]) -> List[Dict[str, Any]]:
-        """UC1-specific Hybrid retrieval + Self-RAG for scored assessment knowledge"""
+        """Enhanced UC1 Hybrid retrieval: Multi-strategy + Question Bank + Self-RAG"""
         try:
-            # Step 1: Hybrid Retrieval - get from both indexes
-            # Include score context for more targeted retrieval
+            # Step 1: Generate enhanced queries with keyword expansion
             score_context = "low difficulty" if avg_score <= 2 else "moderate difficulty" if avg_score <= 4 else "high difficulty"
+
+            # Primary semantic query
             main_query = f"ALS {pnm} {term} {score_context} management support strategies"
 
-            # Vector search from background knowledge
-            bg_results = self.rag.search(main_query, top_k=5, index_kind="background")
-            # Vector search from question bank
-            q_results = self.rag.search(main_query, top_k=3, index_kind="question")
+            # Keyword-enhanced queries for better question bank matching
+            keyword_queries = self._generate_keyword_queries(pnm, term, user_responses)
 
-            # Step 2: Apply hybrid fusion using existing rerank utilities
-            fused_results = self._apply_hybrid_fusion(bg_results, q_results)
+            print(f"[UC1_HYBRID] Main query: {main_query}")
+            print(f"[UC1_HYBRID] Keyword queries: {keyword_queries}")
 
-            # Step 3: Self-RAG - AI judges relevance based on UC1 scored responses
-            return self._self_rag_filter_uc1(fused_results, pnm, term, avg_score, user_responses)
+            # Step 2: Multi-strategy retrieval
+            all_results = []
+
+            # A) Semantic search from background knowledge
+            try:
+                bg_results = self.rag.search(main_query, top_k=4, index_kind="background")
+                all_results.extend(bg_results)
+                print(f"[UC1_HYBRID] Background results: {len(bg_results)}")
+            except Exception as e:
+                print(f"[UC1_HYBRID] Background search failed: {e}")
+
+            # B) Question bank search with multiple strategies
+            try:
+                # Semantic search
+                q_semantic = self.rag.search(main_query, top_k=2, index_kind="question")
+                all_results.extend(q_semantic)
+
+                # Keyword-based searches
+                for kw_query in keyword_queries[:2]:  # Limit to avoid too many API calls
+                    q_keyword = self.rag.search(kw_query, top_k=2, index_kind="question")
+                    all_results.extend(q_keyword)
+
+                print(f"[UC1_HYBRID] Question bank results: {len(q_semantic)} semantic + {len(keyword_queries)*2} keyword")
+            except Exception as e:
+                print(f"[UC1_HYBRID] Question bank search failed: {e}")
+
+            # Step 3: Deduplicate and apply hybrid fusion
+            if all_results:
+                # Remove duplicates based on text similarity
+                unique_results = self._deduplicate_results(all_results)
+                print(f"[UC1_HYBRID] After deduplication: {len(unique_results)} results")
+
+                # Step 4: Self-RAG quality filtering
+                filtered_results = self._self_rag_filter_uc1(unique_results, pnm, term, avg_score, user_responses)
+                print(f"[UC1_HYBRID] After Self-RAG filtering: {len(filtered_results)} results")
+                return filtered_results
+            else:
+                print(f"[UC1_HYBRID] No results found, using simple fallback")
+                # Enhanced fallback with direct term matching
+                fallback_query = f"ALS {term} support help management"
+                return self.rag.search(fallback_query, top_k=3, index_kind="background")
 
         except Exception as e:
-            log.warning(f"UC1 Hybrid+Self-RAG retrieval error: {e}")
+            log.warning(f"UC1 Enhanced Hybrid retrieval error: {e}")
             # Simple fallback
             query = f"ALS {pnm} {term} support"
             return self.rag.search(query, top_k=3, index_kind="background")
@@ -1211,6 +1302,7 @@ def create_conversation_context(
     
     # Count user messages for turn tracking
     turn_count = sum(1 for msg in conversation.messages if msg.role == 'user')
+    print(f"[TURN_DEBUG] Total messages: {len(conversation.messages)}, User messages: {turn_count}")
 
     # Debug: Log conversation state for new conversations
     if turn_count == 1:  # First user message in this conversation
@@ -1236,11 +1328,12 @@ def create_conversation_context(
 def convert_to_conversation_response(dialogue_response: DialogueResponse) -> Dict[str, Any]:
     """
     Convert DialogueResponse to the format expected by chat_unified.py.
-    
+
     This ensures compatibility with the existing API response structure.
     """
     response_data = {
         "question_text": dialogue_response.content,
+        "response": dialogue_response.content,  # Add response field for test compatibility
         "question_type": ("dialogue" if dialogue_response.response_type == ResponseType.CHAT
                          else "assessment" if dialogue_response.response_type == ResponseType.QUESTION
                          else "summary"),
@@ -1395,8 +1488,10 @@ Respond with JSON:
             try:
                 import json
                 analysis = json.loads(response)
+                print(f"[AI_DEBUG] AI analysis successful: {analysis}")
                 return analysis
-            except:
+            except Exception as e:
+                print(f"[AI_DEBUG] AI analysis JSON parsing failed: {e}, response: {response[:200]}")
                 # Fallback if JSON parsing fails
                 return {
                     "symptoms_detected": [],
@@ -1408,6 +1503,7 @@ Respond with JSON:
                 }
 
         except Exception as e:
+            print(f"[AI_DEBUG] AI analysis completely failed: {e}")
             return {
                 "symptoms_detected": [],
                 "symptom_count": 0,
@@ -1419,6 +1515,7 @@ Respond with JSON:
 
     async def _should_trigger_assessment(self, context: ConversationContext) -> bool:
         """AI-powered assessment trigger using intelligent symptom analysis"""
+        print(f"[TRIGGER_DEBUG] _should_trigger_assessment called: turn_count={context.turn_count}")
 
         # Use AI to analyze symptoms and readiness
         ai_analysis = await self._ai_analyze_symptoms_and_readiness(context)
@@ -1428,94 +1525,151 @@ Respond with JSON:
 
         # Decision logic based on AI analysis
         if ai_analysis.get("ready_for_assessment", False):
-            reason = ai_analysis.get('readiness_reason', 'AI analysis')
+            print(f"[TRIGGER_DEBUG] AI analysis says ready: {ai_analysis}")
             return True
 
-        # Fixed turn count trigger (no keyword matching as requested)
-        if context.turn_count >= 8:  # Match the main flow threshold
+        # TEMPORARY: Force trigger for testing other functions - DISABLED
+        # if True:  # Always trigger for testing
+        #     print(f"[TRIGGER_DEBUG] FORCED trigger for testing: turn_count={context.turn_count}")
+        #     return True
+
+        # Unified turn count trigger: reduced threshold for better UX
+        if context.turn_count >= 3:
+            print(f"[TRIGGER_DEBUG] Turn count trigger activated: {context.turn_count} >= 3")
             return True
 
+        print(f"[TRIGGER_DEBUG] No trigger: turn_count={context.turn_count}, ai_ready={ai_analysis.get('ready_for_assessment', False)}")
         return False
 
     async def _ai_select_relevant_term(self, context: ConversationContext) -> tuple:
-        """Use AI keyword expansion + vector search for intelligent question selection"""
+        """Enhanced: AI analysis + hybrid retrieval for accurate question selection"""
         try:
-            # Step 1: AI keyword expansion
-            conversation_text = " ".join([msg.content for msg in context.conversation.messages[-3:] if msg.role == 'user'])
-            current_input = context.user_input
+            # Step 1: Get all user inputs and extract conversation themes
+            user_messages = [msg.content for msg in context.conversation.messages if msg.role == 'user']
+            conversation_history = " ".join(user_messages)
 
-            keyword_prompt = f"""Based on this ALS patient conversation, expand key medical and emotional concepts for question bank search:
+            print(f"[HYBRID_DEBUG] Starting hybrid question selection for conversation: {conversation_history[:100]}...")
 
-Conversation: "{conversation_text}"
-Current message: "{current_input}"
+            # Step 2: Generate search keywords from conversation
+            keywords = self._generate_keyword_queries("conversation_analysis", "question_selection", user_messages)
+            print(f"[HYBRID_DEBUG] Generated keywords: {keywords}")
 
-Generate expanded search keywords focusing on:
-- Medical symptoms and conditions
-- Emotional states and concerns
-- Daily living activities
-- Support needs and challenges
+            # Step 3: Use hybrid retrieval to find most relevant questions from question bank
+            from app.vendors.ibm_cloud import RAGQueryClient
+            try:
+                rag_client = RAGQueryClient()
 
-Respond with expanded keywords (comma-separated):"""
+                # Search in question bank index using conversation keywords
+                all_results = []
+                for keyword in keywords[:3]:  # Use top 3 keywords
+                    try:
+                        q_results = rag_client.search(keyword, top_k=3, index_kind="question")
+                        all_results.extend(q_results)
+                        print(f"[HYBRID_DEBUG] Keyword '{keyword}' found {len(q_results)} question matches")
+                    except Exception as e:
+                        print(f"[HYBRID_DEBUG] Keyword search failed for '{keyword}': {e}")
+                        continue
 
-            expanded_keywords = self.llm.generate_text(keyword_prompt)
-            search_query = f"{current_input} {expanded_keywords}".strip()
+                # Deduplicate and get best matches
+                if all_results:
+                    unique_results = self._deduplicate_and_filter_results(all_results, max_results=5)
+                    print(f"[HYBRID_DEBUG] Found {len(unique_results)} unique question matches")
 
+                    # Extract question text and match with question bank
+                    if unique_results:
+                        best_match_text = unique_results[0].get('text', '')
+                        print(f"[HYBRID_DEBUG] Best match text: {best_match_text[:100]}...")
 
-            # Step 2: Vector search with expanded keywords
-            rag_client = RAGQueryClient()
-            search_results = rag_client.search(search_query, top_k=5, index_kind="question")
-
-            if search_results:
-
-                # DEBUG: Print all search result metadata to understand format
-                for i, result in enumerate(search_results):
-                    pass  # Debug print removed
-
-                # Get asked questions from database (not strict avoidance)
-                asked_questions = context.conversation.assessment_state.get('asked_questions', [])
-
-                # Step 3: Find best matching question from vector results
-                for result in search_results:
-                    # Vector search filename is question ID
-                    question_id = result.get('metadata', {}).get('filename') or result.get('metadata', {}).get('id')
-
-                    if question_id:
                         # Find corresponding question in question bank
                         all_questions = self.question_bank.items()
                         for question in all_questions:
-                            if question.id == question_id:
-                                # Prefer unasked questions, but don't strictly require it
-                                if question_id not in asked_questions:
-                                    return question.pnm, question.term
-                                else:
-                                    # Question was asked before, but might still be relevant
-                                    return question.pnm, question.term
+                            # Check if question text matches or is similar
+                            if (best_match_text.lower() in question.main.lower() or
+                                question.main.lower() in best_match_text.lower() or
+                                any(keyword.lower() in question.main.lower() for keyword in keywords[:2])):
+                                print(f"[HYBRID_DEBUG] Matched with question bank: {question.pnm}/{question.term}")
+                                return question.pnm, question.term
 
-            # Fallback: use first unasked question from question bank
+            except Exception as e:
+                print(f"[HYBRID_DEBUG] Hybrid retrieval failed: {e}")
+
+            # Step 4: Fallback to AI analysis if hybrid retrieval fails
+            theme_prompt = f"""Analyze this ALS patient conversation to find the most relevant assessment topic.
+
+User conversation: "{conversation_history}"
+
+Available topics:
+Physiological: breathing, swallowing, mobility, sleep, nutrition, pain, fatigue
+Safety: accessibility, equipment, technology, decision-making, emergency
+Love & Belonging: relationships, social activities, communication, support
+Esteem: independence, dignity, accomplishment, contribution, confidence
+Self-Actualisation: purpose, meaning, personal growth, goals
+Cognitive: memory, problem-solving, information processing, concentration
+Aesthetic: beauty, creativity, environmental enjoyment, comfort
+Transcendence: spirituality, legacy, connection, values
+
+Respond with only: "DIMENSION,TERM"
+Example: "Physiological,breathing"
+"""
+
+            ai_response = self.llm.generate_text(theme_prompt).strip()
+            print(f"[HYBRID_DEBUG] AI fallback response: '{ai_response}'")
+
+            # Step 5: Parse and match question bank directly
+            if "," in ai_response:
+                suggested_pnm, suggested_term = ai_response.split(",", 1)
+                suggested_pnm = suggested_pnm.strip()
+                suggested_term = suggested_term.strip()
+                print(f"[HYBRID_DEBUG] Parsed PNM: '{suggested_pnm}', Term: '{suggested_term}'")
+
+                # Find questions in question bank
+                all_questions = self.question_bank.items()
+
+                # Exact match first
+                for question in all_questions:
+                    if (question.pnm.lower() == suggested_pnm.lower() and
+                        suggested_term.lower() in question.term.lower()):
+                        print(f"[HYBRID_DEBUG] Found exact match: {question.pnm}/{question.term}")
+                        return question.pnm, question.term
+
+                # PNM dimension match
+                for question in all_questions:
+                    if question.pnm.lower() == suggested_pnm.lower():
+                        print(f"[HYBRID_DEBUG] Found PNM match: {question.pnm}/{question.term}")
+                        return question.pnm, question.term
+
+            # Step 6: Smart fallback - find breathing-related question if user mentioned breathing
+            if any(word in conversation_history.lower() for word in ['breath', 'breathing', 'respiratory', 'air', 'oxygen']):
+                all_questions = self.question_bank.items()
+                for question in all_questions:
+                    if 'breath' in question.term.lower() or 'breath' in question.main.lower():
+                        print(f"[HYBRID_DEBUG] Smart fallback to breathing question: {question.pnm}/{question.term}")
+                        return question.pnm, question.term
+
+            # Final fallback
             all_questions = self.question_bank.items()
-            asked_questions = context.conversation.assessment_state.get('asked_questions', [])
-
-            for question in all_questions:
-                if question.id not in asked_questions:
-                    return question.pnm, question.term
-
-            # Ultimate fallback - use first available question
             if all_questions:
+                # Try to find a Physiological question instead of the first question
+                for question in all_questions:
+                    if question.pnm.lower() == 'physiological':
+                        print(f"[HYBRID_DEBUG] Final fallback to Physiological: {question.pnm}/{question.term}")
+                        return question.pnm, question.term
+
+                # Last resort
                 first_question = all_questions[0]
+                print(f"[HYBRID_DEBUG] Last resort fallback: {first_question.pnm}/{first_question.term}")
                 return first_question.pnm, first_question.term
 
         except Exception as e:
-
-            # Safe fallback: use first available question from question bank
+            print(f"[HYBRID_DEBUG] Critical error in question selection: {e}")
+            # Safe fallback
             try:
                 all_questions = self.question_bank.items()
                 if all_questions:
-                    first_question = all_questions[0]
-                    return first_question.pnm, first_question.term
+                    return all_questions[0].pnm, all_questions[0].term
             except:
                 pass
 
-        # Last resort - but with real question bank term
         return "Physiological", "Mobility and transfers"
 
     async def _process_uc1_assessment_response(self, context: ConversationContext):
@@ -1525,26 +1679,28 @@ Respond with expanded keywords (comma-separated):"""
             question_context = context.conversation.assessment_state.get('question_context', {})
             current_question_id = question_context.get('question_id')
 
+            # Also check for followup question ID
+            followup_question_id = context.conversation.assessment_state.get('followup_question_id')
+            if followup_question_id and not current_question_id:
+                current_question_id = followup_question_id
+
+            # Skip scoring for follow up questions
+            if current_question_id and "_followup_" in current_question_id:
+                return
+
             if current_question_id:
-                # Mark this question as asked to avoid repetition
-                asked_questions = context.conversation.assessment_state.get('asked_questions', [])
-                if current_question_id not in asked_questions:
-                    asked_questions.append(current_question_id)
-                    context.conversation.assessment_state['asked_questions'] = asked_questions
+                # Store current question ID for tracking (no asked_questions list needed)
+                context.conversation.assessment_state['current_question_id'] = current_question_id
 
                 # Get current PNM/term from assessment state
                 current_pnm = context.conversation.assessment_state.get('current_pnm', 'Physiological')
                 current_term = context.conversation.assessment_state.get('current_term', 'General')
 
                 # Try to get score from option first, then use AI scoring
-                print(f"[SCORING DEBUG] User input: '{context.user_input}'")
-                print(f"[SCORING DEBUG] Available options: {question_context.get('options', [])}")
 
                 score = self._extract_option_score_uc1(context.user_input, question_context)
-                print(f"[SCORING DEBUG] Option score result: {score}")
 
                 if score is None:
-                    print(f"[SCORING DEBUG] No option match, triggering AI scoring")
                     # Use AI scoring for free text response - access ai_scorer from main manager
                     try:
                         # Ensure ai_scorer is available
@@ -1559,14 +1715,12 @@ Respond with expanded keywords (comma-separated):"""
                             context.conversation.messages[-5:]  # Recent context
                         )
                         score = ai_score_result.score
-                        print(f"[SCORING DEBUG] AI scoring completed: {score}")
 
                     except Exception as e:
                         # Skip scoring instead of using hardcoded fallback as per user requirements
-                        print(f"[SCORING DEBUG] AI scoring failed: {e}")
                         score = None
                 else:
-                    print(f"[SCORING DEBUG] Option scoring successful: {score}")
+                    pass
 
                 # Store score in conversation_scores table (like UC2)
                 # Access storage through the main manager
@@ -1648,16 +1802,121 @@ Respond with expanded keywords (comma-separated):"""
         except Exception as e:
             return None
 
-    def _is_uc1_term_complete(self, context: ConversationContext) -> bool:
-        """Determine if UC1 assessment is complete (1 main question + follow up = 2 questions total)"""
+    async def _generate_followup_question(self, context: ConversationContext) -> DialogueResponse:
+        """Generate a follow up question based on the previous main question"""
         try:
-            # UC1: Complete after main question + follow up (2 questions total)
-            asked_questions = context.conversation.assessment_state.get('asked_questions', [])
-            total_questions_asked = len(asked_questions)
+            # Find the previous main question from conversation messages
+            assessment_messages = [msg for msg in context.conversation.messages
+                                 if msg.role == 'assistant' and msg.metadata and msg.metadata.get('response_type') == 'question']
 
-            # Complete after 2 questions: main question + follow up
+            if not assessment_messages:
+                # Fallback: no previous question found, generate main question
+                return await self._handle_assessment_phase(context)
+
+            # Get the last question's metadata
+            last_question_msg = assessment_messages[-1]
+            question_metadata = last_question_msg.metadata or {}
+            main_question_id = question_metadata.get('question_id')
+
+            if not main_question_id:
+                # Fallback: no question ID found
+                return await self._generate_uc1_summary(context)
+
+            # Find the main question item to get its follow ups
+            main_question_item = None
+            for item in self.qb.items():
+                if item.id == main_question_id:
+                    main_question_item = item
+                    break
+
+            if not main_question_item:
+                # Fallback: main question not found
+                return await self._generate_uc1_summary(context)
+
+            # Get follow up questions
+            followup_questions = []
+            if hasattr(main_question_item, 'followup_questions') and main_question_item.followup_questions:
+                followup_questions = main_question_item.followup_questions
+            elif hasattr(main_question_item, 'followups') and main_question_item.followups:
+                followup_questions = main_question_item.followups
+
+            if not followup_questions:
+                # No follow up questions, go to summary
+                return await self._generate_uc1_summary(context)
+
+            # Select first available follow up question
+            followup_data = followup_questions[0]
+
+            # Parse followup data
+            if isinstance(followup_data, str):
+                try:
+                    import json
+                    followup_data = json.loads(followup_data.replace("'", '"'))
+                except:
+                    # Fallback: invalid followup data
+                    return await self._generate_uc1_summary(context)
+
+            if not isinstance(followup_data, dict):
+                return await self._generate_uc1_summary(context)
+
+            # Extract question text and options
+            question_text = followup_data.get('question', followup_data.get('text', 'Follow-up question'))
+            followup_options = followup_data.get('options', [])
+
+            # Convert options to proper format
+            options = []
+            if followup_options:
+                for i, opt in enumerate(followup_options):
+                    if isinstance(opt, str):
+                        options.append({"value": str(i), "label": opt})
+                    elif isinstance(opt, dict):
+                        options.append({
+                            "value": opt.get("id", opt.get("value", str(i))),
+                            "label": opt.get("label", opt.get("text", str(opt)))
+                        })
+            else:
+                # For yesno type questions or empty options, provide default options
+                question_type = followup_data.get('type', 'text')
+                if question_type == 'yesno':
+                    options = [
+                        {"value": "yes", "label": "Yes"},
+                        {"value": "no", "label": "No"}
+                    ]
+                elif not options:
+                    # If no options provided, allow free text input
+                    options = []
+
+            # Store followup context in assessment state
+            context.conversation.assessment_state['followup_question_id'] = f"{main_question_id}_followup_1"
+            context.conversation.assessment_state['current_pnm'] = main_question_item.pnm
+            context.conversation.assessment_state['current_term'] = main_question_item.term
+
+            return DialogueResponse(
+                content=question_text,
+                response_type=ResponseType.QUESTION,
+                mode=ConversationMode.DIMENSION_ANALYSIS,
+                should_continue_dialogue=False,
+                current_pnm=main_question_item.pnm,
+                current_term=main_question_item.term,
+                options=options,
+                question_id=f"{main_question_id}_followup_1"
+            )
+
+        except Exception as e:
+            print(f"[UC1] Error generating followup question: {e}")
+            # Fallback to summary if followup generation fails
+            return await self._generate_uc1_summary(context)
+
+    def _is_uc1_term_complete(self, context: ConversationContext) -> bool:
+        """Determine if UC1 assessment is complete (1 main question + 1 follow up = complete)"""
+        try:
+            # UC1: Check if we have answered both main question and follow up
+            assessment_messages = [msg for msg in context.conversation.messages if msg.role == 'assistant' and msg.metadata and msg.metadata.get('response_type') == 'question']
+            total_questions_asked = len(assessment_messages)
+
+            # Check if we have both main question and follow up responses
+            # Complete after user answers follow up question (which means 2 questions have been asked)
             is_complete = total_questions_asked >= 2
-
 
             return is_complete
         except Exception as e:
@@ -1820,14 +2079,23 @@ Continue working with your healthcare team to address your concerns and optimize
 
             # Get current assessment progress
             assessment_state = context.conversation.assessment_state or {}
-            asked_questions = assessment_state.get('asked_questions', [])
 
-            # Use AI to select the most relevant term for assessment
-            selected_pnm, selected_term = await self._ai_select_relevant_term(context)
+            # UC1 Flow: main question -> follow up question -> summary
+            # Check what stage we're at
+            assessment_messages = [msg for msg in context.conversation.messages if msg.role == 'assistant' and msg.metadata and msg.metadata.get('response_type') == 'question']
+            question_count = len(assessment_messages)
 
-            # UC1 Single-term assessment: Focus on AI-selected term without strict asked_questions checking
-            # As per user feedback: "不需要查有没有问过,没问过也可以更新"
-            relevant_questions = []
+
+            if question_count == 0:
+                # First question: select main question with AI
+                selected_pnm, selected_term = await self._ai_select_relevant_term(context)
+                relevant_questions = []
+            elif question_count == 1:
+                # Second question: select follow up question from the previous main question
+                return await self._generate_followup_question(context)
+            else:
+                # Should not reach here as completion check should trigger summary
+                return await self._generate_uc1_summary(context)
 
             # Primary: Find questions for the AI-selected term
             for item in self.qb.items():
@@ -1845,12 +2113,8 @@ Continue working with your healthcare team to address your concerns and optimize
             max_questions_for_uc1 = 3
             available_questions = relevant_questions[:max_questions_for_uc1] if relevant_questions else []
 
-            # Select question prioritizing unasked ones, but allowing re-asking if needed for UC1 completion
-            question_item = None
-            for item in available_questions:
-                if item.id not in asked_questions:
-                    question_item = item
-                    break
+            # Select first available question (simplified - no asked_questions tracking)
+            question_item = available_questions[0] if available_questions else None
 
             # If all prioritized questions were asked, use first available for UC1 completion
             if not question_item and available_questions:

@@ -41,22 +41,25 @@ class ConversationResponse(BaseModel):
     question_type: str = "main"
     options: List[Dict[str, str]] = []
     allow_text_input: bool = True
-    
+
+    # AI response content (for test compatibility)
+    response: str = ""
+
     # Optional enhancement fields
     transition_message: Optional[str] = None
     info_cards: Optional[List[Dict[str, Any]]] = None
-    
+
     # State tracking
     current_pnm: Optional[str] = None
     current_term: Optional[str] = None
     fsm_state: Optional[str] = None
     turn_index: int = 0
-    
+
     # Dialogue mode control
     dialogue_mode: bool = False
     dialogue_content: Optional[str] = None
     should_continue_dialogue: bool = False
-    
+
     # Conversation metadata
     conversation_id: str
     next_state: str = "continue"
@@ -72,9 +75,12 @@ def _get_or_create_conversation(
     """Get existing conversation or create new one"""
 
     if conversation_id:
+        print(f"[STORAGE_DEBUG] Looking for conversation: {conversation_id}")
         doc = storage.get_conversation(conversation_id)
+        print(f"[STORAGE_DEBUG] Found conversation: {doc is not None}")
 
         if doc:
+            print(f"[STORAGE_DEBUG] Conversation has {len(doc.messages)} messages")
             if doc.user_id == user_id:
                 return doc
             else:
@@ -103,6 +109,7 @@ def _get_or_create_conversation(
                 pass
 
     # Create new conversation (only if no conversation_id provided or creation with ID failed)
+    print(f"[STORAGE_DEBUG] Creating new conversation - conversation_id was: {conversation_id}")
     conversation_type = "dimension" if dimension_focus else "general_chat"
     title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
 
@@ -112,6 +119,7 @@ def _get_or_create_conversation(
         dimension=dimension_focus,
         title=title
     )
+    print(f"[STORAGE_DEBUG] Created new conversation: {new_conv.id}")
     return new_conv
 
 async def _process_user_input(
@@ -139,6 +147,7 @@ async def _process_user_input(
         )
         # storage.add_message() returns updated conversation object with the new message
         conversation = storage.add_message(conversation.id, user_message)
+        print(f"[CONVERSATION_DEBUG] After adding user message: {len(conversation.messages)} messages")
     
     # ENHANCED DIALOGUE INTEGRATION
     try:
@@ -151,8 +160,9 @@ async def _process_user_input(
         print(f"[CHAT_UNIFIED] About to call process_conversation")
 
         # Process conversation with enhanced framework
+        print(f"[CHAT_UNIFIED] About to call process_conversation with context.turn_count={context.turn_count}")
         dialogue_response = await mode_manager.process_conversation(context)
-        print(f"[CHAT_UNIFIED] process_conversation completed")
+        print(f"[CHAT_UNIFIED] process_conversation completed, response_type={dialogue_response.response_type.value}")
         
         # Convert to expected API response format
         response_data = convert_to_conversation_response(dialogue_response)
@@ -398,6 +408,7 @@ async def conversation_endpoint(
             user_id=current_user["id"],
             dimension_focus=request.dimension_focus
         )
+        print(f"[CONVERSATION_DEBUG] Initial conversation: {len(conversation.messages)} messages")
         
         # Process user input and generate response
         response_data = await _process_user_input(
