@@ -871,7 +871,7 @@ CRITICAL INSTRUCTIONS:
             q_results = []
             for query in queries:
                 bg_results.extend(self.rag.search(query, top_k=2, index_kind="background"))
-                q_results.extend(self.rag.search(query, top_k=1, index_kind="question"))
+                q_results.extend(self.rag.search(query, top_k=3, index_kind="question"))
 
             # Step 2: Apply hybrid fusion using existing rerank utilities
             fused_results = self._apply_hybrid_fusion(bg_results, q_results)
@@ -953,42 +953,128 @@ Rate each piece of knowledge for relevance (1-5, where 5=highly relevant):
             return results[:3]
 
     def _generate_keyword_queries(self, pnm: str, term: str, user_responses: List[str]) -> List[str]:
-        """Generate keyword-enhanced queries for better question bank matching"""
-        queries = []
+        """AI-powered precise topic extraction for PNM and term matching"""
+        try:
+            # Get user conversation content
+            user_content = ' '.join(user_responses) if user_responses else ""
 
-        # Extract key phrases from user responses
-        user_keywords = []
-        if user_responses:
-            # Simple keyword extraction from user responses
-            combined_responses = ' '.join(user_responses).lower()
-            common_terms = ['difficulty', 'pain', 'trouble', 'help', 'support', 'manage', 'unable', 'struggle']
-            user_keywords = [word for word in common_terms if word in combined_responses]
+            # AI prompt for precise single keyword extraction with comprehensive vocabulary
+            prompt = f"""Extract the most relevant keyword from this ALS conversation. Choose from the detailed terms below.
 
-        # Generate targeted queries
-        base_terms = [term.lower(), pnm.lower()]
+Conversation: "{user_content}"
 
-        # Query 1: Direct term + ALS
-        queries.append(f"ALS {term}")
+Choose exactly 1 most relevant term from this comprehensive ALS assessment vocabulary:
 
-        # Query 2: PNM dimension + specific issues
-        if user_keywords:
-            queries.append(f"ALS {pnm} {' '.join(user_keywords[:2])}")
+PNM Physiological terms:
+- breathing, respiratory, ventilation, oxygen, airway
+- swallowing, dysphagia, choking, liquids, solids, eating, nutrition
+- mobility, walking, transfers, wheelchair, bed, chair, movement
+- pain, discomfort, cramping, stiffness, soreness, aching
+- fatigue, tiredness, energy, exhaustion, weakness, stamina
+- sleep, insomnia, rest, nighttime, dreams, awakening
+- medication, drugs, pills, treatment, side-effects, dosage
+- hygiene, bathing, washing, grooming, toileting, personal-care
+- temperature, hot, cold, sweating, shivering
 
-        # Query 3: Symptom-focused query
-        symptom_terms = {
-            'breathing': ['breathe', 'respiratory', 'oxygen'],
-            'swallowing': ['swallow', 'eating', 'choking'],
-            'mobility': ['move', 'walk', 'transfer'],
-            'communication': ['speak', 'voice', 'talk'],
-            'cognitive': ['memory', 'thinking', 'concentration']
-        }
+PNM Safety terms:
+- equipment, devices, machines, tools, aids, assistive
+- safety, secure, protection, danger, risk, hazard
+- emergency, urgent, crisis, help, rescue, alarm
+- medical, healthcare, doctors, nurses, hospital, clinic
+- financial, money, insurance, costs, expenses, bills
+- home, house, environment, accessibility, modifications
 
-        for symptom, related in symptom_terms.items():
-            if symptom in term.lower():
-                queries.append(f"ALS {symptom} {related[0]}")
-                break
+PNM Love & Belonging terms:
+- relationships, partner, spouse, marriage, romantic
+- family, children, parents, siblings, relatives, grandchildren
+- friends, social, community, neighbors, support-group
+- isolation, lonely, alone, disconnected, withdrawn
+- communication, talking, conversation, sharing, expressing
+- intimacy, closeness, affection, love, caring, bonding
 
-        return queries[:3]  # Limit to 3 keyword queries
+PNM Esteem terms:
+- independence, autonomous, self-reliant, capable, able
+- dignity, respect, worth, value, honor, pride
+- confidence, self-esteem, belief, trust, assurance
+- control, choice, decisions, power, authority, influence
+- accomplishments, achievements, success, goals, progress
+- identity, self-image, personality, character, individuality
+
+PNM Self-Actualisation terms:
+- growth, development, learning, improvement, advancement
+- goals, aspirations, dreams, ambitions, objectives, plans
+- creativity, artistic, expression, imagination, innovation
+- fulfillment, satisfaction, contentment, happiness, joy
+- purpose, meaning, significance, importance, contribution
+- potential, capabilities, talents, skills, abilities
+
+PNM Cognitive terms:
+- memory, remembering, forgetting, recall, recognition
+- concentration, focus, attention, distraction, clarity
+- learning, education, knowledge, understanding, comprehension
+- decisions, choices, judgment, reasoning, thinking
+- problems, solutions, planning, organization, strategy
+- confusion, clarity, awareness, perception, consciousness
+
+PNM Aesthetic terms:
+- environment, surroundings, atmosphere, setting, space
+- beauty, attractive, pleasant, appealing, lovely
+- comfort, cozy, peaceful, calming, soothing, relaxing
+- nature, outdoors, gardens, views, scenery, landscape
+
+PNM Transcendence terms:
+- spirituality, religion, faith, beliefs, prayer, worship
+- legacy, inheritance, contribution, impact, influence
+- meaning, purpose, significance, importance, value
+- connection, unity, belonging, oneness, harmony
+- hope, optimism, faith, trust, belief, confidence
+
+Respond with exactly 1 single word or short phrase only:"""
+
+            # Get AI response
+            ai_response = self.llm.generate_text(prompt).strip()
+
+            # Parse AI response to extract the single most relevant keyword
+            topic = ai_response.strip().lower()
+            # Clean up common prefixes/suffixes
+            topic = topic.replace('- ', '').replace('* ', '').replace('• ', '')
+
+            # Validate it's a single word or short phrase (max 2 words, max 15 characters)
+            if topic and len(topic.split()) <= 2 and len(topic) <= 15:
+                primary_keyword = topic
+            else:
+                # Use fallback if AI response is invalid
+                primary_keyword = "breathing"
+
+            print(f"[TOPIC_DEBUG] AI extracted keyword: {primary_keyword}")
+            return [primary_keyword]
+
+        except Exception as e:
+            print(f"[TOPIC_DEBUG] AI topic extraction failed: {e}")
+            return ["breathing"]  # Safe fallback
+
+    def _deduplicate_and_filter_results(self, results: List[Dict[str, Any]], max_results: int = 5) -> List[Dict[str, Any]]:
+        """Clean and deduplicate RAG search results"""
+        if not results:
+            return []
+
+        # Remove duplicates based on text content
+        seen_texts = set()
+        unique_results = []
+
+        for result in results:
+            text = result.get('text', '').strip()
+            if text and text not in seen_texts:
+                seen_texts.add(text)
+                unique_results.append(result)
+
+        # Sort by score if available and return top results
+        try:
+            unique_results.sort(key=lambda x: float(x.get('score', 0)), reverse=True)
+        except:
+            pass
+
+        return unique_results[:max_results]
 
     def _deduplicate_results(self, results: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Remove duplicate results based on text similarity"""
@@ -1446,99 +1532,17 @@ class UseCaseOneManager:
                 should_continue_dialogue=True
             )
 
-    async def _ai_analyze_symptoms_and_readiness(self, context: ConversationContext) -> dict:
-        """Use AI to analyze user symptoms and assess readiness for evaluation"""
-        try:
-            # Get conversation history
-            recent_messages = [msg.content for msg in context.conversation.messages[-5:] if msg.role == 'user']
-            conversation_text = " ".join(recent_messages)
-
-            prompt = f"""Analyze this ALS patient conversation to determine:
-1. Symptoms mentioned and their severity
-2. Readiness for structured assessment
-3. Most relevant PNM dimensions and terms
-
-Conversation: "{conversation_text}"
-Current message: "{context.user_input}"
-
-Available PNM dimensions:
-- Physiological: breathing, swallowing, mobility, sleep, nutrition
-- Safety: accessibility, equipment, technology, decision-making
-- Love & Belonging: relationships, social activities, communication
-- Esteem: independence, dignity, accomplishment, contribution
-- Self-Actualisation: purpose, meaning, personal growth
-- Cognitive: memory, problem-solving, information processing
-- Aesthetic: beauty, creativity, environmental enjoyment
-- Transcendence: spirituality, legacy, connection to larger purpose
-
-Respond with JSON:
-{{
-    "symptoms_detected": ["symptom1", "symptom2"],
-    "symptom_count": number,
-    "severity_level": "mild|moderate|severe",
-    "ready_for_assessment": boolean,
-    "readiness_reason": "explanation",
-    "suggested_pnm": "most relevant dimension",
-    "suggested_term": "most relevant specific term",
-    "confidence": 0.0-1.0
-}}"""
-
-            response = self.llm.generate_text(prompt)
-
-            try:
-                import json
-                analysis = json.loads(response)
-                print(f"[AI_DEBUG] AI analysis successful: {analysis}")
-                return analysis
-            except Exception as e:
-                print(f"[AI_DEBUG] AI analysis JSON parsing failed: {e}, response: {response[:200]}")
-                # Fallback if JSON parsing fails
-                return {
-                    "symptoms_detected": [],
-                    "symptom_count": 0,
-                    "ready_for_assessment": context.turn_count >= 4,
-                    "suggested_pnm": "Physiological",
-                    "suggested_term": "general",
-                    "confidence": 0.5
-                }
-
-        except Exception as e:
-            print(f"[AI_DEBUG] AI analysis completely failed: {e}")
-            return {
-                "symptoms_detected": [],
-                "symptom_count": 0,
-                "ready_for_assessment": context.turn_count >= 4,
-                "suggested_pnm": "Physiological",
-                "suggested_term": "general",
-                "confidence": 0.3
-            }
 
     async def _should_trigger_assessment(self, context: ConversationContext) -> bool:
-        """AI-powered assessment trigger using intelligent symptom analysis"""
+        """Simple fixed turn count trigger for UC1 assessment"""
         print(f"[TRIGGER_DEBUG] _should_trigger_assessment called: turn_count={context.turn_count}")
 
-        # Use AI to analyze symptoms and readiness
-        ai_analysis = await self._ai_analyze_symptoms_and_readiness(context)
-
-        # Store AI analysis for later use in assessment
-        context.ai_analysis = ai_analysis
-
-        # Decision logic based on AI analysis
-        if ai_analysis.get("ready_for_assessment", False):
-            print(f"[TRIGGER_DEBUG] AI analysis says ready: {ai_analysis}")
+        # Simple fixed turn count trigger - no AI judgment needed
+        if context.turn_count >= 4:
+            print(f"[TRIGGER_DEBUG] Fixed turn count trigger activated: {context.turn_count} >= 4")
             return True
 
-        # TEMPORARY: Force trigger for testing other functions - DISABLED
-        # if True:  # Always trigger for testing
-        #     print(f"[TRIGGER_DEBUG] FORCED trigger for testing: turn_count={context.turn_count}")
-        #     return True
-
-        # Unified turn count trigger: reduced threshold for better UX
-        if context.turn_count >= 3:
-            print(f"[TRIGGER_DEBUG] Turn count trigger activated: {context.turn_count} >= 3")
-            return True
-
-        print(f"[TRIGGER_DEBUG] No trigger: turn_count={context.turn_count}, ai_ready={ai_analysis.get('ready_for_assessment', False)}")
+        print(f"[TRIGGER_DEBUG] No trigger: turn_count={context.turn_count} < 4")
         return False
 
     async def _ai_select_relevant_term(self, context: ConversationContext) -> tuple:
@@ -1554,99 +1558,75 @@ Respond with JSON:
             keywords = self._generate_keyword_queries("conversation_analysis", "question_selection", user_messages)
             print(f"[HYBRID_DEBUG] Generated keywords: {keywords}")
 
-            # Step 3: Use hybrid retrieval to find most relevant questions from question bank
+            # Step 3: Simplified RAG search with top_k=3 for better options
             from app.vendors.ibm_cloud import RAGQueryClient
             try:
                 rag_client = RAGQueryClient()
 
-                # Search in question bank index using conversation keywords
-                all_results = []
-                for keyword in keywords[:3]:  # Use top 3 keywords
-                    try:
-                        q_results = rag_client.search(keyword, top_k=3, index_kind="question")
-                        all_results.extend(q_results)
-                        print(f"[HYBRID_DEBUG] Keyword '{keyword}' found {len(q_results)} question matches")
-                    except Exception as e:
-                        print(f"[HYBRID_DEBUG] Keyword search failed for '{keyword}': {e}")
-                        continue
+                # Use conversation history as primary search query
+                primary_query = conversation_history[-200:] if len(conversation_history) > 200 else conversation_history
 
-                # Deduplicate and get best matches
-                if all_results:
-                    unique_results = self._deduplicate_and_filter_results(all_results, max_results=5)
-                    print(f"[HYBRID_DEBUG] Found {len(unique_results)} unique question matches")
+                # Search with top_k=3 for better options
+                q_results = rag_client.search(primary_query, top_k=3, index_kind="question")
 
-                    # Extract question text and match with question bank
-                    if unique_results:
-                        best_match_text = unique_results[0].get('text', '')
-                        print(f"[HYBRID_DEBUG] Best match text: {best_match_text[:100]}...")
+                if q_results and len(q_results) > 0:
+                    best_result = q_results[0]
+                    best_match_text = best_result.get('text', '')
+                    print(f"[HYBRID_DEBUG] RAG top result: {best_match_text[:100]}...")
 
-                        # Find corresponding question in question bank
-                        all_questions = self.question_bank.items()
-                        for question in all_questions:
-                            # Check if question text matches or is similar
-                            if (best_match_text.lower() in question.main.lower() or
-                                question.main.lower() in best_match_text.lower() or
-                                any(keyword.lower() in question.main.lower() for keyword in keywords[:2])):
-                                print(f"[HYBRID_DEBUG] Matched with question bank: {question.pnm}/{question.term}")
-                                return question.pnm, question.term
+                    # Direct matching with question bank using your effective approach
+                    all_questions = self.question_bank.items()
+
+                    # Method 1: Exact text matching
+                    for question in all_questions:
+                        if (best_match_text.lower() in question.main.lower() or
+                            question.main.lower() in best_match_text.lower()):
+                            print(f"[HYBRID_DEBUG] Exact text match: {question.pnm}/{question.term}")
+                            return question.pnm, question.term
+
+                    # Method 2: Keyword overlap scoring
+                    match_words = set(best_match_text.lower().split())
+                    max_overlap = 0
+                    best_question = None
+
+                    for question in all_questions:
+                        question_words = set(question.main.lower().split())
+                        overlap = len(match_words & question_words)
+                        if overlap > max_overlap and overlap > 0:
+                            max_overlap = overlap
+                            best_question = question
+
+                    if best_question and max_overlap >= 2:
+                        print(f"[HYBRID_DEBUG] Keyword overlap match ({max_overlap}): {best_question.pnm}/{best_question.term}")
+                        return best_question.pnm, best_question.term
 
             except Exception as e:
-                print(f"[HYBRID_DEBUG] Hybrid retrieval failed: {e}")
+                print(f"[HYBRID_DEBUG] RAG search failed: {e}")
 
-            # Step 4: Fallback to AI analysis if hybrid retrieval fails
-            theme_prompt = f"""Analyze this ALS patient conversation to find the most relevant assessment topic.
+            # Step 4: Simplified keyword-based fallback
+            conv_lower = conversation_history.lower()
 
-User conversation: "{conversation_history}"
+            # Direct keyword matching based on conversation content
+            keyword_matches = {
+                'breath': ['breath', 'breathing', 'respiratory', 'air', 'oxygen'],
+                'swallow': ['swallow', 'eating', 'food', 'drink', 'chok'],
+                'mobility': ['move', 'walk', 'transfer', 'mobility', 'wheelchair'],
+                'communication': ['speak', 'talk', 'voice', 'communication'],
+                'fatigue': ['tired', 'fatigue', 'energy', 'exhausted'],
+                'pain': ['pain', 'hurt', 'ache', 'discomfort']
+            }
 
-Available topics:
-Physiological: breathing, swallowing, mobility, sleep, nutrition, pain, fatigue
-Safety: accessibility, equipment, technology, decision-making, emergency
-Love & Belonging: relationships, social activities, communication, support
-Esteem: independence, dignity, accomplishment, contribution, confidence
-Self-Actualisation: purpose, meaning, personal growth, goals
-Cognitive: memory, problem-solving, information processing, concentration
-Aesthetic: beauty, creativity, environmental enjoyment, comfort
-Transcendence: spirituality, legacy, connection, values
+            # Find best keyword match
+            for topic, keywords in keyword_matches.items():
+                if any(kw in conv_lower for kw in keywords):
+                    # Find question containing this topic
+                    all_questions = self.question_bank.items()
+                    for question in all_questions:
+                        if topic in question.term.lower() or topic in question.main.lower():
+                            print(f"[HYBRID_DEBUG] Keyword fallback match ({topic}): {question.pnm}/{question.term}")
+                            return question.pnm, question.term
 
-Respond with only: "DIMENSION,TERM"
-Example: "Physiological,breathing"
-"""
-
-            ai_response = self.llm.generate_text(theme_prompt).strip()
-            print(f"[HYBRID_DEBUG] AI fallback response: '{ai_response}'")
-
-            # Step 5: Parse and match question bank directly
-            if "," in ai_response:
-                suggested_pnm, suggested_term = ai_response.split(",", 1)
-                suggested_pnm = suggested_pnm.strip()
-                suggested_term = suggested_term.strip()
-                print(f"[HYBRID_DEBUG] Parsed PNM: '{suggested_pnm}', Term: '{suggested_term}'")
-
-                # Find questions in question bank
-                all_questions = self.question_bank.items()
-
-                # Exact match first
-                for question in all_questions:
-                    if (question.pnm.lower() == suggested_pnm.lower() and
-                        suggested_term.lower() in question.term.lower()):
-                        print(f"[HYBRID_DEBUG] Found exact match: {question.pnm}/{question.term}")
-                        return question.pnm, question.term
-
-                # PNM dimension match
-                for question in all_questions:
-                    if question.pnm.lower() == suggested_pnm.lower():
-                        print(f"[HYBRID_DEBUG] Found PNM match: {question.pnm}/{question.term}")
-                        return question.pnm, question.term
-
-            # Step 6: Smart fallback - find breathing-related question if user mentioned breathing
-            if any(word in conversation_history.lower() for word in ['breath', 'breathing', 'respiratory', 'air', 'oxygen']):
-                all_questions = self.question_bank.items()
-                for question in all_questions:
-                    if 'breath' in question.term.lower() or 'breath' in question.main.lower():
-                        print(f"[HYBRID_DEBUG] Smart fallback to breathing question: {question.pnm}/{question.term}")
-                        return question.pnm, question.term
-
-            # Final fallback
+            # Step 5: Intelligent final fallback
             all_questions = self.question_bank.items()
             if all_questions:
                 # Try to find a Physiological question instead of the first question
@@ -1671,6 +1651,192 @@ Example: "Physiological,breathing"
                 pass
 
         return "Physiological", "Mobility and transfers"
+
+    async def _retrieve_question_from_index(self, context: ConversationContext):
+        """New improved flow: RAG retrieve multiple candidates → AI select best question"""
+        try:
+            # Step 1: Generate keywords for search
+            user_messages = [msg.content for msg in context.conversation.messages if msg.role == 'user']
+            keywords = self.response_generator._generate_keyword_queries("", "", user_messages)
+            conversation_history = " ".join(user_messages)
+
+            print(f"[NEW_RETRIEVE] Keywords: {keywords}")
+            print(f"[NEW_RETRIEVE] Query: {conversation_history[:100]}...")
+
+            # Step 2: RAG search to get multiple candidates
+            candidate_questions = await self._search_question_candidates(conversation_history, keywords)
+
+            if not candidate_questions:
+                print(f"[NEW_RETRIEVE] No candidates found")
+                return None
+
+            print(f"[NEW_RETRIEVE] Found {len(candidate_questions)} candidates")
+
+            # Step 3: AI select the most appropriate question
+            selected_question_text = await self._ai_select_best_question(
+                candidate_questions, conversation_history, context.conversation.messages
+            )
+
+            if not selected_question_text:
+                print(f"[NEW_RETRIEVE] AI selection failed")
+                return None
+
+            # Step 4: Match selected question with question bank item
+            matched_item = self._match_question_to_item(selected_question_text)
+
+            if matched_item:
+                print(f"[NEW_RETRIEVE] Selected: {matched_item.pnm}/{matched_item.term}")
+                return matched_item
+
+            print(f"[NEW_RETRIEVE] No match found for selected question")
+            return None
+
+        except Exception as e:
+            print(f"[NEW_RETRIEVE] Critical error: {e}")
+            return None
+
+    async def _search_question_candidates(self, query: str, keywords: List[str]) -> List[str]:
+        """Search for multiple question candidates using RAG"""
+        try:
+            from app.vendors.ibm_cloud import RAGQueryClient
+            rag_client = RAGQueryClient()
+
+            # Search queries: conversation + keywords
+            search_queries = [
+                query[-200:] if len(query) > 200 else query,
+                f"ALS {' '.join(keywords[:3])}" if keywords else "ALS assessment"
+            ]
+
+            all_candidates = []
+            for search_query in search_queries:
+                try:
+                    q_results = rag_client.search(search_query, top_k=3, index_kind="question")
+
+                    if q_results:
+                        for result in q_results:
+                            question_text = result.get('text', '').strip()
+                            if question_text and question_text not in all_candidates:
+                                all_candidates.append(question_text)
+
+                except Exception as e:
+                    print(f"[SEARCH_CANDIDATES] Search failed for '{search_query[:50]}': {e}")
+                    continue
+
+            print(f"[SEARCH_CANDIDATES] Found {len(all_candidates)} unique candidates")
+            return all_candidates[:10]  # Limit to top 10 candidates
+
+        except Exception as e:
+            print(f"[SEARCH_CANDIDATES] Critical error: {e}")
+            return []
+
+    async def _ai_select_best_question(self, candidates: List[str], conversation: str, messages: List) -> str:
+        """AI selects the most appropriate question from candidates"""
+        try:
+            if not candidates:
+                return ""
+
+            # Format dialogue history
+            dialogue_history = []
+            for msg in messages[-6:]:  # Last 6 messages for context
+                dialogue_history.append({
+                    "role": msg.role,
+                    "content": msg.content
+                })
+
+            # AI selection prompt
+            prompt = f"""You are an ALS expert assistant. Select the most relevant and helpful question to ask next.
+
+Patient's conversation:
+{conversation}
+
+Dialogue history:
+{dialogue_history}
+
+Candidate questions:
+{chr(10).join([f"{i+1}. {q}" for i, q in enumerate(candidates)])}
+
+Instructions:
+- Choose the question that best addresses the patient's current concerns
+- Focus on quality of life assessment
+- Do NOT ask the same question again
+- If none are suitable, select the most relevant one
+
+Output ONLY the complete question text (no numbers, no explanations):"""
+
+            # Use existing LLM
+            ai_response = self.llm.generate_text(prompt).strip()
+
+            # Clean up response
+            selected = ai_response.replace("1.", "").replace("2.", "").replace("3.", "").strip()
+
+            print(f"[AI_SELECT_DEBUG] Raw AI response: {ai_response[:100]}...")
+            print(f"[AI_SELECT_DEBUG] Cleaned selection: {selected[:100]}...")
+            print(f"[AI_SELECT_DEBUG] Candidates: {[c[:50] + '...' for c in candidates[:3]]}")
+
+            # Verify selection is from candidates
+            for candidate in candidates:
+                if candidate.lower() in selected.lower() or selected.lower() in candidate.lower():
+                    print(f"[AI_SELECT] Chose: {candidate[:80]}...")
+                    return candidate
+
+            # Fallback to first candidate if no match
+            print(f"[AI_SELECT] No match, using first candidate")
+            return candidates[0] if candidates else ""
+
+        except Exception as e:
+            print(f"[AI_SELECT] Error: {e}")
+            return candidates[0] if candidates else ""
+
+    def _match_question_to_item(self, question_text: str):
+        """Match selected question text to question bank item"""
+        try:
+            if not question_text:
+                return None
+
+            question_lower = question_text.lower()
+
+            # Try exact or partial matching with question bank items
+            best_match = None
+            best_score = 0
+
+            for item in self.qb.items():
+                item_text = getattr(item, 'main', '') or getattr(item, 'question', '')
+                if not item_text:
+                    continue
+
+                item_lower = item_text.lower()
+
+                # Check for exact match
+                if question_lower == item_lower:
+                    print(f"[MATCH] Exact match: {item.id}")
+                    return item
+
+                # Check for partial match (question contains item text or vice versa)
+                if question_lower in item_lower or item_lower in question_lower:
+                    score = len(set(question_lower.split()) & set(item_lower.split()))
+                    if score > best_score:
+                        best_score = score
+                        best_match = item
+
+                # Check for word overlap
+                question_words = set(question_lower.split())
+                item_words = set(item_lower.split())
+                overlap = len(question_words & item_words)
+
+                if overlap >= 4 and overlap > best_score:  # At least 4 word overlap
+                    best_score = overlap
+                    best_match = item
+
+            if best_match:
+                print(f"[MATCH] Best match (score {best_score}): {best_match.id}")
+                return best_match
+
+            print(f"[MATCH] No good match found")
+            return None
+
+        except Exception as e:
+            print(f"[MATCH] Error: {e}")
+            return None
 
     async def _process_uc1_assessment_response(self, context: ConversationContext):
         """Process user's UC1 assessment response and record it"""
@@ -2087,9 +2253,8 @@ Continue working with your healthcare team to address your concerns and optimize
 
 
             if question_count == 0:
-                # First question: select main question with AI
-                selected_pnm, selected_term = await self._ai_select_relevant_term(context)
-                relevant_questions = []
+                # First question: directly retrieve from question bank index using AI topics
+                question_item = await self._retrieve_question_from_index(context)
             elif question_count == 1:
                 # Second question: select follow up question from the previous main question
                 return await self._generate_followup_question(context)
@@ -2097,34 +2262,22 @@ Continue working with your healthcare team to address your concerns and optimize
                 # Should not reach here as completion check should trigger summary
                 return await self._generate_uc1_summary(context)
 
-            # Primary: Find questions for the AI-selected term
-            for item in self.qb.items():
-                if (item.pnm == selected_pnm and item.term == selected_term):
-                    relevant_questions.append(item)
-
-            # Secondary: If no specific term questions, use any questions in the PNM dimension
-            if not relevant_questions:
-                for item in self.qb.items():
-                    if item.pnm == selected_pnm:
-                        relevant_questions.append(item)
-
-            # UC1 strategy: Select the first few questions from relevant set (up to 3 for single-term assessment)
-            # This allows completing term assessment without exhaustive questioning
-            max_questions_for_uc1 = 3
-            available_questions = relevant_questions[:max_questions_for_uc1] if relevant_questions else []
-
-            # Select first available question (simplified - no asked_questions tracking)
-            question_item = available_questions[0] if available_questions else None
-
-            # If all prioritized questions were asked, use first available for UC1 completion
-            if not question_item and available_questions:
-                question_item = available_questions[0]
-
-            # Final fallback: any question from question bank
+            # If direct retrieve failed, fallback to breathing-related question
             if not question_item:
+                # Look for breathing-related questions first
                 for item in self.qb.items():
-                    question_item = item
-                    break
+                    if (item.pnm.lower() == 'physiological' and
+                        item.term.lower() == 'breathing'):
+                        question_item = item
+                        print(f"[FALLBACK] Using breathing question: {item.id}")
+                        break
+
+                # If no breathing question found, use first question as final fallback
+                if not question_item:
+                    for item in self.qb.items():
+                        question_item = item
+                        print(f"[FALLBACK] Using first question: {item.id}")
+                        break
 
             if question_item:
 

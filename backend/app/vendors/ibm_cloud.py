@@ -123,25 +123,25 @@ class RAGQueryClient:
             except Exception as e:
                 raise e
         
-        # Try project first
-        if proj:
-            try:
-                cfg["projectId"] = proj
-                res = safe_run_query(cfg)
-                # Check if vector index was not found in project
-                if (res.get("output", "").find("does_not_exist") != -1 or 
-                    res.get("output", "").find("Failed to retrieve vector index asset") != -1):
-                    res = None  # Reset to try with space
-            except Exception as e:
-                last_error = e
-                res = None
-        
-        # Try space if project failed
-        if res is None and space:
+        # Try space first (vector indexes are associated with spaces, not projects)
+        if space:
             try:
                 cfg = {"vectorIndexId": vec_id, "spaceId": space, "top_k": top_k}
                 res = safe_run_query(cfg)
+                print(f"[IBM_SUCCESS] Space query successful for index {vec_id[:8]}...")
             except Exception as e:
+                print(f"[IBM_SPACE_ERROR] Space query failed: {e}")
+                last_error = e
+                res = None
+
+        # Try project as fallback (though vector indexes are typically space-based)
+        if res is None and proj:
+            try:
+                cfg = {"vectorIndexId": vec_id, "projectId": proj, "top_k": top_k}
+                res = safe_run_query(cfg)
+                print(f"[IBM_FALLBACK] Project query successful for index {vec_id[:8]}...")
+            except Exception as e:
+                print(f"[IBM_PROJECT_ERROR] Project query failed: {e}")
                 last_error = e
                 res = None
         
@@ -177,9 +177,26 @@ class RAGQueryClient:
         elif res.get("output"):
             output_text = res["output"]
             if isinstance(output_text, str) and len(output_text.strip()) > 0:
+                # Check for error messages in output
+                error_indicators = [
+                    "Error: Failure querying documents",
+                    "Failed to retrieve",
+                    "does_not_exist",
+                    "Unexpected resp",
+                    "error:",
+                    "Error:",
+                    "failed"
+                ]
+
+                output_lower = output_text.lower()
+                if any(indicator.lower() in output_lower for indicator in error_indicators):
+                    # This is an error message, not valid content
+                    print(f"[RAG_ERROR] Watson API returned error: {output_text[:100]}...")
+                    return []
+
                 # Clean the output text
                 cleaned_text = output_text.encode('utf-8', errors='ignore').decode('utf-8')
-                
+
                 # Try to split the output into chunks if it contains multiple results
                 # This is a heuristic approach since we don't know the exact format
                 chunks = []
@@ -188,10 +205,10 @@ class RAGQueryClient:
                     potential_splits = cleaned_text.split('\n\n')
                     if len(potential_splits) > 1:
                         chunks = [chunk.strip() for chunk in potential_splits if len(chunk.strip()) > 50]
-                
+
                 if not chunks:
                     chunks = [cleaned_text.strip()]
-                
+
                 # Create documents from chunks
                 for i, chunk in enumerate(chunks[:top_k]):  # Respect top_k limit
                     out.append({
