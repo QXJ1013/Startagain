@@ -9,25 +9,28 @@ services:
     ports:
       - "8000:8000"
     environment:
-      - WATSONX_URL=${WATSONX_URL}
+      - WATSONX_URL=${WATSONX_URL:-https://eu-gb.ml.cloud.ibm.com}
       - WATSONX_APIKEY=${WATSONX_APIKEY}
-      - PROJECT_ID=${PROJECT_ID:-367019f9-e126-4a8d-b054-26670084d62d}
+      - PROJECT_ID=${PROJECT_ID:-0989d54e-bebc-4a33-b6bd-c3331cdef4d9}
       - SPACE_ID=${SPACE_ID:-367019f9-e126-4a8d-b054-26670084d62d}
-      - VECTOR_INDEX_ID=${VECTOR_INDEX_ID:-8ef82ae7-0818-4821-8d0f-f6a7ca3234d8}
       - BACKGROUND_VECTOR_INDEX_ID=${BACKGROUND_VECTOR_INDEX_ID:-26ccfa50-3b7f-4ec3-b5f5-81a6d3b7f238}
       - QUESTION_VECTOR_INDEX_ID=${QUESTION_VECTOR_INDEX_ID:-6e39dc9f-b3f5-4403-a530-7dbc226fa3e1}
+      - VECTOR_INDEX_ID=${VECTOR_INDEX_ID:-8ef82ae7-0818-4821-8d0f-f6a7ca3234d8}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:-als_secret_key_2024}
       - DB_PATH=/app/app/data/als.db
-      - SCHEMA_PATH=/app/app/data/schema.sql
-      - QUESTION_BANK_PATH=/app/app/data/pnm_questions_v3_final.json
+      - DB_SCHEMA_PATH=/app/app/data/schema.sql
+      - ENABLE_SEMANTIC_BACKOFF=${ENABLE_SEMANTIC_BACKOFF:-true}
+      - BM25_ENABLED=${BM25_ENABLED:-true}
+      - ENVIRONMENT=production
+      - LOG_LEVEL=INFO
     volumes:
       - ./backend/app/data:/app/app/data
-      - backend-cache:/app/backend/cache
+      - backend-logs:/app/logs
     networks:
       - als-network
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/livez"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -41,7 +44,7 @@ services:
     ports:
       - "80:80"
     environment:
-      - VITE_API_BASE=http://backend:8000
+      - VITE_API_BASE=
     depends_on:
       - backend
     networks:
@@ -59,5 +62,5 @@ networks:
     driver: bridge
 
 volumes:
-  backend-cache:
+  backend-logs:
     driver: local

@@ -1,5 +1,5 @@
 # Frontend Dockerfile
-FROM node:18-alpine as build-stage
+FROM node:20-alpine as build-stage
 
 # Set working directory
 WORKDIR /app

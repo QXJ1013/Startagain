@@ -351,10 +351,10 @@ class DocumentStorage:
         # Update index table
         self.conn.execute("""
             INSERT OR REPLACE INTO conversation_scores
-            (conversation_id, pnm, term, score, status, scoring_method, rationale)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            (conversation_id, pnm, term, score, status, updated_at, scoring_method, rationale)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
         """, (conversation_id, pnm, term, score, kwargs.get('status', 'completed'),
-              kwargs.get('scoring_method'), kwargs.get('rationale')))
+              datetime.now().isoformat(), kwargs.get('scoring_method'), kwargs.get('rationale')))
         
         return self.update_conversation(doc)
     

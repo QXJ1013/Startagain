@@ -161,7 +161,6 @@ class ConversationModeManager:
             raise e  # Re-raise to trigger fallback to legacy system
 
         # Route based on conversation type - clean separation
-
         if (context.conversation.type == "dimension" and
             context.conversation.dimension):
             # Use Case 2: Single dimension assessment
@@ -759,6 +758,35 @@ CRITICAL INSTRUCTIONS:
         # Clean and format the response
         response = response.strip()
 
+        # CRITICAL: Remove prompt instructions that leaked into response
+        prompt_indicators = [
+            "- Do not refer to", "- Never say", "- Use a supportive",
+            "- Keep your response", "Your response should be",
+            "Your response is:", "CRITICAL INSTRUCTIONS:",
+            "Do not repeat training", "Focus on the specific",
+            "Be conversational and human", "If about breathing:",
+            "Keep responses focused", "Start directly with",
+            "respond directly as if", "never use templates"
+        ]
+
+        for indicator in prompt_indicators:
+            if indicator in response:
+                # Extract content before the prompt leak
+                parts = response.split(indicator, 1)
+                if parts[0].strip():
+                    response = parts[0].strip()
+                    break
+                else:
+                    # If prompt leak is at start, use fallback
+                    response = "I understand your situation and I'm here to help with your ALS-related needs."
+                    break
+
+        # Clean "Your response is:" pattern specifically
+        if "Your response is:" in response:
+            parts = response.split("Your response is:", 1)
+            if len(parts) > 1 and parts[1].strip():
+                response = parts[1].strip()
+
         # Ensure response isn't too long (conversation flow)
         sentences = response.split('. ')
         if len(sentences) > 3:
@@ -1033,20 +1061,45 @@ Respond with exactly 1 single word or short phrase only:"""
 
             # Get AI response
             ai_response = self.llm.generate_text(prompt).strip()
+            print(f"[TOPIC_DEBUG] Raw AI response: '{ai_response}'")
 
             # Parse AI response to extract the single most relevant keyword
             topic = ai_response.strip().lower()
             # Clean up common prefixes/suffixes
             topic = topic.replace('- ', '').replace('* ', '').replace('• ', '')
+            print(f"[TOPIC_DEBUG] Cleaned topic: '{topic}' (words: {len(topic.split())}, chars: {len(topic)})")
 
-            # Validate it's a single word or short phrase (max 2 words, max 15 characters)
-            if topic and len(topic.split()) <= 2 and len(topic) <= 15:
-                primary_keyword = topic
+            # AI intelligent keyword extraction with broader validation
+            if topic and len(topic.strip()) > 0:
+                # Accept AI response if it's reasonable (more flexible validation)
+                words = topic.split()
+                if len(words) == 1 and 2 <= len(words[0]) <= 20:
+                    # Single word response
+                    primary_keyword = words[0]
+                    print(f"[TOPIC_DEBUG] Using single word AI keyword: {primary_keyword}")
+                elif len(words) == 2 and len(f"{words[0]} {words[1]}") <= 25:
+                    # Two word response (like "swallowing problems")
+                    primary_keyword = f"{words[0]} {words[1]}"
+                    print(f"[TOPIC_DEBUG] Using two-word AI keyword: {primary_keyword}")
+                elif len(words) > 2:
+                    # AI returned longer response - try to extract key term intelligently
+                    # Use the first meaningful word (not articles/prepositions)
+                    meaningful_words = [w for w in words if len(w) > 2 and w not in ['the', 'and', 'for', 'with', 'are', 'was', 'can', 'has', 'had']]
+                    if meaningful_words:
+                        primary_keyword = meaningful_words[0]
+                        print(f"[TOPIC_DEBUG] Using extracted meaningful word: {primary_keyword}")
+                    else:
+                        primary_keyword = words[0] if words else "breathing"
+                        print(f"[TOPIC_DEBUG] Using first word fallback: {primary_keyword}")
+                else:
+                    primary_keyword = "breathing"
+                    print(f"[TOPIC_DEBUG] Using fallback (word too short)")
             else:
-                # Use fallback if AI response is invalid
+                # Use fallback if AI response is completely empty
                 primary_keyword = "breathing"
+                print(f"[TOPIC_DEBUG] Using fallback keyword: {primary_keyword} (empty AI response)")
 
-            print(f"[TOPIC_DEBUG] AI extracted keyword: {primary_keyword}")
+            print(f"[TOPIC_DEBUG] Final extracted keyword: {primary_keyword}")
             return [primary_keyword]
 
         except Exception as e:
@@ -1823,7 +1876,7 @@ Output ONLY the complete question text (no numbers, no explanations):"""
                 item_words = set(item_lower.split())
                 overlap = len(question_words & item_words)
 
-                if overlap >= 4 and overlap > best_score:  # At least 4 word overlap
+                if overlap >= 2 and overlap > best_score:  # At least 2 word overlap (lowered from 4)
                     best_score = overlap
                     best_match = item
 
@@ -2369,6 +2422,13 @@ class UseCaseTwoManager:
         self.main_manager = main_manager
         self.response_generator = ResponseGenerator()
 
+        # Use main_manager's ai_scorer for consistency, or create new one
+        if main_manager and hasattr(main_manager, 'ai_scorer'):
+            self.ai_scorer = main_manager.ai_scorer
+        else:
+            from app.services.ai_scoring_engine import AIFreeTextScorer
+            self.ai_scorer = AIFreeTextScorer(ai_router)
+
     async def handle_dimension_assessment(self, context: ConversationContext, dimension: str) -> DialogueResponse:
         """Handle single dimension assessment flow"""
 
@@ -2381,20 +2441,20 @@ class UseCaseTwoManager:
         # Process user's previous answer and score if provided
         # UC2 uses dedicated scoring logic for term-based evaluation
         if context.user_input and context.user_input.strip():
-
             # Clear any old scoring artifacts to avoid conflicts
             if 'temp_term_scores' in context.conversation.assessment_state:
                 del context.conversation.assessment_state['temp_term_scores']
 
             try:
-                # NEW SIMPLE UC2 SCORING LOGIC
-                await self._process_user_response_uc2_simple(context, dimension)
+                # UC2 SCORING LOGIC
+                scoring_success = await self._process_user_response_uc2_simple(context, dimension)
 
-                # Increment question index after successful scoring
-                dimension_term_question_key = f"{dimension}_term_question_index"
-                current_question_index = context.conversation.assessment_state.get(dimension_term_question_key, 0)
-                next_question_index = current_question_index + 1
-                context.conversation.assessment_state[dimension_term_question_key] = next_question_index
+                # Increment question index ONLY after successful scoring
+                if scoring_success:
+                    dimension_term_question_key = f"{dimension}_term_question_index"
+                    current_question_index = context.conversation.assessment_state.get(dimension_term_question_key, 0)
+                    next_question_index = current_question_index + 1
+                    context.conversation.assessment_state[dimension_term_question_key] = next_question_index
 
                 # Check if scores were added
                 temp_scores = {}
@@ -2675,7 +2735,7 @@ class UseCaseTwoManager:
 
         return None
 
-    async def _process_user_response_uc2_simple(self, context: ConversationContext, dimension: str) -> None:
+    async def _process_user_response_uc2_simple(self, context: ConversationContext, dimension: str) -> bool:
         """
         Simple UC2 scoring logic based on user requirements:
         1. Extract score from main question options
@@ -2683,7 +2743,7 @@ class UseCaseTwoManager:
         3. Trigger term scoring when term is complete
         """
         if not context.user_input or not context.user_input.strip():
-            return
+            return False
 
         user_input = context.user_input.strip()
 
@@ -2697,11 +2757,12 @@ class UseCaseTwoManager:
         # Extract score from user input using existing method
         score = self._extract_score_from_user_input(user_input, question_context)
         scoring_method = "question_bank_options"
+        rationale = f"Option selection: {user_input[:50]}..." if score is not None else None
 
         if score is None:
             # AI scoring fallback for custom user input (as per CLAUDE.md requirements)
             try:
-                # Ensure ai_scorer is always available
+                # Ensure ai_scorer is available (same as UC1 protection)
                 if not hasattr(self, 'ai_scorer') or not self.ai_scorer:
                     from app.services.ai_scoring_engine import AIFreeTextScorer
                     self.ai_scorer = AIFreeTextScorer()  # No ai_router needed - uses IBM WatsonX directly
@@ -2714,10 +2775,14 @@ class UseCaseTwoManager:
                 )
                 score = ai_score_result.score
                 scoring_method = "ai_fallback"
+                rationale = ai_score_result.rationale or f"AI scoring: {user_input[:50]}..."
 
             except Exception as e:
-                # Skip scoring instead of using hardcoded fallback as per user requirements
-                return
+                # Continue processing like UC1 (don't return False)
+                print(f"[UC2_AI_SCORING] AI scoring failed: {e}")
+                scoring_method = "ai_fallback_failed"
+                rationale = f"AI scoring failed for input: {user_input[:50]}..."
+                # score remains None, continue to storage logic
 
         if score is not None:
             # Get current term from question context with fallback to current context
@@ -2726,23 +2791,28 @@ class UseCaseTwoManager:
                 # Fallback to context.current_term or dimension-based term
                 current_term = getattr(context, 'current_term', None)
                 if not current_term:
-                    # Skip scoring if no valid term is available - prevent wrong data
-                    return
-
+                    # UC2 SPECIFIC FIX: Use dimension as fallback term to prevent infinite loops
+                    # This ensures scoring can proceed even if term is missing
+                    current_term = f"{dimension}_assessment"
 
             # Store term score directly in database (immediate storage)
-            await self._store_term_score_immediate(context, dimension, current_term, score, scoring_method)
+            storage_success = await self._store_term_score_immediate(context, dimension, current_term, score, scoring_method, rationale)
 
-            # Mark this term as completed
-            completed_terms = context.conversation.assessment_state.get('completed_terms', [])
-            term_key = f"{dimension}_{current_term}"
-            if term_key not in completed_terms:
-                completed_terms.append(term_key)
-                context.conversation.assessment_state['completed_terms'] = completed_terms
-        else:
-            pass  # Debug print removed
+            if storage_success:
+                # Mark this term as completed
+                completed_terms = context.conversation.assessment_state.get('completed_terms', [])
+                term_key = f"{dimension}_{current_term}"
+                if term_key not in completed_terms:
+                    completed_terms.append(term_key)
+                    context.conversation.assessment_state['completed_terms'] = completed_terms
+                return True
+            else:
+                return False
 
-    async def _store_term_score_immediate(self, context: ConversationContext, dimension: str, term: str, score: float, scoring_method: str = "question_bank_options") -> bool:
+        # No score was obtained
+        return False
+
+    async def _store_term_score_immediate(self, context: ConversationContext, dimension: str, term: str, score: float, scoring_method: str = "question_bank_options", rationale: str = None) -> bool:
         """
         Immediately store term score to database
         Returns True if successful, False otherwise
@@ -2761,17 +2831,20 @@ class UseCaseTwoManager:
 
             # Connect and store
             with sqlite3.connect(str(db_path)) as conn:
+                print(f"[UC2_DB_DEBUG] Inserting: conv_id={context.conversation.id}, pnm={dimension}, term={term}, score={score}, method={scoring_method}, rationale={rationale[:30] if rationale else None}")
                 conn.execute("""
                     INSERT OR REPLACE INTO conversation_scores
-                    (conversation_id, pnm, term, score, status, updated_at)
-                    VALUES (?, ?, ?, ?, ?, ?)
+                    (conversation_id, pnm, term, score, status, updated_at, scoring_method, rationale)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                 """, (
                     context.conversation.id,
                     dimension,
                     term,
                     float(score),
                     'completed',
-                    datetime.now().isoformat()
+                    datetime.now().isoformat(),
+                    scoring_method,
+                    rationale
                 ))
 
                 # Verify storage

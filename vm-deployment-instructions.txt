@@ -1,0 +1,58 @@
+🎯 Next Steps to Complete Deployment:
+
+1. 📤 Upload Your Application Code:
+   You can either:
+   
+   Option A - Use Git (Recommended):
+   ssh azureuser@20.77.71.22
+   cd ~/als-assistant
+   git clone https://github.com/YOUR_USERNAME/YOUR_REPO.git .
+   # Or upload your code via scp/sftp
+   
+   Option B - Use Azure File Copy:
+   az vm run-command invoke \
+     --resource-group ALS-ASSISTANT-RG \
+     --name als-assistant-docker \
+     --command-id RunShellScript \
+     --scripts "cd ~/als-assistant && git clone YOUR_REPO_URL ."
+
+2. 🔧 Set Environment Variables:
+   ssh azureuser@20.77.71.22
+   cd ~/als-assistant
+   # Copy the environment variables:
+   cat > .env << 'ENV_EOF'
+WATSONX_URL=https://eu-gb.ml.cloud.ibm.com
+WATSONX_APIKEY=2WFP6H8wNxt60gCkHU727aGjKeJ68MS45S92bbILBy4z
+PROJECT_ID=0989d54e-bebc-4a33-b6bd-c3331cdef4d9
+SPACE_ID=367019f9-e126-4a8d-b054-26670084d62d
+BACKGROUND_VECTOR_INDEX_ID=26ccfa50-3b7f-4ec3-b5f5-81a6d3b7f238
+QUESTION_VECTOR_INDEX_ID=6e39dc9f-b3f5-4403-a530-7dbc226fa3e1
+VECTOR_INDEX_ID=8ef82ae7-0818-4821-8d0f-f6a7ca3234d8
+JWT_SECRET_KEY=als_secret_key_azure_vm_2024
+DB_PATH=/app/app/data/als.db
+DB_SCHEMA_PATH=/app/app/data/schema.sql
+ENABLE_SEMANTIC_BACKOFF=true
+BM25_ENABLED=true
+ENVIRONMENT=production
+LOG_LEVEL=INFO
+ENV_EOF
+
+3. 🚀 Start Application:
+   ssh azureuser@20.77.71.22
+   cd ~/als-assistant
+   docker-compose up -d --build
+
+4. 🌐 Configure Firewall (if needed):
+   az vm open-port --resource-group ALS-ASSISTANT-RG --name als-assistant-docker --port 80
+   az vm open-port --resource-group ALS-ASSISTANT-RG --name als-assistant-docker --port 8000
+
+5. ✅ Access Your Application:
+   Frontend: http://20.77.71.22
+   Backend: http://20.77.71.22:8000
+   
+6. 📊 Monitor Application:
+   ssh azureuser@20.77.71.22
+   docker-compose logs -f
+
+💰 Cost: ~$30-50/month for Standard_B2s VM
+🗑️ Cleanup: az vm delete --resource-group ALS-ASSISTANT-RG --name als-assistant-docker --yes

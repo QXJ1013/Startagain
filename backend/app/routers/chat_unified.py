@@ -210,6 +210,16 @@ async def _process_user_input(
             if dialogue_response.current_term:
                 conversation.assessment_state['current_term'] = dialogue_response.current_term
 
+            # CRITICAL: Update asked_questions list when a question is generated
+            if dialogue_response.response_type.value == 'question':
+                question_id = getattr(dialogue_response, 'question_id', None)
+                if question_id:
+                    asked_questions = conversation.assessment_state.get('asked_questions', [])
+                    if question_id not in asked_questions:
+                        asked_questions.append(question_id)
+                        conversation.assessment_state['asked_questions'] = asked_questions
+                        print(f"[CHAT_UNIFIED] Added question {question_id} to asked_questions: {asked_questions}")
+
             # Check if conversation is completed (based on enhanced dialogue signals)
             conversation_locked = conversation.assessment_state.get('conversation_locked', False)
             response_type_value = dialogue_response.response_type.value

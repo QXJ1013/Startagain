@@ -1,4 +1,4 @@
-# Backend Dockerfile
+# ALS Assistant Backend Dockerfile
 FROM python:3.11-slim
 
 # Set working directory
@@ -9,36 +9,49 @@ RUN apt-get update && apt-get install -y \
     gcc \
     g++ \
     sqlite3 \
-    && rm -rf /var/lib/apt/lists/*
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Create non-root user for security
+RUN groupadd -r appuser && useradd -r -g appuser appuser
 
 # Copy requirements first for better caching
 COPY requirements.txt .
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Install Python dependencies with updated bcrypt for compatibility
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir bcrypt==4.1.3 && \
+    pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY app/ ./app/
 
-# Create data directory and set permissions
+# Create data directory and set proper permissions
 RUN mkdir -p /app/app/data && \
-    chmod 755 /app/app/data
+    mkdir -p /app/logs && \
+    chown -R appuser:appuser /app
 
-# Copy data files
-COPY app/data/*.json /app/app/data/
-COPY app/data/*.sql /app/app/data/
-COPY app/data/*.db /app/app/data/
+# Copy data files with proper permissions
+COPY --chown=appuser:appuser app/data/*.json /app/app/data/
+COPY --chown=appuser:appuser app/data/*.sql /app/app/data/
+COPY --chown=appuser:appuser app/data/als.db /app/app/data/als.db
 
-# Set environment variables
+# Set environment variables for production
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
+ENV ENVIRONMENT=production
+ENV LOG_LEVEL=INFO
+
+# Switch to non-root user
+USER appuser
 
 # Expose port
 EXPOSE 8000
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+# Improved health check using the correct endpoint
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD curl -f http://localhost:8000/health/livez || exit 1
 
-# Run the application
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the application with production settings
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1", "--log-level", "info"]

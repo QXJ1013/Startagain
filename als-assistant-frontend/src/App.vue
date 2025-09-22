@@ -20,7 +20,12 @@ const isLoginPage = computed(() => route.path === '/login')
 
 // Check authentication status on app startup
 onMounted(async () => {
-  await authStore.checkAuth()
+  try {
+    await authStore.checkAuth()
+  } catch (error) {
+    console.error('Auth check failed on startup:', error)
+    // Continue loading the app even if auth check fails
+  }
 })
 </script>
 
