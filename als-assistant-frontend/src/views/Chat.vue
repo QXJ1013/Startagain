@@ -558,8 +558,16 @@ async function processUserInput(input: string) {
     // Ensure we have a valid conversation ID
     let conversationId = chatStore.currentConversationId
 
-    // If no conversation ID, create a new general chat conversation
+    // If no conversation ID, create a new conversation
+    // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
+      if (chatStore.conversationType === 'dimension' && chatStore.dimensionName) {
+        // This shouldn't happen in dimension mode - conversation should already exist
+        console.error('[PROCESSUSER] No conversation ID in dimension mode - this is a bug')
+        error.value = 'Conversation not found. Please restart assessment from Data page.'
+        return
+      }
+
       setLoadingText('Creating conversation...')
       try {
         const newConv = await conversationsApi.createConversation(
@@ -647,8 +655,16 @@ async function startConversationWithInput(userMessage: string) {
     // Ensure we have a valid conversation ID
     let conversationId = chatStore.currentConversationId
 
-    // If no conversation ID, create a new general chat conversation
+    // If no conversation ID, create a new conversation
+    // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
+      if (chatStore.conversationType === 'dimension' && chatStore.dimensionName) {
+        // This shouldn't happen in dimension mode - conversation should already exist
+        console.error('[STARTCONV] No conversation ID in dimension mode - this is a bug')
+        error.value = 'Conversation not found. Please restart assessment from Data page.'
+        return
+      }
+
       setLoadingText('Creating conversation...')
       try {
         const newConv = await conversationsApi.createConversation(
@@ -765,9 +781,18 @@ async function startDimensionConversation(dimension: string) {
   try {
     let conversationId = chatStore.currentConversationId
 
-    // Create new conversation only if one doesn't exist
+    console.log(`[CHAT.VUE] Initial conversation ID check: ${conversationId}`)
+    console.log(`[CHAT.VUE] Chat store state:`, {
+      conversationType: chatStore.conversationType,
+      dimensionName: chatStore.dimensionName,
+      currentConversationId: chatStore.currentConversationId
+    })
+
+    // Create new conversation only if one doesn't exist (for UC1 - direct chat start)
+    // UC2 (from Data page) should already have a conversation ID set
     if (authStore.isAuthenticated && !conversationId) {
       try {
+        console.log(`[CHAT.VUE] No existing conversation, creating new one for ${dimension} (UC1 path)`)
         const newConv = await conversationsApi.createConversation(authStore.token!, 'dimension', dimension, `${dimension} Assessment`)
         conversationId = newConv.id
         chatStore.setCurrentConversation(conversationId)
@@ -778,7 +803,7 @@ async function startDimensionConversation(dimension: string) {
         return
       }
     } else {
-      console.log(`[CHAT.VUE] Using existing conversation: ${conversationId}`)
+      console.log(`[CHAT.VUE] Using existing conversation from UC2: ${conversationId}`)
     }
 
     // Add a small delay to ensure backend state is properly set

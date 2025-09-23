@@ -24,7 +24,7 @@
                 <div
                   class="bar-fill"
                   :class="{ 'bar-zero': dim.score === 0 }"
-                  :style="{ width: dim.score === 0 ? '3%' : `${(dim.score / 7) * 100}%` }"
+                  :style="{ width: dim.score === 0 ? '3%' : `${(dim.score / 5) * 100}%` }"
                 ></div>
               </div>
               <span class="score-value" :class="{ 'score-zero': dim.score === 0 }">
@@ -52,7 +52,7 @@
         <div class="terms-table" v-if="allTerms.length > 0">
           <div v-for="term in displayedTerms" :key="term.name" class="term-row">
             <span class="term-name" :title="term.name">{{ term.name }}</span>
-            <span class="term-score">{{ term.score.toFixed(1) }}/7</span>
+            <span class="term-score">{{ term.score.toFixed(1) }}/5</span>
             <span class="term-date">{{ term.lastDate }}</span>
           </div>
           <div v-if="allTerms.length > 5" class="more-terms-indicator">
@@ -102,7 +102,7 @@
                 <span class="modal-term-dimension">{{ term.dimension }}</span>
               </div>
               <div class="modal-term-score">
-                <span class="score-value">{{ term.score.toFixed(1) }}/7</span>
+                <span class="score-value">{{ term.score.toFixed(1) }}/5</span>
                 <span class="score-date">{{ term.lastDate }}</span>
               </div>
             </div>
@@ -197,12 +197,13 @@ async function startDimensionChat(dimensionName: string) {
 
     console.log(`[DATA.VUE] Creating new conversation for ${dimensionName}`);
 
-    // STEP 4: Create fresh conversation using conversations API
+    // STEP 4: Create fresh conversation using conversations API with unique timestamp
+    const timestamp = new Date().toISOString();
     const newConv = await conversationsApi.createConversation(
       authStore.token,
       'dimension',
       dimensionName,
-      `${dimensionName} Assessment - ${new Date().toLocaleTimeString()}`
+      `${dimensionName} Assessment - ${timestamp}`
     );
 
     console.log(`[DATA.VUE] Created conversation ${newConv.id} for ${dimensionName}`);
@@ -219,7 +220,7 @@ async function startDimensionChat(dimensionName: string) {
     router.push('/chat');
 
     // STEP 8: Show notification with timestamp to confirm fresh start
-    sessionStore.setMessage(`Starting ${dimensionName} assessment (${new Date().toLocaleTimeString()})`);
+    sessionStore.setMessage(`Starting ${dimensionName} assessment`);
 
   } catch (error: any) {
     console.error('Error starting dimension chat:', error);
