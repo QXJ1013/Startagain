@@ -559,8 +559,8 @@ async function processUserInput(input: string) {
     let conversationId = chatStore.currentConversationId
 
     if (!conversationId) {
-      // If UC2 dimension mode (from Data page), skip creation - other flow will handle it
-      if (chatStore.conversationType === 'dimension' && sessionStore.dimensionFocus) {
+      // If dimension mode, skip creation - other flow will handle it
+      if (chatStore.conversationType === 'dimension') {
         isLoading.value = false
         return
       }
@@ -655,8 +655,8 @@ async function startConversationWithInput(userMessage: string) {
     // If no conversation ID, create a new conversation
     // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
-      // If UC2 dimension mode (from Data page), skip creation - other flow will handle it
-      if (chatStore.conversationType === 'dimension' && sessionStore.dimensionFocus) {
+      // If dimension mode, skip creation - other flow will handle it
+      if (chatStore.conversationType === 'dimension') {
         isLoading.value = false
         return
       }
@@ -801,6 +801,8 @@ async function startDimensionConversation(dimension: string) {
     // Get the first question for this dimension from the backend
     if (conversationId) {
       console.log(`[CHAT.VUE] Requesting first question for ${dimension} conversation ${conversationId}`)
+      // Add 200ms delay to allow backend conversation creation to complete
+      await new Promise(resolve => setTimeout(resolve, 200))
       const response = await api.getNextQuestion(conversationId, '', dimension, authStore.token)
 
       if (response) {

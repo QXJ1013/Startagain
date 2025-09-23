@@ -88,33 +88,23 @@ def _get_or_create_conversation(
                 raise HTTPException(status_code=403, detail="Access denied to conversation")
 
         # If conversation not found but ID was provided, it might be a timing issue
-        # Try extended wait with graceful fallback (for UC2 flow)
+        # Try a brief wait and check again (for UC2 flow)
         if not conversation_id.startswith('temp-'):
             import time
+            time.sleep(0.5)  
+            doc = storage.get_conversation(conversation_id)
+            if doc and doc.user_id == user_id:
+                print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
+                return doc
+        else:
+            # Conversation doesn't exist - this should not happen for UC2 flow
+            # UC2 should always have conversation created by /conversations endpoint first
+            print(f"[STORAGE_ERROR] Conversation {conversation_id} not found and not temporary")
+            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
 
-            # Extended wait - up to 1 second total
-            for attempt in range(10):
-                time.sleep(0.1)  # 100ms each attempt
-                doc = storage.get_conversation(conversation_id)
-                if doc and doc.user_id == user_id:
-                    print(f"[STORAGE_DEBUG] Found conversation after retry {attempt + 1}: {conversation_id}")
-                    return doc
-
-            # If still not found, check if conversation actually exists in DB
-            existing = storage.conn.execute("SELECT id FROM conversation_documents WHERE id = ? AND user_id = ?", (conversation_id, user_id)).fetchone()
-            if existing:
-                print(f"[STORAGE_DEBUG] Conversation {conversation_id} exists in DB, forcing sync")
-                # Force database sync and try one more time
-                storage.conn.commit()
-                doc = storage.get_conversation(conversation_id)
-                if doc:
-                    return doc
-            # If conversation still not found after all attempts, log and continue with creation
-            print(f"[STORAGE_WARNING] Conversation {conversation_id} not found after extended wait")
-
-    # Only create new conversation if no conversation_id provided OR temp- ID
-    if not conversation_id or conversation_id.startswith('temp-'):
-        print(f"[STORAGE_DEBUG] Creating new conversation - conversation_id was: {conversation_id}")
+    # Only create new conversation if no conversation_id provided (UC1 - direct chat access)
+    if not conversation_id:
+        print(f"[STORAGE_DEBUG] No conversation_id provided, creating new conversation")
         conversation_type = "dimension" if dimension_focus else "general_chat"
         title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
 
@@ -127,9 +117,8 @@ def _get_or_create_conversation(
         print(f"[STORAGE_DEBUG] Created new conversation: {new_conv.id}")
         return new_conv
 
-    # If we reach here, conversation_id was provided but not found - return error
-    print(f"[STORAGE_ERROR] Cannot find or create conversation {conversation_id}")
-    raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
+    # If we reach here, something went wrong
+    raise HTTPException(status_code=500, detail="Failed to get or create conversation")
 
 async def _process_user_input(
     conversation: ConversationDocument,
