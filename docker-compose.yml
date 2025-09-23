@@ -1,10 +1,11 @@
-version: '3.8'
-
 services:
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        USER_ID: 1000
+        GROUP_ID: 1000
     container_name: als-backend
     ports:
       - "8000:8000"

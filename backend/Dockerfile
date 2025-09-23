@@ -13,8 +13,13 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/* \
     && apt-get clean
 
-# Create non-root user for security
-RUN groupadd -r appuser && useradd -r -g appuser appuser
+# Accept USER_ID and GROUP_ID as build arguments
+ARG USER_ID=1000
+ARG GROUP_ID=1000
+
+# Create user with the same UID/GID as the host user
+RUN groupadd -g ${GROUP_ID} appuser && \
+    useradd -u ${USER_ID} -g ${GROUP_ID} -r appuser
 
 # Copy requirements first for better caching
 COPY requirements.txt .
