@@ -96,30 +96,41 @@ def _get_or_create_conversation(
             if doc and doc.user_id == user_id:
                 print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
                 return doc
+        elif conversation_id.startswith('temp-'):
+            # Handle temporary IDs by creating new conversation
+            pass
         else:
-            # Conversation doesn't exist - this should not happen for UC2 flow
-            # UC2 should always have conversation created by /conversations endpoint first
-            print(f"[STORAGE_ERROR] Conversation {conversation_id} not found and not temporary")
-            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
+            # Conversation doesn't exist, create new one with the provided ID
+            # This allows frontend to specify conversation IDs
+            conversation_type = "dimension" if dimension_focus else "general_chat"
+            title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
 
-    # Only create new conversation if no conversation_id provided (UC1 - direct chat access)
-    if not conversation_id:
-        print(f"[STORAGE_DEBUG] No conversation_id provided, creating new conversation")
-        conversation_type = "dimension" if dimension_focus else "general_chat"
-        title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
+            try:
+                new_conv = storage.create_conversation_with_id(
+                    conversation_id=conversation_id,
+                    user_id=user_id,
+                    type=conversation_type,
+                    dimension=dimension_focus,
+                    title=title
+                )
+                return new_conv
+            except ValueError as e:
+                # If there's an error (like ID already exists), fall through to creating new conversation
+                pass
 
-        new_conv = storage.create_conversation(
-            user_id=user_id,
-            type=conversation_type,
-            dimension=dimension_focus,
-            title=title
-        )
-        print(f"[STORAGE_DEBUG] Created new conversation: {new_conv.id}")
-        return new_conv
+    # Create new conversation (only if no conversation_id provided or creation with ID failed)
+    print(f"[STORAGE_DEBUG] Creating new conversation - conversation_id was: {conversation_id}")
+    conversation_type = "dimension" if dimension_focus else "general_chat"
+    title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
 
-    # If we reach here, something went wrong
-    raise HTTPException(status_code=500, detail="Failed to get or create conversation")
-
+    new_conv = storage.create_conversation(
+        user_id=user_id,
+        type=conversation_type,
+        dimension=dimension_focus,
+        title=title
+    )
+    print(f"[STORAGE_DEBUG] Created new conversation: {new_conv.id}")
+    return new_conv
 async def _process_user_input(
     conversation: ConversationDocument,
     user_input: str,

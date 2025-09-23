@@ -555,10 +555,15 @@ async function processUserInput(input: string) {
   setLoadingText('Analyzing your response...')
 
   try {
-    
+
     let conversationId = chatStore.currentConversationId
 
     if (!conversationId) {
+      // If dimension mode, skip creation - other flow will handle it
+      if (chatStore.conversationType === 'dimension') {
+        isLoading.value = false
+        return
+      }
 
       setLoadingText('Creating conversation...')
       try {
@@ -650,6 +655,11 @@ async function startConversationWithInput(userMessage: string) {
     // If no conversation ID, create a new conversation
     // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
+      // If dimension mode, skip creation - other flow will handle it
+      if (chatStore.conversationType === 'dimension') {
+        isLoading.value = false
+        return
+      }
 
       setLoadingText('Creating conversation...')
       try {
