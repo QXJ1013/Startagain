@@ -555,18 +555,10 @@ async function processUserInput(input: string) {
   setLoadingText('Analyzing your response...')
 
   try {
-    // Ensure we have a valid conversation ID
+    
     let conversationId = chatStore.currentConversationId
 
-    // If no conversation ID, create a new conversation
-    // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
-      if (chatStore.conversationType === 'dimension' && chatStore.dimensionName) {
-        // This shouldn't happen in dimension mode - conversation should already exist
-        console.error('[PROCESSUSER] No conversation ID in dimension mode - this is a bug')
-        error.value = 'Conversation not found. Please restart assessment from Data page.'
-        return
-      }
 
       setLoadingText('Creating conversation...')
       try {
@@ -658,12 +650,6 @@ async function startConversationWithInput(userMessage: string) {
     // If no conversation ID, create a new conversation
     // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
-      if (chatStore.conversationType === 'dimension' && chatStore.dimensionName) {
-        // This shouldn't happen in dimension mode - conversation should already exist
-        console.error('[STARTCONV] No conversation ID in dimension mode - this is a bug')
-        error.value = 'Conversation not found. Please restart assessment from Data page.'
-        return
-      }
 
       setLoadingText('Creating conversation...')
       try {
@@ -780,13 +766,6 @@ async function startDimensionConversation(dimension: string) {
 
   try {
     let conversationId = chatStore.currentConversationId
-
-    console.log(`[CHAT.VUE] Initial conversation ID check: ${conversationId}`)
-    console.log(`[CHAT.VUE] Chat store state:`, {
-      conversationType: chatStore.conversationType,
-      dimensionName: chatStore.dimensionName,
-      currentConversationId: chatStore.currentConversationId
-    })
 
     // Create new conversation only if one doesn't exist (for UC1 - direct chat start)
     // UC2 (from Data page) should already have a conversation ID set

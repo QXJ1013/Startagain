@@ -188,34 +188,7 @@ async function startDimensionChat(dimensionName: string) {
       return;
     }
 
-    console.log(`[DATA.VUE] ✅ Starting fresh ${dimensionName} assessment`);
-
-    // STEP 1: Strategic reset - preserve dimension mode intention
-    chatStore.clearMessages(); // Clear messages but preserve conversation state
-    chatStore.setCurrentConversation(null); // Clear conversation ID
-    chatStore.resetProgress(); // Clear progress state
-    chatStore.setError(null); // Clear any errors
-    sessionStore.resetSession(); // This clears session state
-
-    // STEP 1.5: Immediately set dimension mode to prevent any race conditions
-    chatStore.conversationType = 'dimension';
-    chatStore.dimensionName = dimensionName;
-    console.log(`[DATA.VUE] Set dimension mode: ${dimensionName}`);
-
-    // STEP 2: Clear localStorage keys that might interfere
-    const sessionKeys = Object.keys(localStorage).filter(k => k.startsWith('als_session'));
-    sessionKeys.forEach(k => {
-      if (k !== 'als_session_id') { // Keep session ID but clear others
-        localStorage.removeItem(k);
-      }
-    });
-
-    // STEP 3: Defensive delay to ensure frontend state clears
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    console.log(`[DATA.VUE] Creating new conversation for ${dimensionName}`);
-
-    // STEP 4: Create fresh conversation using conversations API with unique timestamp
+    // STEP 1: Create fresh conversation first to avoid race condition
     const newConv = await conversationsApi.createConversation(
       authStore.token,
       'dimension',
@@ -223,19 +196,32 @@ async function startDimensionChat(dimensionName: string) {
       `${dimensionName} Assessment - ${new Date().toLocaleTimeString()}`
     );
 
-    console.log(`[DATA.VUE] Created conversation ${newConv.id} for ${dimensionName}`);
+    // STEP 2: Clear state and set new conversation atomically
+    chatStore.clearMessages();
+    chatStore.resetProgress();
+    chatStore.setError(null);
+    sessionStore.resetSession();
 
-    // STEP 5: Set conversation ID (dimension state already set above)
+    // STEP 3: Set dimension mode and conversation ID
+    chatStore.conversationType = 'dimension';
+    chatStore.dimensionName = dimensionName;
     chatStore.setCurrentConversation(newConv.id);
-    console.log(`[DATA.VUE] Conversation ID set: ${newConv.id}, Type: ${chatStore.conversationType}`);
 
-    // STEP 6: Set dimension focus for Chat.vue to pick up
+    // STEP 4: Clear localStorage keys that might interfere
+    const sessionKeys = Object.keys(localStorage).filter(k => k.startsWith('als_session'));
+    sessionKeys.forEach(k => {
+      if (k !== 'als_session_id') {
+        localStorage.removeItem(k);
+      }
+    });
+
+    // STEP 5: Set dimension focus for Chat.vue to pick up
     sessionStore.setDimensionFocus(dimensionName);
 
-    // STEP 7: Navigate to chat page - it will handle the initial question
+    // STEP 6: Navigate to chat page - it will handle the initial question
     router.push('/chat');
 
-    // STEP 8: Show notification with timestamp to confirm fresh start
+    // STEP 7: Show notification to confirm fresh start
     sessionStore.setMessage(`Starting ${dimensionName} assessment`);
 
   } catch (error: any) {
