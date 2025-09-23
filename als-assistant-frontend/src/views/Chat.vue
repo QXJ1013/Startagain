@@ -755,9 +755,14 @@ async function startDimensionConversation(dimension: string) {
   const conversationExists = !!chatStore.currentConversationId
   console.log(`[CHAT.VUE] Conversation exists: ${conversationExists}, ID: ${chatStore.currentConversationId}`)
 
-  // Set conversation type and dimension (will be properly initialized via API call)
-  chatStore.conversationType = 'dimension'
-  chatStore.dimensionName = dimension
+  if (!conversationExists) {
+    // Only create new conversation if one doesn't exist
+    chatStore.startNewConversation('dimension', dimension)
+  } else {
+    // Use existing conversation, just set the type and dimension
+    chatStore.conversationType = 'dimension'
+    chatStore.dimensionName = dimension
+  }
 
   // Always reset session for fresh dimension assessment
   sessionStore.resetSession()
