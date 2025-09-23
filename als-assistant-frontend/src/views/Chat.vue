@@ -881,8 +881,9 @@ async function initializeNewChat() {
   }
 
   try {
-    // Don't set conversation ID - let backend create it
-    // UC1 will create conversation when first message is sent
+    // Generate a simple conversation ID for the session
+    const simpleConversationId = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
+    chatStore.setCurrentConversation(simpleConversationId)
 
     // Create fresh session for new conversation
     sessionStore.resetSession()

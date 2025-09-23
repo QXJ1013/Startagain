@@ -91,15 +91,11 @@ def _get_or_create_conversation(
         # Try a brief wait and check again (for UC2 flow)
         if not conversation_id.startswith('temp-'):
             import time
-            time.sleep(0.5)  
+            time.sleep(0.5)
             doc = storage.get_conversation(conversation_id)
             if doc and doc.user_id == user_id:
                 print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
                 return doc
-        else:
-            # UC2: Conversation doesn't exist after retries - timing issue
-            print(f"[STORAGE_ERROR] UC2 conversation {conversation_id} not found after retries")
-            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
 
     # Only create new conversation if no conversation_id provided (UC1 - direct chat access)
     if not conversation_id:
