@@ -673,6 +673,9 @@ async function startConversationWithInput(userMessage: string) {
         console.log(`[START CONV] Setting conversation ID: ${conversationId}`)
         chatStore.setCurrentConversation(conversationId)
         console.log(`[START CONV] Store conversation ID after setting: ${chatStore.currentConversationId}`)
+
+        // Add delay to ensure conversation is saved in backend before using it
+        await new Promise(resolve => setTimeout(resolve, 200))
       } catch (e: any) {
         error.value = `Failed to create conversation: ${e.message}`
         isLoading.value = false
@@ -755,14 +758,9 @@ async function startDimensionConversation(dimension: string) {
   const conversationExists = !!chatStore.currentConversationId
   console.log(`[CHAT.VUE] Conversation exists: ${conversationExists}, ID: ${chatStore.currentConversationId}`)
 
-  if (!conversationExists) {
-    // Only create new conversation if one doesn't exist
-    chatStore.startNewConversation('dimension', dimension)
-  } else {
-    // Use existing conversation, just set the type and dimension
-    chatStore.conversationType = 'dimension'
-    chatStore.dimensionName = dimension
-  }
+  // Set conversation type and dimension (will be properly initialized via API call)
+  chatStore.conversationType = 'dimension'
+  chatStore.dimensionName = dimension
 
   // Always reset session for fresh dimension assessment
   sessionStore.resetSession()
@@ -881,11 +879,6 @@ async function initializeNewChat() {
   }
 
   try {
-    // Generate a simple conversation ID for the session
-    const simpleConversationId = `conv_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`
-    chatStore.setCurrentConversation(simpleConversationId)
-
-    // Create fresh session for new conversation
     sessionStore.resetSession()
 
     // Show welcome message

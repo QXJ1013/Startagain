@@ -87,19 +87,34 @@ def _get_or_create_conversation(
                 # Conversation exists but belongs to different user
                 raise HTTPException(status_code=403, detail="Access denied to conversation")
 
-        # If conversation not found but ID was provided, it might be a timing issue
-        # Try a brief wait and check again (for UC2 flow)
-        if not conversation_id.startswith('temp-'):
+        # If conversation not found but ID was provided, check if this needs retry
+        # UC1 temporary IDs: conv_timestamp_random -> skip retry, create new
+        # UC2 real IDs: conv_date_uuid -> retry for timing issues
+        import re
+        is_uc1_temp_id = re.match(r'conv_\d{13}_[a-z0-9]+$', conversation_id)
+
+        if not conversation_id.startswith('temp-') and not is_uc1_temp_id:
+            # UC2 flow - retry for timing issues
             import time
             time.sleep(0.5)
             doc = storage.get_conversation(conversation_id)
             if doc and doc.user_id == user_id:
                 print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
                 return doc
+            else:
+                # UC2: Conversation doesn't exist after retries - timing issue
+                print(f"[STORAGE_ERROR] UC2 conversation {conversation_id} not found after retries")
+                raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
+        else:
+            # UC1 temporary ID or temp- prefix - skip retry, will create new conversation below
+            print(f"[STORAGE_DEBUG] UC1 temporary ID detected: {conversation_id}, will create new conversation")
 
-    # Only create new conversation if no conversation_id provided (UC1 - direct chat access)
+    # Create new conversation if no conversation_id provided (UC1 - direct chat access)
+    # or if UC1 temporary ID detected
     if not conversation_id:
         print(f"[STORAGE_DEBUG] No conversation_id provided, creating new conversation")
+    else:
+        print(f"[STORAGE_DEBUG] UC1 temporary ID {conversation_id}, creating new conversation")
         conversation_type = "dimension" if dimension_focus else "general_chat"
         title = f"{dimension_focus} Assessment" if dimension_focus else "General Chat"
 
