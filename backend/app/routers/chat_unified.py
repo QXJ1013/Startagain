@@ -97,9 +97,9 @@ def _get_or_create_conversation(
                 print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
                 return doc
         else:
-            # Conversation doesn't exist - this could be UC1 with frontend-generated ID
-            # Fall through to creation logic below
-            print(f"[STORAGE_DEBUG] Conversation {conversation_id} not found, will create new one")
+            # UC2: Conversation doesn't exist after retries - timing issue
+            print(f"[STORAGE_ERROR] UC2 conversation {conversation_id} not found after retries")
+            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
 
     # Only create new conversation if no conversation_id provided (UC1 - direct chat access)
     if not conversation_id:
