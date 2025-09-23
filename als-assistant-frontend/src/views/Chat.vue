@@ -559,8 +559,8 @@ async function processUserInput(input: string) {
     let conversationId = chatStore.currentConversationId
 
     if (!conversationId) {
-      // If dimension mode, skip creation - other flow will handle it
-      if (chatStore.conversationType === 'dimension') {
+      // If UC2 dimension mode (from Data page), skip creation - other flow will handle it
+      if (chatStore.conversationType === 'dimension' && sessionStore.dimensionFocus) {
         isLoading.value = false
         return
       }
@@ -655,8 +655,8 @@ async function startConversationWithInput(userMessage: string) {
     // If no conversation ID, create a new conversation
     // CRITICAL: Don't create general_chat if we're in dimension mode
     if (!conversationId) {
-      // If dimension mode, skip creation - other flow will handle it
-      if (chatStore.conversationType === 'dimension') {
+      // If UC2 dimension mode (from Data page), skip creation - other flow will handle it
+      if (chatStore.conversationType === 'dimension' && sessionStore.dimensionFocus) {
         isLoading.value = false
         return
       }
