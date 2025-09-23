@@ -2051,7 +2051,7 @@
   },
   {
     "id": "PROMPT-034",
-    "pnm": "Self-actualisation",
+    "pnm": "Self-Actualisation",
     "term": "Patient rights",
     "question": "Do you feel your care team involves you in decision-making to the extent you desire, respecting your right to have a say in your treatment plan?",
     "options": [
@@ -4557,7 +4557,7 @@
   },
   {
     "id": "PROMPT-074",
-    "pnm": "Self-actualisation",
+    "pnm": "Self-Actualisation",
     "term": "Mental health counselling",
     "question": "How are you coping emotionally with having a terminal illness? Would you consider counseling to help you come to terms with it?",
     "options": [
@@ -4934,7 +4934,7 @@
   },
   {
     "id": "PROMPT-080",
-    "pnm": "Self-actualisation",
+    "pnm": "Self-Actualisation",
     "term": "Cognition",
     "question": "Have you noticed any changes in your memory, thinking, or behavior, and do you feel you have support to manage those changes?",
     "options": [
@@ -5690,7 +5690,7 @@
   },
   {
     "id": "PROMPT-092",
-    "pnm": "Self-actualisation",
+    "pnm": "Self-Actualisation",
     "term": "Self-care",
     "question": "How do you feel your condition is affecting your family or caregivers, and does that worry you?",
     "options": [

@@ -86,6 +86,16 @@ def _get_or_create_conversation(
             else:
                 # Conversation exists but belongs to different user
                 raise HTTPException(status_code=403, detail="Access denied to conversation")
+
+        # If conversation not found but ID was provided, it might be a timing issue
+        # Try a brief wait and check again (for UC2 flow)
+        if not conversation_id.startswith('temp-'):
+            import time
+            time.sleep(0.1)  # 100ms wait
+            doc = storage.get_conversation(conversation_id)
+            if doc and doc.user_id == user_id:
+                print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
+                return doc
         elif conversation_id.startswith('temp-'):
             # Handle temporary IDs by creating new conversation
             pass
