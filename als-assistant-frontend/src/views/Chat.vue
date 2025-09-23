@@ -775,6 +775,8 @@ async function startDimensionConversation(dimension: string) {
   hasInitialized.value = true
 
   try {
+    // Wait for Data.vue conversation ID to be set (UC2 flow)
+    await new Promise(resolve => setTimeout(resolve, 100))
     let conversationId = chatStore.currentConversationId
 
     // Create new conversation only if one doesn't exist (for UC1 - direct chat start)

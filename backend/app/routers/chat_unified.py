@@ -97,10 +97,9 @@ def _get_or_create_conversation(
                 print(f"[STORAGE_DEBUG] Found conversation after retry: {conversation_id}")
                 return doc
         else:
-            # Conversation doesn't exist - this should not happen for UC2 flow
-            # UC2 should always have conversation created by /conversations endpoint first
-            print(f"[STORAGE_ERROR] Conversation {conversation_id} not found and not temporary")
-            raise HTTPException(status_code=404, detail=f"Conversation {conversation_id} not found")
+            # Conversation doesn't exist - this could be UC1 with frontend-generated ID
+            # Fall through to creation logic below
+            print(f"[STORAGE_DEBUG] Conversation {conversation_id} not found, will create new one")
 
     # Only create new conversation if no conversation_id provided (UC1 - direct chat access)
     if not conversation_id:
