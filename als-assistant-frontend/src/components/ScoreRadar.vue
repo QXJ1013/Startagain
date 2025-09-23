@@ -8,20 +8,20 @@
   import { Chart as ChartJS, RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend } from "chart.js";
   ChartJS.register(RadialLinearScale, PointElement, LineElement, Filler, Tooltip, Legend);
   
-  const props = defineProps<{ dims: Array<{ pnm: string; score_0_7: number }> }>();
+  const props = defineProps<{ dims: Array<{ pnm: string; score_0_5: number }> }>();
   
   const chartData = computed(() => ({
     labels: props.dims.map(d => d.pnm),
     datasets: [{
-      label: "PNM (0-7)",
-      data: props.dims.map(d => d.score_0_7),
+      label: "PNM (0-5)",
+      data: props.dims.map(d => d.score_0_5),
       fill: true
     }]
   }));
   
   const chartOptions = {
     responsive: true,
-    scales: { r: { suggestedMin: 0, suggestedMax: 7, ticks: { stepSize: 1 } } },
+    scales: { r: { suggestedMin: 0, suggestedMax: 5, ticks: { stepSize: 1 } } },
     plugins: { legend: { display: false } }
   };
   </script>

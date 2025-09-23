@@ -12,27 +12,33 @@
         "qol_impact": "100% - Complete peace of mind"
       },
       {
+        "id": "1",
+        "label": "Documented but not communicated to everyone",
+        "score": 1,
+        "qol_impact": "90% - Peace of mind"
+      },
+      {
         "id": "2",
         "label": "Discussed with family but not formally documented",
         "score": 2,
         "qol_impact": "75% - Mostly prepared"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Thought about it but haven't discussed or documented",
-        "score": 4,
+        "score": 3,
         "qol_impact": "50% - Some uncertainty"
       },
       {
-        "id": "6",
+        "id": "4",
         "label": "Avoided thinking about these issues",
-        "score": 6,
+        "score": 4,
         "qol_impact": "25% - Significant anxiety"
       },
       {
-        "id": "7",
+        "id": "5",
         "label": "Too overwhelmed to consider or discuss",
-        "score": 7,
+        "score": 5,
         "qol_impact": "<10% - Critical state"
       }
     ],
@@ -81,27 +87,33 @@
         "qol_impact": "100% - Fully prepared"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Have someone in mind but not officially designated",
-        "score": 2,
+        "score": 1,
         "qol_impact": "75% - Mostly prepared"
       },
       {
-        "id": "4",
-        "label": "Uncertain who to choose",
-        "score": 4,
+        "id": "2",
+        "label": "Deciding between candidates; not finalized",
+        "score": 2,
         "qol_impact": "50% - Some uncertainty"
       },
       {
-        "id": "6",
+        "id": "3",
+        "label": "Uncertain who to choose",
+        "score": 3,
+        "qol_impact": "50% - Some uncertainty"
+      },
+      {
+        "id": "4",
         "label": "Have not thought about it at all",
-        "score": 6,
+        "score": 4,
         "qol_impact": "25% - Not prepared"
       },
       {
-        "id": "7",
+        "id": "5",
         "label": "Do not want anyone to make decisions for me",
-        "score": 7,
+        "score": 5,
         "qol_impact": "<10% - Critical situation"
       }
     ],
@@ -130,46 +142,40 @@
     "question": "Have you expressed any specific wishes for how you want things handled as you approach end-of-life?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -197,46 +203,40 @@
     "question": "Are you aware of any legal or medical requirements in your country/state for end-of-life decisions (like specific forms or approvals needed)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -264,34 +264,40 @@
     "question": "Have you made any arrangements for managing your estate or finances in the event of serious illness or passing (e.g., trusts, estate planning)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
+      },
+      {
+        "id": "5",
+        "label": "Severe issues; needs regular assistance",
+        "score": 5,
+        "qol_impact": "Severe impact"
       }
     ],
     "followup_questions": [
@@ -319,28 +325,34 @@
     "question": "Do you currently have a will, or have you thought about creating or updating one given your diagnosis?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -374,28 +386,34 @@
     "question": "Have you designated a power of attorney to help manage your affairs if you become unable to do so?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -429,28 +447,34 @@
     "question": "Are there any personal or medical information privacy concerns (like who has access to your health information or story) that you have?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -484,28 +508,34 @@
     "question": "Are there any issues or changes with your employment payroll or medical benefits that you're currently dealing with?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -539,28 +569,34 @@
     "question": "Have you experienced or are you worried about any workplace discrimination or unfair treatment related to your ALS/MND?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -594,28 +630,34 @@
     "question": "How are you managing day-to-day finances and budgeting in light of any income changes due to ALS/MND?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -649,28 +691,34 @@
     "question": "Do you have the necessary arrangements to manage your banking and bills if you become unable to handle them (like automatic payments or someone to assist)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -704,28 +752,34 @@
     "question": "Have you set up any trusts or similar financial arrangements to ensure your assets are managed or transferred according to your wishes?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -759,28 +813,34 @@
     "question": "Are there any financial risks or uncertainties related to your condition that you're worried about (e.g., cost of care, income stability)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -814,28 +874,34 @@
     "question": "Do you currently have life insurance, or are you considering it (or changes to it) in light of your condition?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -869,28 +935,34 @@
     "question": "Are you accessing any disability benefits or other support programs (like social security, grants, or community aid)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -924,28 +996,34 @@
     "question": "Which family members are involved in caring for you, and how are they coping with the caregiving responsibilities?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -979,28 +1057,34 @@
     "question": "Do you have professional or paid caregivers assisting you, and how do you feel about the care they're providing?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1034,28 +1118,34 @@
     "question": "Are you receiving any financial subsidies or support to help cover care or equipment costs?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1071,12 +1161,12 @@
         "options": []
       },
       {
-        "question": "Is the financial support you\u2019re getting enough to cover your care needs, or are there still costs not covered?",
+        "question": "Is the financial support you’re getting enough to cover your care needs, or are there still costs not covered?",
         "type": "multiple",
         "options": [
-          "Yes \u2013 the support covers my needs",
-          "No \u2013 there are still significant out-of-pocket costs",
-          "I\u2019m not receiving any financial support"
+          "Yes – the support covers my needs",
+          "No – there are still significant out-of-pocket costs",
+          "I’m not receiving any financial support"
         ]
       },
       {
@@ -1093,28 +1183,34 @@
     "question": "Do you currently receive home care services, and are they meeting your needs?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1145,7 +1241,7 @@
           "Household chores (cleaning, cooking)",
           "Medical/nursing tasks (medications, therapy)",
           "Companionship or supervision",
-          "None \u2013 all tasks are covered",
+          "None – all tasks are covered",
           "Other"
         ]
       },
@@ -1167,28 +1263,34 @@
     "question": "Have you thought about or planned for long-term care options, such as nursing care or a care facility, for the future?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1222,28 +1324,34 @@
     "question": "Have your caregivers (family or professional) received any training or guidance on how to care for someone with ALS/MND?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1277,28 +1385,34 @@
     "question": "How are your caregivers managing their time between caregiving and their own personal or work life?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1332,27 +1446,39 @@
     "question": "Are any of your caregivers younger family members (like teenage or young adult children), and do they have the support they need in coping with this role?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
         "label": "Moderate issues; noticeable limitations",
         "score": 4,
+        "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "5",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 5,
         "qol_impact": "Moderate impact"
       }
     ],
@@ -1381,22 +1507,28 @@
     "question": "Do you have a plan for emergencies (like a sudden health issue or accident), such as whom to call, where to go, or what to do?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
@@ -1406,9 +1538,9 @@
       },
       {
         "id": "5",
-        "label": "Marked issues; frequent limitations",
+        "label": "Moderate issues; noticeable limitations",
         "score": 5,
-        "qol_impact": "Marked impact"
+        "qol_impact": "Moderate impact"
       }
     ],
     "followup_questions": [
@@ -1436,22 +1568,28 @@
     "question": "How has traveling, even for short trips, been for you? Are you facing any challenges in getting from place to place?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
@@ -1461,9 +1599,9 @@
       },
       {
         "id": "5",
-        "label": "Marked issues; frequent limitations",
+        "label": "Moderate issues; noticeable limitations",
         "score": 5,
-        "qol_impact": "Marked impact"
+        "qol_impact": "Moderate impact"
       }
     ],
     "followup_questions": [
@@ -1491,22 +1629,28 @@
     "question": "What kind of transportation do you mainly use to get to appointments or run errands, and does it accommodate your needs (like a wheelchair if you use one)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
@@ -1516,9 +1660,9 @@
       },
       {
         "id": "5",
-        "label": "Marked issues; frequent limitations",
+        "label": "Moderate issues; noticeable limitations",
         "score": 5,
-        "qol_impact": "Marked impact"
+        "qol_impact": "Moderate impact"
       }
     ],
     "followup_questions": [
@@ -1546,27 +1690,39 @@
     "question": "Are the places you need or want to go (like your home, work, or community spaces) physically accessible to you now?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
         "label": "Moderate issues; noticeable limitations",
         "score": 4,
+        "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "5",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 5,
         "qol_impact": "Moderate impact"
       }
     ],
@@ -1595,22 +1751,28 @@
     "question": "Do you have any arrangements for respite care (temporary relief) for your caregivers, and have you or they used such services?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
@@ -1620,9 +1782,9 @@
       },
       {
         "id": "5",
-        "label": "Marked issues; frequent limitations",
+        "label": "Moderate issues; noticeable limitations",
         "score": 5,
-        "qol_impact": "Marked impact"
+        "qol_impact": "Moderate impact"
       }
     ],
     "followup_questions": [
@@ -1650,22 +1812,28 @@
     "question": "Are you or your family taking advantage of any respite care or support services (like day programs, temporary care stays) to get breaks when needed?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
+      },
+      {
+        "id": "3",
+        "label": "Moderate issues; noticeable limitations",
+        "score": 3,
+        "qol_impact": "Moderate impact"
       },
       {
         "id": "4",
@@ -1675,9 +1843,9 @@
       },
       {
         "id": "5",
-        "label": "Marked issues; frequent limitations",
+        "label": "Moderate issues; noticeable limitations",
         "score": 5,
-        "qol_impact": "Marked impact"
+        "qol_impact": "Moderate impact"
       }
     ],
     "followup_questions": [
@@ -1705,28 +1873,34 @@
     "question": "Do your care providers (doctors, nurses, etc.) respect and understand any cultural or religious practices that are important to you?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1760,28 +1934,34 @@
     "question": "Are there any cultural or language barriers you are facing in getting the care or information you need?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -1815,22 +1995,40 @@
     "question": "Are you familiar with your patient rights (like the right to refuse treatment, privacy rights, etc.), and do you feel these rights are respected?",
     "options": [
       {
-        "id": "1",
-        "label": "No issues / optimal understanding",
-        "score": 1,
+        "id": "0",
+        "label": "Fully aware of my patient rights",
+        "score": 0,
         "qol_impact": "Fully aware of rights"
       },
       {
+        "id": "1",
+        "label": "Mostly aware; minor uncertainties",
+        "score": 1,
+        "qol_impact": "Mostly aware of rights"
+      },
+      {
+        "id": "2",
+        "label": "Somewhat aware; some gaps in understanding",
+        "score": 2,
+        "qol_impact": "Partially aware of rights"
+      },
+      {
         "id": "3",
-        "label": "Somewhat aware but not fully clear",
+        "label": "Limited awareness; unclear about several aspects",
         "score": 3,
-        "qol_impact": "Partially aware"
+        "qol_impact": "Limited awareness of rights"
+      },
+      {
+        "id": "4",
+        "label": "Mostly unaware of my patient rights",
+        "score": 4,
+        "qol_impact": "Mostly unaware of rights"
       },
       {
         "id": "5",
-        "label": "Not really aware of my patient rights",
+        "label": "Not aware of my patient rights",
         "score": 5,
-        "qol_impact": "Not aware; might be vulnerable"
+        "qol_impact": "Not aware of rights"
       }
     ],
     "followup_questions": [
@@ -1858,22 +2056,40 @@
     "question": "Do you feel your care team involves you in decision-making to the extent you desire, respecting your right to have a say in your treatment plan?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "Very involved; my opinions drive my care",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Empowered and respected"
+      },
+      {
+        "id": "1",
+        "label": "Involved; I'm consulted on most decisions",
+        "score": 1,
+        "qol_impact": "Highly involved"
+      },
+      {
+        "id": "2",
+        "label": "Moderately involved; my input is sometimes considered",
+        "score": 2,
+        "qol_impact": "Moderately involved"
       },
       {
         "id": "3",
         "label": "Somewhat involved; they listen but sometimes make decisions without me",
         "score": 3,
-        "qol_impact": "Moderately involved"
+        "qol_impact": "Limited involvement"
+      },
+      {
+        "id": "4",
+        "label": "Little involvement; decisions mostly made for me",
+        "score": 4,
+        "qol_impact": "Not involved"
       },
       {
         "id": "5",
         "label": "Not involved much; decisions are mostly made for me",
         "score": 5,
-        "qol_impact": "Not involved; disempowered"
+        "qol_impact": "Disempowered"
       }
     ],
     "followup_questions": [
@@ -1901,10 +2117,22 @@
     "question": "If you had a concern or complaint about your care, do you know how to raise it and do you feel it would be handled properly?",
     "options": [
       {
-        "id": "1",
-        "label": "Yes, know how; confident it would be handled",
-        "score": 1,
+        "id": "0",
+        "label": "Yes, absolutely know how; confident it would be handled",
+        "score": 0,
         "qol_impact": "Empowered to speak up"
+      },
+      {
+        "id": "1",
+        "label": "Yes, I know how; fairly confident in outcome",
+        "score": 1,
+        "qol_impact": "Confident to speak up"
+      },
+      {
+        "id": "2",
+        "label": "Somewhat; I have an idea how, but not fully sure",
+        "score": 2,
+        "qol_impact": "Somewhat unsure"
       },
       {
         "id": "3",
@@ -1913,10 +2141,16 @@
         "qol_impact": "Unsure or hesitant"
       },
       {
-        "id": "5",
-        "label": "No, don\u2019t know how; or fear negative consequences",
-        "score": 5,
+        "id": "4",
+        "label": "No, don't really know how; and worry it wouldn’t be handled",
+        "score": 4,
         "qol_impact": "Feels unsafe to complain"
+      },
+      {
+        "id": "5",
+        "label": "No, I don't know how and fear negative consequences",
+        "score": 5,
+        "qol_impact": "Unsafe to speak up"
       }
     ],
     "followup_questions": [
@@ -1944,16 +2178,40 @@
     "question": "Has your condition affected how you see your body or appearance, and is this something that bothers you?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No change in how I feel about my body",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Self-image intact"
       },
       {
-        "id": "7",
-        "label": "Yes, I feel very self-conscious or upset about changes",
-        "score": 7,
+        "id": "1",
+        "label": "Slightly more self-conscious but not bothered",
+        "score": 1,
+        "qol_impact": "Minor self-image issues"
+      },
+      {
+        "id": "2",
+        "label": "Mildly bothered by changes occasionally",
+        "score": 2,
+        "qol_impact": "Mild self-image distress"
+      },
+      {
+        "id": "3",
+        "label": "Moderately bothered; sometimes upset about changes",
+        "score": 3,
+        "qol_impact": "Moderate self-image distress"
+      },
+      {
+        "id": "4",
+        "label": "Markedly self-conscious; often upset about changes",
+        "score": 4,
         "qol_impact": "Major self-image distress"
+      },
+      {
+        "id": "5",
+        "label": "Yes, very self-conscious or upset about changes",
+        "score": 5,
+        "qol_impact": "Severe self-image distress"
       }
     ],
     "followup_questions": [
@@ -1980,6 +2238,12 @@
     "term": "Body image",
     "question": "Do you feel comfortable with how your body is changing in front of close ones, or does it affect your interactions?",
     "options": [
+      {
+        "id": "0",
+        "label": "Completely comfortable; not affecting interactions at all",
+        "score": 0,
+        "qol_impact": "No relational impact"
+      },
       {
         "id": "1",
         "label": "Comfortable; not affecting interactions",
@@ -2036,28 +2300,34 @@
     "question": "Are you experiencing any changes in your speech or communication ability, and how is that affecting your daily interactions?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
@@ -2091,34 +2361,40 @@
     "question": "Do you feel heard and understood by those around you when you communicate, despite any changes in how you speak or express yourself?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "I feel completely heard and understood",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Communication intact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "I have to repeat myself occasionally, but I'm mostly understood",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Minor communication issues"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "It's noticeably harder; I often worry I'm not understood",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Moderate communication issues"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Communication is very challenging; others struggle to understand me",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Major communication issues"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "I feel isolated because I can't effectively communicate",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Communication breakdown"
+      },
+      {
+        "id": "5",
+        "label": "I cannot communicate at all; completely isolated",
+        "score": 5,
+        "qol_impact": "Complete communication breakdown"
       }
     ],
     "followup_questions": [
@@ -2145,6 +2421,12 @@
     "term": "Activities of daily living",
     "question": "Which daily activities (like dressing, bathing, eating) have become challenging for you due to ALS/MND?",
     "options": [
+      {
+        "id": "0",
+        "label": "None; I manage all daily activities fine",
+        "score": 0,
+        "qol_impact": "Fully independent"
+      },
       {
         "id": "1",
         "label": "None; I manage all daily activities fine",
@@ -2201,6 +2483,12 @@
     "question": "Are you able to manage personal hygiene tasks (such as bathing, grooming, using the toilet) as independently as you would like?",
     "options": [
       {
+        "id": "0",
+        "label": "I manage all hygiene tasks independently",
+        "score": 0,
+        "qol_impact": "Fully independent"
+      },
+      {
         "id": "1",
         "label": "I manage all hygiene tasks independently",
         "score": 1,
@@ -2255,6 +2543,12 @@
     "term": "Mobility",
     "question": "Has there been any change in your ability to move around (walking, transferring, etc.), and are you getting the support or equipment you need for mobility?",
     "options": [
+      {
+        "id": "0",
+        "label": "Moving around normally",
+        "score": 0,
+        "qol_impact": "Unaffected mobility"
+      },
       {
         "id": "1",
         "label": "Moving around normally",
@@ -2311,6 +2605,12 @@
     "question": "Have you made any changes to how you travel, like using special transportation services or modifying a vehicle, due to mobility or health changes?",
     "options": [
       {
+        "id": "0",
+        "label": "No changes; I travel as usual",
+        "score": 0,
+        "qol_impact": "Travel unaffected"
+      },
+      {
         "id": "1",
         "label": "No changes; I travel as usual",
         "score": 1,
@@ -2366,10 +2666,16 @@
     "question": "How has your sleep been lately? Do you feel you're getting enough rest and quality sleep?",
     "options": [
       {
+        "id": "0",
+        "label": "Sleeping very well; always feel rested",
+        "score": 0,
+        "qol_impact": "Well-rested"
+      },
+      {
         "id": "1",
         "label": "Sleeping well; feel rested",
         "score": 1,
-        "qol_impact": "Well-rested"
+        "qol_impact": "Rested"
       },
       {
         "id": "2",
@@ -2388,6 +2694,12 @@
         "label": "Significant issues; rarely feel fully rested",
         "score": 4,
         "qol_impact": "Major sleep impact"
+      },
+      {
+        "id": "5",
+        "label": "Severe sleep problems; almost never feel rested",
+        "score": 5,
+        "qol_impact": "Severe sleep impact"
       }
     ],
     "followup_questions": [
@@ -2415,6 +2727,12 @@
     "question": "Are you finding that fatigue or poor sleep is affecting your daytime activities or mood?",
     "options": [
       {
+        "id": "0",
+        "label": "No, I feel fully alert and my mood is unaffected",
+        "score": 0,
+        "qol_impact": "No daytime impact"
+      },
+      {
         "id": "1",
         "label": "No, I feel alert and my mood is unaffected",
         "score": 1,
@@ -2437,6 +2755,12 @@
         "label": "Yes, fatigue really limits my daily life",
         "score": 4,
         "qol_impact": "Major daytime impact"
+      },
+      {
+        "id": "5",
+        "label": "Yes, fatigue is overwhelming; limits most activities",
+        "score": 5,
+        "qol_impact": "Severe daytime impact"
       }
     ],
     "followup_questions": [
@@ -2464,22 +2788,40 @@
     "question": "Have you noticed any changes in your weight or appetite since your diagnosis?",
     "options": [
       {
+        "id": "0",
+        "label": "No, weight/appetite are completely stable",
+        "score": 0,
+        "qol_impact": "Stable nutrition"
+      },
+      {
         "id": "1",
         "label": "No, weight/appetite are stable",
         "score": 1,
         "qol_impact": "Stable nutrition"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Some changes, but nothing concerning",
+        "score": 2,
+        "qol_impact": "Mild changes"
+      },
+      {
+        "id": "3",
+        "label": "Unintentionally lost or gained some weight; mild change",
         "score": 3,
-        "qol_impact": "Mild nutrition changes"
+        "qol_impact": "Moderate changes"
+      },
+      {
+        "id": "4",
+        "label": "Yes, significant weight/appetite change",
+        "score": 4,
+        "qol_impact": "Marked changes"
       },
       {
         "id": "5",
         "label": "Yes, significant weight/appetite change",
         "score": 5,
-        "qol_impact": "Major nutrition changes"
+        "qol_impact": "Major changes"
       }
     ],
     "followup_questions": [
@@ -2506,6 +2848,12 @@
     "term": "Swallowing",
     "question": "Are you experiencing any difficulties with swallowing, such as coughing during meals or needing to change food textures?",
     "options": [
+      {
+        "id": "0",
+        "label": "No issues; swallowing normally",
+        "score": 0,
+        "qol_impact": "No swallowing issues"
+      },
       {
         "id": "1",
         "label": "No issues; swallowing normally",
@@ -2562,6 +2910,12 @@
     "question": "Are you able to maintain a balanced diet and adequate nutrition, or have you considered supplements or feeding support due to your condition?",
     "options": [
       {
+        "id": "0",
+        "label": "Eating well; balanced diet",
+        "score": 0,
+        "qol_impact": "Good nutrition"
+      },
+      {
         "id": "1",
         "label": "Eating well; balanced diet",
         "score": 1,
@@ -2617,6 +2971,12 @@
     "question": "Have you noticed any changes in your breathing (like shortness of breath, especially when lying down or at night)?",
     "options": [
       {
+        "id": "0",
+        "label": "No difference; breathing completely fine",
+        "score": 0,
+        "qol_impact": "Breathing normal"
+      },
+      {
         "id": "1",
         "label": "No difference; breathing fine",
         "score": 1,
@@ -2639,6 +2999,12 @@
         "label": "Significant change; use breathing support at times",
         "score": 4,
         "qol_impact": "Major breath changes"
+      },
+      {
+        "id": "5",
+        "label": "Severe change; require frequent breathing support",
+        "score": 5,
+        "qol_impact": "Severe breath changes"
       }
     ],
     "followup_questions": [
@@ -2666,6 +3032,12 @@
     "question": "Do you use any respiratory support (like a ventilator or cough assist device) to help with breathing or clearing secretions?",
     "options": [
       {
+        "id": "0",
+        "label": "No, no support needed",
+        "score": 0,
+        "qol_impact": "Breathing independent"
+      },
+      {
         "id": "1",
         "label": "No, no support needed",
         "score": 1,
@@ -2675,7 +3047,7 @@
         "id": "2",
         "label": "Not yet; considering or monitoring",
         "score": 2,
-        "qol_impact": "Monitoring respiratory status"
+        "qol_impact": "Monitoring respiratory"
       },
       {
         "id": "3",
@@ -2720,6 +3092,12 @@
     "term": "Fatigue",
     "question": "How much fatigue are you experiencing day-to-day, and is it interfering with your activities?",
     "options": [
+      {
+        "id": "0",
+        "label": "No fatigue; energy level is good",
+        "score": 0,
+        "qol_impact": "Energy normal"
+      },
       {
         "id": "1",
         "label": "No fatigue; energy level is good",
@@ -2775,6 +3153,12 @@
     "term": "Pain management",
     "question": "Are you dealing with any pain or discomfort, and if so, is it being adequately managed with medications or other therapies?",
     "options": [
+      {
+        "id": "0",
+        "label": "No pain; comfortable",
+        "score": 0,
+        "qol_impact": "Pain free"
+      },
       {
         "id": "1",
         "label": "No pain; comfortable",
@@ -2835,6 +3219,12 @@
     "term": "Medication side effects",
     "question": "Are any of your treatments or medications causing side effects that bother you (e.g., nausea, dizziness, drowsiness)?",
     "options": [
+      {
+        "id": "0",
+        "label": "No noticeable side effects",
+        "score": 0,
+        "qol_impact": "No side effect issues"
+      },
       {
         "id": "1",
         "label": "No noticeable side effects",
@@ -2898,6 +3288,12 @@
     "question": "How frequently have you needed to visit the hospital or emergency room in recent months, and were those visits well-handled?",
     "options": [
       {
+        "id": "0",
+        "label": "No visits; condition stable",
+        "score": 0,
+        "qol_impact": "No hospitalizations"
+      },
+      {
         "id": "1",
         "label": "No visits; condition stable",
         "score": 1,
@@ -2959,6 +3355,12 @@
     "question": "Do you have easy access to your healthcare team (doctors, nurses, therapists), and is it working well for you (e.g., scheduling, transport to appointments)?",
     "options": [
       {
+        "id": "0",
+        "label": "Access is easy; no issues",
+        "score": 0,
+        "qol_impact": "Fully accessible"
+      },
+      {
         "id": "1",
         "label": "Access is easy; no issues",
         "score": 1,
@@ -3013,6 +3415,12 @@
     "term": "Symptom management",
     "question": "Overall, are your ALS/MND symptoms being managed in a way that you're comfortable with, or do you feel some symptoms need better control?",
     "options": [
+      {
+        "id": "0",
+        "label": "All symptoms well-managed",
+        "score": 0,
+        "qol_impact": "Optimal management"
+      },
       {
         "id": "1",
         "label": "All symptoms well-managed",
@@ -3076,6 +3484,12 @@
     "question": "Are you actively participating in any specialized ALS/MND clinics or research, and how do you find those experiences?",
     "options": [
       {
+        "id": "0",
+        "label": "Yes, very active; extremely positive experience",
+        "score": 0,
+        "qol_impact": "Empowered by participation"
+      },
+      {
         "id": "1",
         "label": "Yes, active; very positive experience",
         "score": 1,
@@ -3130,6 +3544,12 @@
     "term": "Experimental therapies",
     "question": "Have you considered or are you trying any experimental therapies or clinical trials for ALS/MND?",
     "options": [
+      {
+        "id": "0",
+        "label": "Not considered at all; content with standard care",
+        "score": 0,
+        "qol_impact": "Content with standard care"
+      },
       {
         "id": "1",
         "label": "Not considered; sticking to standard care",
@@ -3186,6 +3606,12 @@
     "question": "Is there good communication and coordination among your healthcare providers (neurologist, primary care, therapists, etc.) in managing your ALS/MND?",
     "options": [
       {
+        "id": "0",
+        "label": "Excellent coordination; everyone is on the same page",
+        "score": 0,
+        "qol_impact": "Care well-coordinated"
+      },
+      {
         "id": "1",
         "label": "Excellent coordination; everyone is on the same page",
         "score": 1,
@@ -3240,6 +3666,12 @@
     "term": "Assistive devices",
     "question": "Do you have all the assistive devices or equipment you need (like wheelchairs, communication devices, home modifications), and are they working well for you?",
     "options": [
+      {
+        "id": "0",
+        "label": "Yes, fully equipped with all needed devices",
+        "score": 0,
+        "qol_impact": "Fully equipped"
+      },
       {
         "id": "1",
         "label": "Yes, have all I need; they work well",
@@ -3296,6 +3728,12 @@
     "question": "Is your home environment adapted for your needs (like safety modifications, accessible layout), and do you feel safe and comfortable at home?",
     "options": [
       {
+        "id": "0",
+        "label": "Home is fully adapted and safe",
+        "score": 0,
+        "qol_impact": "Home fully supportive"
+      },
+      {
         "id": "1",
         "label": "Home is fully adapted and safe",
         "score": 1,
@@ -3351,27 +3789,39 @@
     "question": "In managing your health, do you prefer to make decisions yourself, delegate to family, or use a shared approach with your care team?",
     "options": [
       {
+        "id": "0",
+        "label": "I make all decisions myself (highly autonomous)",
+        "score": 0,
+        "qol_impact": "Highly autonomous"
+      },
+      {
         "id": "1",
         "label": "I prefer to make all decisions myself",
         "score": 1,
         "qol_impact": "Highly autonomous"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "I make most decisions, with some family input",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mostly autonomous"
       },
       {
-        "id": "5",
+        "id": "3",
+        "label": "Shared decisions; family involved equally",
+        "score": 3,
+        "qol_impact": "Moderately autonomous"
+      },
+      {
+        "id": "4",
         "label": "I rely on family/care team to guide decisions",
-        "score": 5,
+        "score": 4,
         "qol_impact": "More passive in decisions"
       },
       {
-        "id": "7",
-        "label": "I feel I have little say; others decide for me",
-        "score": 7,
+        "id": "5",
+        "label": "I have little say; others decide for me",
+        "score": 5,
         "qol_impact": "Lacks autonomy"
       }
     ],
@@ -3400,6 +3850,12 @@
     "question": "Are you able to manage your medications on your own (like remembering doses, refills), or do you have help with it?",
     "options": [
       {
+        "id": "0",
+        "label": "Manage completely on my own",
+        "score": 0,
+        "qol_impact": "Independent medication management"
+      },
+      {
         "id": "1",
         "label": "Manage completely on my own",
         "score": 1,
@@ -3421,7 +3877,7 @@
         "id": "4",
         "label": "Not managing; someone else fully handles it",
         "score": 4,
-        "qol_impact": "Fully dependent on others"
+        "qol_impact": "Dependent on others"
       },
       {
         "id": "5",
@@ -3454,6 +3910,12 @@
     "term": "Care burden",
     "question": "Do you worry about the strain or burden your care needs might be placing on your family or caregivers?",
     "options": [
+      {
+        "id": "0",
+        "label": "Not at all; I'm confident they're managing fine",
+        "score": 0,
+        "qol_impact": "No perceived burden"
+      },
       {
         "id": "1",
         "label": "Not at all; I'm confident they're managing fine",
@@ -3509,6 +3971,12 @@
     "term": "Hobbies & interests",
     "question": "Have you been able to continue with hobbies or interests that you enjoy, or have those been affected by your condition?",
     "options": [
+      {
+        "id": "0",
+        "label": "Yes, still enjoy all my hobbies",
+        "score": 0,
+        "qol_impact": "Hobbies intact"
+      },
       {
         "id": "1",
         "label": "Yes, still enjoy all my hobbies",
@@ -3572,10 +4040,16 @@
     "question": "Has your daily routine changed significantly because of ALS/MND, and has it been difficult to adjust to these changes?",
     "options": [
       {
+        "id": "0",
+        "label": "Routine unchanged; completely the same",
+        "score": 0,
+        "qol_impact": "Routine intact"
+      },
+      {
         "id": "1",
         "label": "Routine mostly the same; minor tweaks",
         "score": 1,
-        "qol_impact": "Routine intact"
+        "qol_impact": "Routine slightly changed"
       },
       {
         "id": "2",
@@ -3594,6 +4068,12 @@
         "label": "Major changes; still struggling to adjust",
         "score": 4,
         "qol_impact": "Routine largely changed"
+      },
+      {
+        "id": "5",
+        "label": "Drastic changes; not adjusted and overwhelmed",
+        "score": 5,
+        "qol_impact": "Routine disrupted"
       }
     ],
     "followup_questions": [
@@ -3628,6 +4108,12 @@
     "question": "How do you feel about your level of independence currently, and are you comfortable accepting help when needed?",
     "options": [
       {
+        "id": "0",
+        "label": "Completely comfortable; accept help whenever needed",
+        "score": 0,
+        "qol_impact": "Healthy acceptance"
+      },
+      {
         "id": "1",
         "label": "Comfortable; accept help easily when needed",
         "score": 1,
@@ -3650,6 +4136,12 @@
         "label": "Very uncomfortable; avoid help even if I need it",
         "score": 4,
         "qol_impact": "High struggle with independence"
+      },
+      {
+        "id": "5",
+        "label": "Extremely uncomfortable; refuse help even when necessary",
+        "score": 5,
+        "qol_impact": "Refuses help"
       }
     ],
     "followup_questions": [
@@ -3677,6 +4169,12 @@
     "question": "Have you tried any mindfulness or relaxation techniques to help cope with stress or symptoms, and if not, would you be open to them?",
     "options": [
       {
+        "id": "0",
+        "label": "Yes, I practice regularly; it helps a lot",
+        "score": 0,
+        "qol_impact": "Practices mindfulness"
+      },
+      {
         "id": "1",
         "label": "Yes, I practice regularly; it helps",
         "score": 1,
@@ -3702,7 +4200,7 @@
       },
       {
         "id": "5",
-        "label": "Tried and didn\u2019t find them helpful",
+        "label": "Tried and didn’t find them helpful",
         "score": 5,
         "qol_impact": "Mindfulness unhelpful"
       }
@@ -3739,6 +4237,12 @@
     "question": "Do you find moments to relax or mentally unwind, or does anxiety often intrude on your relaxation?",
     "options": [
       {
+        "id": "0",
+        "label": "I relax very easily; anxiety never intrudes",
+        "score": 0,
+        "qol_impact": "Relaxation intact"
+      },
+      {
         "id": "1",
         "label": "I relax well; anxiety under control",
         "score": 1,
@@ -3761,6 +4265,12 @@
         "label": "Rarely relax; anxiety is constant",
         "score": 4,
         "qol_impact": "Major anxiety impact"
+      },
+      {
+        "id": "5",
+        "label": "Cannot relax at all; anxiety is overwhelming",
+        "score": 5,
+        "qol_impact": "Severe anxiety impact"
       }
     ],
     "followup_questions": [
@@ -3787,6 +4297,12 @@
     "term": "Routine activities",
     "question": "Are day-to-day activities (like cooking, cleaning, shopping) manageable for you, or do you find you need more assistance or adaptations?",
     "options": [
+      {
+        "id": "0",
+        "label": "Manage all daily tasks independently",
+        "score": 0,
+        "qol_impact": "Fully independent"
+      },
       {
         "id": "1",
         "label": "Manage all daily tasks independently",
@@ -3850,6 +4366,12 @@
     "question": "How well do you feel you are adapting to the changes in your life caused by ALS/MND?",
     "options": [
       {
+        "id": "0",
+        "label": "Adapting extremely well; staying resilient",
+        "score": 0,
+        "qol_impact": "High adaptability"
+      },
+      {
         "id": "1",
         "label": "Adapting very well; staying resilient",
         "score": 1,
@@ -3872,6 +4394,12 @@
         "label": "Not adapting well; it's overwhelming",
         "score": 4,
         "qol_impact": "Poor adaptability"
+      },
+      {
+        "id": "5",
+        "label": "Unable to adapt; completely overwhelmed",
+        "score": 5,
+        "qol_impact": "No adaptability"
       }
     ],
     "followup_questions": [
@@ -3905,22 +4433,28 @@
     "question": "Do you feel you have enough information about ALS/MND and what to expect, or are there areas where you want to know more?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "Well-informed; all questions answered",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Knowledgeable"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Fairly informed; minor clarifications wanted",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Mostly knowledgeable"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Some gaps; have unanswered questions",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Information gaps"
+      },
+      {
+        "id": "3",
+        "label": "Not well-informed; need more guidance",
+        "score": 3,
+        "qol_impact": "Lacks information"
       },
       {
         "id": "4",
@@ -3967,46 +4501,40 @@
     "question": "Would you be interested in family or relationship counseling to help you and your loved ones adjust to changes from ALS/MND?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4034,46 +4562,40 @@
     "question": "How are you coping emotionally with having a terminal illness? Would you consider counseling to help you come to terms with it?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4106,6 +4628,12 @@
     "term": "Existential",
     "question": "Do you grapple with questions about meaning, purpose, or fairness because of your illness, and have you found any sources of comfort or answers?",
     "options": [
+      {
+        "id": "0",
+        "label": "Have made peace; not troubled by these questions at all",
+        "score": 0,
+        "qol_impact": "At peace"
+      },
       {
         "id": "1",
         "label": "Have made peace; not troubled by these questions",
@@ -4162,6 +4690,12 @@
     "question": "Have you thought about what personal legacy or impact you want to leave behind (like memories, messages, projects), and are you working on anything related to that?",
     "options": [
       {
+        "id": "0",
+        "label": "Yes, I have a clear legacy plan and am making excellent progress",
+        "score": 0,
+        "qol_impact": "Legacy plan in action"
+      },
+      {
         "id": "1",
         "label": "Yes, I have a clear legacy project/plan I'm pursuing",
         "score": 1,
@@ -4216,6 +4750,12 @@
     "term": "Spirituality",
     "question": "Do you have spiritual or religious practices that are helping you through this time, or is that aspect something you're seeking more of?",
     "options": [
+      {
+        "id": "0",
+        "label": "Strong spiritual support; it helps a lot",
+        "score": 0,
+        "qol_impact": "Spiritually supported"
+      },
       {
         "id": "1",
         "label": "Strong spiritual support; it helps a lot",
@@ -4272,20 +4812,38 @@
     "question": "Are you part of any spiritual or faith-based community, and do they provide support to you during this time?",
     "options": [
       {
+        "id": "0",
+        "label": "Yes, actively involved; great support",
+        "score": 0,
+        "qol_impact": "Community highly supportive"
+      },
+      {
         "id": "1",
         "label": "Yes, actively involved; great support",
         "score": 1,
         "qol_impact": "Community supportive"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Somewhat involved; some support",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Moderate support"
       },
       {
+        "id": "3",
+        "label": "Slightly involved; limited support",
+        "score": 3,
+        "qol_impact": "Limited support"
+      },
+      {
+        "id": "4",
+        "label": "Not involved much; no real support from community",
+        "score": 4,
+        "qol_impact": "No community support"
+      },
+      {
         "id": "5",
-        "label": "Not involved; no support from a community",
+        "label": "Not involved at all; no support from a community",
         "score": 5,
         "qol_impact": "No community support"
       }
@@ -4315,46 +4873,40 @@
     "question": "Have you connected with any ALS/MND support groups or peers? If not, would you be interested in that kind of support?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
         "label": "Marked issues; frequent limitations",
         "score": 5,
         "qol_impact": "Marked impact"
-      },
-      {
-        "id": "6",
-        "label": "Severe issues; needs regular assistance",
-        "score": 6,
-        "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4387,46 +4939,40 @@
     "question": "Have you noticed any changes in your memory, thinking, or behavior, and do you feel you have support to manage those changes?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4434,10 +4980,10 @@
         "question": "Are there specific cognitive changes that concern you?",
         "type": "multiple",
         "options": [
-          "Yes \u2013 memory problems concern me",
-          "Yes \u2013 word-finding or language issues concern me",
-          "Yes \u2013 changes in mood or behavior concern me",
-          "No \u2013 no specific cognitive changes",
+          "Yes – memory problems concern me",
+          "Yes – word-finding or language issues concern me",
+          "Yes – changes in mood or behavior concern me",
+          "No – no specific cognitive changes",
           "Not sure"
         ]
       },
@@ -4460,46 +5006,40 @@
     "question": "Are you still able to enjoy art or creative activities as you used to (for example, painting, drawing, music)?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
         "label": "Marked issues; frequent limitations",
         "score": 5,
         "qol_impact": "Marked impact"
-      },
-      {
-        "id": "6",
-        "label": "Severe issues; needs regular assistance",
-        "score": 6,
-        "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4512,9 +5052,9 @@
         "question": "Do creative outlets still interest you as much, or have you found new ones that better fit your current abilities?",
         "type": "multiple",
         "options": [
-          "Yes \u2013 I\u2019m still interested in the same creative outlets",
-          "I\u2019ve lost some interest in those activities",
-          "I\u2019ve found new creative hobbies that suit me now"
+          "Yes – I’m still interested in the same creative outlets",
+          "I’ve lost some interest in those activities",
+          "I’ve found new creative hobbies that suit me now"
         ]
       },
       {
@@ -4531,46 +5071,40 @@
     "question": "Do you enjoy literature or writing, and have you been able to continue with that despite your illness?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
         "label": "Marked issues; frequent limitations",
         "score": 5,
         "qol_impact": "Marked impact"
-      },
-      {
-        "id": "6",
-        "label": "Severe issues; needs regular assistance",
-        "score": 6,
-        "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4598,46 +5132,40 @@
     "question": "Do you still enjoy cooking or being involved in meal preparation as an activity, not just a necessity?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
+      },
+      {
+        "id": "4",
+        "label": "Marked issues; frequent limitations",
+        "score": 4,
+        "qol_impact": "Marked impact"
       },
       {
         "id": "5",
         "label": "Marked issues; frequent limitations",
         "score": 5,
         "qol_impact": "Marked impact"
-      },
-      {
-        "id": "6",
-        "label": "Severe issues; needs regular assistance",
-        "score": 6,
-        "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4647,12 +5175,12 @@
         "options": []
       },
       {
-        "question": "Does cooking still bring you enjoyment, and is there a way to keep you involved even if you can\u2019t do everything yourself?",
+        "question": "Does cooking still bring you enjoyment, and is there a way to keep you involved even if you can’t do everything yourself?",
         "type": "multiple",
         "options": [
-          "Yes \u2013 I still enjoy cooking and find ways to stay involved",
-          "I enjoy it but I can\u2019t do much now",
-          "I don\u2019t really get enjoyment from cooking anymore"
+          "Yes – I still enjoy cooking and find ways to stay involved",
+          "I enjoy it but I can’t do much now",
+          "I don’t really get enjoyment from cooking anymore"
         ]
       },
       {
@@ -4669,46 +5197,40 @@
     "question": "Are you able to enjoy watching films or TV, and do you have any special setup to make it easier or more comfortable?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4721,10 +5243,10 @@
         "question": "Do you face any difficulties when watching TV or movies?",
         "type": "multiple",
         "options": [
-          "Yes \u2013 I have hearing difficulties and need higher volume or subtitles",
-          "Yes \u2013 I have vision issues and need subtitles/large screen",
-          "Yes \u2013 it\u2019s hard to sit comfortably for a whole movie",
-          "No \u2013 I don\u2019t face significant difficulties watching TV"
+          "Yes – I have hearing difficulties and need higher volume or subtitles",
+          "Yes – I have vision issues and need subtitles/large screen",
+          "Yes – it’s hard to sit comfortably for a whole movie",
+          "No – I don’t face significant difficulties watching TV"
         ]
       },
       {
@@ -4741,46 +5263,40 @@
     "question": "If you enjoy video games or gaming, are you still able to participate? Have you tried any adaptive gaming setups?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4793,10 +5309,10 @@
         "question": "Are there specific games you miss playing, or have you switched to different games that are easier for you to manage?",
         "type": "multiple",
         "options": [
-          "Yes \u2013 I miss some games I used to play",
-          "Yes \u2013 I\u2019ve started playing different types of games that are easier now",
-          "I\u2019m still playing the same games",
-          "I\u2019ve stopped gaming entirely"
+          "Yes – I miss some games I used to play",
+          "Yes – I’ve started playing different types of games that are easier now",
+          "I’m still playing the same games",
+          "I’ve stopped gaming entirely"
         ]
       },
       {
@@ -4813,46 +5329,40 @@
     "question": "Were sports or outdoor activities a part of your life, and are you able to engage in them in some way now?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -4879,6 +5389,12 @@
     "term": "Entertainment",
     "question": "Are there other hobbies or interests that are important to you, and have you found ways to continue them or alternatives that bring you joy?",
     "options": [
+      {
+        "id": "0",
+        "label": "Still doing all important hobbies",
+        "score": 0,
+        "qol_impact": "Hobbies intact"
+      },
       {
         "id": "1",
         "label": "Still doing all important hobbies",
@@ -4935,46 +5451,40 @@
     "question": "Do you still like going out to restaurants or dining out, and is there anything that makes it hard for you to do so?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -5002,46 +5512,40 @@
     "question": "Has ALS/MND affected your intimate or sexual life, and is this an area where you would like support or to speak with a professional?",
     "options": [
       {
-        "id": "1",
+        "id": "0",
         "label": "No issues / optimal function",
-        "score": 1,
+        "score": 0,
         "qol_impact": "Minimal or no impact"
       },
       {
-        "id": "2",
+        "id": "1",
         "label": "Minor issues; easily managed",
-        "score": 2,
+        "score": 1,
         "qol_impact": "Very small impact"
       },
       {
-        "id": "3",
+        "id": "2",
         "label": "Mild issues; occasional limitations",
-        "score": 3,
+        "score": 2,
         "qol_impact": "Mild impact"
       },
       {
-        "id": "4",
+        "id": "3",
         "label": "Moderate issues; noticeable limitations",
-        "score": 4,
+        "score": 3,
         "qol_impact": "Moderate impact"
       },
       {
-        "id": "5",
+        "id": "4",
         "label": "Marked issues; frequent limitations",
-        "score": 5,
+        "score": 4,
         "qol_impact": "Marked impact"
       },
       {
-        "id": "6",
+        "id": "5",
         "label": "Severe issues; needs regular assistance",
-        "score": 6,
+        "score": 5,
         "qol_impact": "Severe impact"
-      },
-      {
-        "id": "7",
-        "label": "Extreme issues; requires immediate attention",
-        "score": 7,
-        "qol_impact": "Extreme impact"
       }
     ],
     "followup_questions": [
@@ -5069,28 +5573,40 @@
     "question": "Do you have any spiritual or religious needs that are important to you at this stage, and are those needs being met?",
     "options": [
       {
+        "id": "0",
+        "label": "No, I have no spiritual needs at this time",
+        "score": 0,
+        "qol_impact": "No spiritual needs"
+      },
+      {
         "id": "1",
-        "label": "Yes \u2013 needs are met and supported",
+        "label": "Yes – I have spiritual needs and they are fully met",
         "score": 1,
         "qol_impact": "Spiritual needs met"
       },
       {
         "id": "2",
-        "label": "Yes \u2013 have needs but they are partially met",
+        "label": "Yes – have needs but they are mostly met",
         "score": 2,
-        "qol_impact": "Needs partially met"
+        "qol_impact": "Needs mostly met"
       },
       {
         "id": "3",
-        "label": "Yes \u2013 have needs not currently met",
+        "label": "Yes – have needs but only partially met",
         "score": 3,
-        "qol_impact": "Needs not met"
+        "qol_impact": "Needs partially met"
       },
       {
         "id": "4",
-        "label": "No specific spiritual needs",
+        "label": "Yes – have needs that are largely unmet",
         "score": 4,
-        "qol_impact": "No spiritual needs"
+        "qol_impact": "Needs not met"
+      },
+      {
+        "id": "5",
+        "label": "Yes – have needs not being met at all",
+        "score": 5,
+        "qol_impact": "Needs not met"
       }
     ],
     "followup_questions": [
@@ -5118,22 +5634,40 @@
     "question": "How are you and your caregivers taking care of yourselves emotionally and physically outside of the direct illness needs?",
     "options": [
       {
-        "id": "1",
-        "label": "We have some routines/activities for self-care",
-        "score": 1,
+        "id": "0",
+        "label": "We consistently make time for self-care activities",
+        "score": 0,
         "qol_impact": "Healthy self-care"
       },
       {
+        "id": "1",
+        "label": "We have some routines/activities for self-care",
+        "score": 1,
+        "qol_impact": "Some self-care"
+      },
+      {
         "id": "2",
-        "label": "We find it hard to make time for self-care",
+        "label": "We try, but self-care is irregular or insufficient",
         "score": 2,
-        "qol_impact": "Self-care neglected"
+        "qol_impact": "Limited self-care"
       },
       {
         "id": "3",
-        "label": "We haven\u2019t really addressed self-care much",
+        "label": "We find it hard to make time for self-care",
         "score": 3,
+        "qol_impact": "Self-care neglected"
+      },
+      {
+        "id": "4",
+        "label": "We rarely practice any self-care",
+        "score": 4,
         "qol_impact": "No self-care"
+      },
+      {
+        "id": "5",
+        "label": "We haven’t addressed self-care at all",
+        "score": 5,
+        "qol_impact": "No self-care at all"
       }
     ],
     "followup_questions": [
@@ -5161,28 +5695,40 @@
     "question": "How do you feel your condition is affecting your family or caregivers, and does that worry you?",
     "options": [
       {
+        "id": "0",
+        "label": "I don’t think it’s affecting them significantly",
+        "score": 0,
+        "qol_impact": "No family strain"
+      },
+      {
         "id": "1",
-        "label": "It\u2019s putting a lot of strain on my family/caregivers and it concerns me",
+        "label": "I’m not sure how it’s affecting them",
         "score": 1,
-        "qol_impact": "High family strain concern"
+        "qol_impact": "Uncertain impact"
       },
       {
         "id": "2",
-        "label": "I sense some impact on them but it\u2019s manageable",
+        "label": "I sense some impact on them but it’s manageable",
         "score": 2,
-        "qol_impact": "Moderate family impact concern"
+        "qol_impact": "Moderate family impact"
       },
       {
         "id": "3",
-        "label": "I don\u2019t think it\u2019s significantly affecting them",
+        "label": "It’s putting a lot of strain on them and it concerns me",
         "score": 3,
-        "qol_impact": "Minimal family impact concern"
+        "qol_impact": "High family strain"
       },
       {
         "id": "4",
-        "label": "I\u2019m not sure how it\u2019s affecting them",
+        "label": "It’s extremely hard on them; I’m very worried",
         "score": 4,
-        "qol_impact": "Uncertain impact"
+        "qol_impact": "Very high family strain"
+      },
+      {
+        "id": "5",
+        "label": "It’s overwhelming them; I feel extremely guilty and concerned",
+        "score": 5,
+        "qol_impact": "Overwhelming family strain"
       }
     ],
     "followup_questions": [

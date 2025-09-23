@@ -518,7 +518,7 @@ async def get_user_scores_summary(
                 # Collect scores by dimension for PNM averages
                 for pnm, term, score, updated_at in rows:
                     if pnm in dimension_scores:
-                        # Use score as-is (0-7 scale, suitable for display)
+                        # Use score as-is (0-5 scale, suitable for display)
                         dimension_scores[pnm].append(float(score))
 
                     # Also collect term data for frontend display

@@ -70,7 +70,7 @@
       <h3>Assessment Scoring Standards</h3>
       <div class="scoring-explanations">
         <div class="scoring-explanation">
-          <strong>Score Scale:</strong> All assessments use a 0-7 point scale where 0 represents optimal functioning and 7 indicates significant challenges requiring immediate attention.
+          <strong>Score Scale:</strong> All assessments use a 0-5 point scale based on ALSFRS-R medical standards: 0=Normal function, 1=Slight impact, 2=Mild difficulty, 3=Moderate difficulty, 4=Severe difficulty, 5=Unable to perform.
         </div>
         <div class="scoring-explanation">
           <strong>Evaluation Method:</strong> Scores are determined through either structured multiple-choice responses or AI-powered analysis of your detailed answers, ensuring comprehensive and personalized assessment.

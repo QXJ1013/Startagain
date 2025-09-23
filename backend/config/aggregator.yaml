@@ -2,17 +2,17 @@
 # Controls score aggregation and stage mapping
 
 aggregator:
-  # Stage thresholds for score mapping (0-7 scale)
+  # Stage thresholds for score mapping (0-5 scale)
   stage_thresholds:
-    - 2.5    # Threshold for Stage 0 -> Stage 1
-    - 4.5    # Threshold for Stage 1 -> Stage 2  
-    - 6.5    # Threshold for Stage 2 -> Stage 3
+    - 1.5    # Threshold for Stage 0 -> Stage 1
+    - 3.0    # Threshold for Stage 1 -> Stage 2
+    - 4.5    # Threshold for Stage 2 -> Stage 3
     
   # Default stage thresholds (backward compatibility)
   default_thresholds:
-    - 2.5
+    - 1.5
+    - 3.0
     - 4.5
-    - 6.5
     
   # Dimension mapping
   dimensions:
@@ -48,7 +48,7 @@ aggregator:
   # Score calculation
   scoring:
     min_score: 0
-    max_score: 7
+    max_score: 5
     default_weight: 1.0
     
   # Logging

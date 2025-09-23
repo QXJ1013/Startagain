@@ -32,6 +32,7 @@ router = APIRouter(prefix="/chat", tags=["unified-chat"])
 
 class ConversationRequest(BaseModel):
     user_response: str = ""
+    conversation_id: Optional[str] = None  # Allow conversation_id in request body
     dimension_focus: Optional[str] = None
     request_info: bool = True
 

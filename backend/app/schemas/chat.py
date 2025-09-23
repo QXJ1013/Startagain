@@ -164,7 +164,7 @@ class FinishIn(BaseModel):
 
 class DimensionResultOut(BaseModel):
     pnm: str
-    score_0_7: Optional[float] = None
+    score_0_5: Optional[float] = None
     stage: Optional[str] = None
     term_scores: List[Dict[str, Any]] = Field(default_factory=list)
     uncovered_terms: List[str] = Field(default_factory=list)
@@ -223,14 +223,14 @@ class AssessmentProgress(BaseModel):
 class AssessmentScore(BaseModel):
     pnm: str
     term: str
-    score_0_7: float
+    score_0_5: float
     rationale: Optional[str] = None
     status: str = "completed"
     timestamp: str
 
 class DimensionScore(BaseModel):
     pnm: str
-    score_0_7: float
+    score_0_5: float
     coverage_ratio: float = 0.0
     stage: Optional[str] = None
     method_version: Optional[str] = None

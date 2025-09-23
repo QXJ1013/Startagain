@@ -743,14 +743,9 @@ async function startDimensionConversation(dimension: string) {
   const conversationExists = !!chatStore.currentConversationId
   console.log(`[CHAT.VUE] Conversation exists: ${conversationExists}, ID: ${chatStore.currentConversationId}`)
 
-  if (!conversationExists) {
-    // Only create new conversation if one doesn't exist
-    chatStore.startNewConversation('dimension', dimension)
-  } else {
-    // Use existing conversation, just set the type and dimension
-    chatStore.conversationType = 'dimension'
-    chatStore.dimensionName = dimension
-  }
+  // Set conversation type and dimension (will be properly initialized via API call)
+  chatStore.conversationType = 'dimension'
+  chatStore.dimensionName = dimension
 
   // Always reset session for fresh dimension assessment
   sessionStore.resetSession()
@@ -776,11 +771,14 @@ async function startDimensionConversation(dimension: string) {
         const newConv = await conversationsApi.createConversation(authStore.token!, 'dimension', dimension, `${dimension} Assessment`)
         conversationId = newConv.id
         chatStore.setCurrentConversation(conversationId)
+        console.log(`[CHAT.VUE] Created new dimension conversation: ${conversationId}`)
       } catch (e: any) {
         console.error('Failed to create dimension conversation:', e)
         error.value = 'Failed to create conversation'
         return
       }
+    } else {
+      console.log(`[CHAT.VUE] Using existing conversation: ${conversationId}`)
     }
 
     // Add a small delay to ensure backend state is properly set

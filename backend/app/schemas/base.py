@@ -70,7 +70,7 @@ class TermScoreOut(BaseModel):
     session_id: Optional[str] = None  # Legacy field for compatibility
     pnm: str
     term: str
-    score_0_7: float = Field(..., ge=0, le=7)
+    score_0_5: float = Field(..., ge=0, le=5)
     rationale: Optional[str] = Field(default=None, max_length=240)
     status: str = "completed"
     timestamp: Optional[str] = None
@@ -81,7 +81,7 @@ class DimensionScoreOut(BaseModel):
     conversation_id: Optional[str] = None  # Optional for compatibility
     session_id: Optional[str] = None  # Legacy field for compatibility
     pnm: str
-    score_0_7: float = Field(..., ge=0.0, le=7.0)
+    score_0_5: float = Field(..., ge=0.0, le=5.0)
     coverage_ratio: float = Field(..., ge=0.0, le=1.0)
     stage: Optional[str] = None
     method_version: Optional[str] = "document_agg_v1"

@@ -372,7 +372,7 @@ class DocumentStorage:
                 term_scores.append({
                     'pnm': pnm,
                     'term': term,
-                    'score_0_7': score_data['score'],
+                    'score_0_5': score_data['score'],
                     'rationale': score_data.get('rationale'),
                     'status': score_data.get('status', 'completed')
                 })

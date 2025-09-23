@@ -1154,7 +1154,7 @@ Respond with exactly 1 single word or short phrase only:"""
         """Enhanced UC1 Hybrid retrieval: Multi-strategy + Question Bank + Self-RAG"""
         try:
             # Step 1: Generate enhanced queries with keyword expansion
-            score_context = "low difficulty" if avg_score <= 2 else "moderate difficulty" if avg_score <= 4 else "high difficulty"
+            score_context = "low difficulty" if avg_score <= 1.5 else "moderate difficulty" if avg_score <= 3 else "high difficulty"
 
             # Primary semantic query
             main_query = f"ALS {pnm} {term} {score_context} management support strategies"
@@ -1221,12 +1221,12 @@ Respond with exactly 1 single word or short phrase only:"""
         try:
             # Build UC1-specific context for AI evaluation
             user_context = ' '.join(user_responses)[:300]
-            score_interpretation = "lower functioning" if avg_score >= 5 else "moderate functioning" if avg_score >= 3 else "higher functioning"
+            score_interpretation = "lower functioning" if avg_score >= 3.5 else "moderate functioning" if avg_score >= 2 else "higher functioning"
 
             # AI prompt for UC1 relevance evaluation
             eval_prompt = f"""You are evaluating knowledge relevance for an ALS {pnm} assessment summary.
 
-Assessment: {term} with average score {avg_score:.1f}/7 ({score_interpretation})
+Assessment: {term} with average score {avg_score:.1f}/5 ({score_interpretation})
 Key user responses: {user_context}
 
 Rate each piece of knowledge for relevance (1-5, where 5=highly relevant for this specific score level and responses):
@@ -2231,7 +2231,7 @@ Professional support resources:
 Provide a professional assessment summary with targeted analysis:
 
 ## Assessment Overview:
-Briefly summarize your current situation with {term} (average score: {avg_score:.1f}/7).
+Briefly summarize your current situation with {term} (average score: {avg_score:.1f}/5).
 
 ## Key Findings:
 • Identify 2-3 specific areas where you're managing well
@@ -2260,7 +2260,7 @@ IMPORTANT:
             else:
                 # Enhanced fallback summary
                 return f"""## Assessment Overview:
-Thank you for completing your {term} assessment with an average score of {avg_score:.1f} out of 7.
+Thank you for completing your {term} assessment with an average score of {avg_score:.1f} out of 5.
 
 ## Key Findings:
 • You've shared valuable insights about your {term} experiences
@@ -2683,7 +2683,7 @@ class UseCaseTwoManager:
             scores = context.conversation.assessment_state.get('scores', {}).get(dimension, {})
             if scores:
                 avg_score = sum(score_data['score'] for score_data in scores.values()) / len(scores)
-                summary_content = f"Assessment complete for {dimension}. Average score: {avg_score:.1f}/7. Your responses provide valuable insights into your current situation and will guide personalized support recommendations."
+                summary_content = f"Assessment complete for {dimension}. Average score: {avg_score:.1f}/5. Your responses provide valuable insights into your current situation and will guide personalized support recommendations."
             else:
                 summary_content = f"Your {dimension} assessment has been completed. Thank you for sharing your experiences. This information will help us better understand your needs and provide appropriate support."
 
@@ -3010,7 +3010,7 @@ class UseCaseTwoManager:
             evaluation_prompt = f"""
             Evaluate the user's responses for {dimension} dimension, {term} term.
 
-            Main question score: {main_score}/7 (0=best condition, 7=most challenging)
+            Main question score: {main_score}/5 (0=best condition, 5=most challenging)
 
             User responses: {' | '.join(responses[-3:])}
 
@@ -3020,10 +3020,10 @@ class UseCaseTwoManager:
             - Practical challenges mentioned
             - Overall functioning level
 
-            Return a score from 0-7 where:
+            Return a score from 0-5 where:
             0 = Excellent functioning, minimal challenges
-            3.5 = Moderate challenges, some impact
-            7 = Severe challenges, significant impact
+            2.5 = Moderate challenges, some impact
+            5 = Severe challenges, significant impact
 
             Score:"""
 
@@ -3038,7 +3038,7 @@ class UseCaseTwoManager:
             ai_score = float(ai_result.score) if ai_result.score is not None else main_score
 
             # Ensure score is in valid range
-            ai_score = max(0.0, min(7.0, ai_score))
+            ai_score = max(0.0, min(5.0, ai_score))
             return ai_score
 
         except Exception as e:

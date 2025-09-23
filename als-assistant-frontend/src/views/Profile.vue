@@ -132,20 +132,6 @@
       </div>
     </div>
 
-    <!-- Activity Summary -->
-    <div v-if="!userDataLoading" class="info-card">
-      <h2>Activity Summary</h2>
-      <div class="info-grid">
-        <div class="info-item">
-          <span class="label">Assessments Completed:</span>
-          <span class="value">{{ activityStats.assessmentsCompleted }}</span>
-        </div>
-        <div class="info-item">
-          <span class="label">Questions Answered:</span>
-          <span class="value">{{ activityStats.questionsAnswered }}</span>
-        </div>
-      </div>
-    </div>
 
     <!-- Actions -->
     <div v-if="!userDataLoading" class="actions">
@@ -208,10 +194,6 @@ const userProfile = computed(() => ({
   memberSince: authStore.user?.created_at ? new Date(authStore.user.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long' }) : 'Unknown'
 }))
 
-const activityStats = computed(() => ({
-  assessmentsCompleted: 5,
-  questionsAnswered: chatStore.messages?.length || 0
-}))
 
 function getInitials(): string {
   const name = userProfile.value.displayName

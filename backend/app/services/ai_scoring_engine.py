@@ -8,7 +8,7 @@ import logging
 @dataclass
 class AIScoreResult:
     """Result of AI-powered scoring"""
-    score: float                    # 0-7 scale matching question options
+    score: float                    # 0-5 scale matching ALSFRS-R medical standard
     confidence: float              # 0-1 confidence in scoring
     reasoning: str                 # Explanation of scoring rationale
     quality_of_life_impact: str   # Impact description
@@ -96,7 +96,14 @@ Available scores:
 
 Patient said: "{user_response}"
 
-Score their response (0-7) based on how well they're managing this situation. Return JSON with score, confidence, reasoning, quality_of_life_impact, and extracted_insights."""
+Score their response (0-5) based on ALSFRS-R medical standard. Return JSON with score, confidence, reasoning, quality_of_life_impact, and extracted_insights.
+
+0=Normal function, no impact
+1=Slight impact, mostly normal
+2=Mild difficulty, some impact
+3=Moderate difficulty, clear impact
+4=Severe difficulty, major limitations
+5=Unable to perform, completely limited"""
 
         # Add conversation context if available
         if conversation_history:
@@ -109,12 +116,13 @@ Score their response (0-7) based on how well they're managing this situation. Re
     def _build_question_specific_scale(self, options: List[Dict]) -> str:
         """Build scoring scale text from question options"""
         if not options:
-            return """Score 0-7 scale based on ALS impact assessment:
-0: No impact, fully prepared/optimal situation
-1-2: Minimal impact, excellent management
-3-4: Moderate impact, some challenges
-5-6: Significant impact, major difficulties
-7: Severe impact, extreme challenges"""
+            return """Score 0-5 scale based on ALSFRS-R medical standard:
+0: Normal function, no impact
+1: Slight impact, mostly normal function
+2: Mild difficulty, some functional impact
+3: Moderate difficulty, clear functional impact
+4: Severe difficulty, major functional limitations
+5: Unable to perform, completely limited function"""
 
         # Build scale from actual question options
         scale_lines = []
@@ -137,8 +145,8 @@ Score their response (0-7) based on how well they're managing this situation. Re
                 raise ValueError("AI result missing score field")
 
             score = int(score)
-            if not (0 <= score <= 7):
-                raise ValueError(f"AI score {score} outside valid range 0-7")
+            if not (0 <= score <= 5):
+                raise ValueError(f"AI score {score} outside valid range 0-5")
 
             # Extract and validate confidence
             confidence = float(ai_result.get('confidence', 0.8))

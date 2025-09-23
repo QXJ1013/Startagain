@@ -1,8 +1,8 @@
 -- ALS Assistant System - Unified Complete Schema
 -- Generated from current working database structure
--- 数据库统一完整Schema - 基于当前实际工作数据库结构生成
 
--- Users table - 用户表
+
+-- Users table - 
 CREATE TABLE IF NOT EXISTS users (
     id TEXT PRIMARY KEY,
     email TEXT UNIQUE NOT NULL,
@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS users (
     is_active BOOLEAN DEFAULT 1
 );
 
--- Sessions table - 会话表
+-- Sessions table - 
 CREATE TABLE IF NOT EXISTS sessions (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Conversation Documents - 对话文档表 (JSON存储)
+-- Conversation Documents - 
 CREATE TABLE IF NOT EXISTS conversation_documents (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -37,7 +37,7 @@ CREATE TABLE IF NOT EXISTS conversation_documents (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Conversation Scores - 对话评分表
+-- Conversation Scores -
 CREATE TABLE IF NOT EXISTS conversation_scores (
     conversation_id TEXT,
     pnm TEXT,
@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS conversation_scores (
     FOREIGN KEY(conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
 );
 
--- Term Scores - 术语评分表
+-- Term Scores -
 CREATE TABLE IF NOT EXISTS term_scores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
@@ -64,7 +64,7 @@ CREATE TABLE IF NOT EXISTS term_scores (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Dimension Scores - 维度评分表
+-- Dimension Scores - 
 CREATE TABLE IF NOT EXISTS dimension_scores (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
@@ -76,7 +76,7 @@ CREATE TABLE IF NOT EXISTS dimension_scores (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Evidence Log - 证据日志表
+-- Evidence Log - 
 CREATE TABLE IF NOT EXISTS evidence_log (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id TEXT NOT NULL,
@@ -91,7 +91,7 @@ CREATE TABLE IF NOT EXISTS evidence_log (
     FOREIGN KEY (conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
 );
 
--- Conversations - 旧版对话表 (保留向后兼容)
+-- Conversations - 
 CREATE TABLE IF NOT EXISTS conversations (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL,
@@ -104,7 +104,7 @@ CREATE TABLE IF NOT EXISTS conversations (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- Turns - 对话轮次表 (旧版，保留向后兼容)
+-- Turns - 
 CREATE TABLE IF NOT EXISTS turns (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     conversation_id TEXT NOT NULL,
@@ -116,7 +116,7 @@ CREATE TABLE IF NOT EXISTS turns (
     FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE
 );
 
--- User Preferences - 用户偏好表
+-- User Preferences -
 CREATE TABLE IF NOT EXISTS user_preferences (
     user_id TEXT PRIMARY KEY,
     notification_settings TEXT DEFAULT '{}',
@@ -127,7 +127,7 @@ CREATE TABLE IF NOT EXISTS user_preferences (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- User Conversation Preferences - 用户对话偏好表
+-- User Conversation Preferences - 
 CREATE TABLE IF NOT EXISTS user_conversation_preferences (
     user_id TEXT,
     conversation_id TEXT,
@@ -138,7 +138,7 @@ CREATE TABLE IF NOT EXISTS user_conversation_preferences (
     FOREIGN KEY (conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
 );
 
--- Conversation Tags - 对话标签表
+-- Conversation Tags -
 CREATE TABLE IF NOT EXISTS conversation_tags (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     conversation_id TEXT NOT NULL,
@@ -147,7 +147,7 @@ CREATE TABLE IF NOT EXISTS conversation_tags (
     FOREIGN KEY (conversation_id) REFERENCES conversation_documents(id) ON DELETE CASCADE
 );
 
--- User Direct Routes - 用户直接路由表
+-- User Direct Routes -
 CREATE TABLE IF NOT EXISTS user_direct_routes (
     user_id TEXT,
     dimension TEXT,
@@ -157,7 +157,7 @@ CREATE TABLE IF NOT EXISTS user_direct_routes (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- User PNM Status - 用户PNM状态表
+-- User PNM Status -
 CREATE TABLE IF NOT EXISTS user_pnm_status (
     user_id TEXT,
     pnm TEXT,
@@ -167,7 +167,7 @@ CREATE TABLE IF NOT EXISTS user_pnm_status (
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
--- User Profiles - 用户档案表
+-- User Profiles - 
 CREATE TABLE IF NOT EXISTS user_profiles (
     user_id TEXT PRIMARY KEY,
     profile_data TEXT DEFAULT '{}',
@@ -217,7 +217,7 @@ CREATE INDEX IF NOT EXISTS idx_turns_created_at ON turns(created_at);
 CREATE INDEX IF NOT EXISTS idx_conversation_tags_conversation_id ON conversation_tags(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_conversation_tags_tag ON conversation_tags(tag);
 
--- Triggers for Automatic Updates - 自动更新触发器
+-- Triggers for Automatic Updates
 CREATE TRIGGER IF NOT EXISTS update_conversation_documents_timestamp
     AFTER UPDATE ON conversation_documents
     BEGIN
