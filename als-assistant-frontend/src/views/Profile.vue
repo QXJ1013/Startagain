@@ -156,12 +156,10 @@
 <script setup lang="ts">
 import { computed, ref, reactive, onMounted } from 'vue'
 import { useAuthStore } from '../stores/auth'
-import { useChatStore } from '../stores/chat'
 import { useRouter } from 'vue-router'
 import { userApi } from '../services/api'
 
 const authStore = useAuthStore()
-const chatStore = useChatStore()
 const router = useRouter()
 
 // Reactive state
