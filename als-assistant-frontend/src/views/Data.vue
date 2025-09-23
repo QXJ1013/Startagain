@@ -131,12 +131,15 @@ const hoveredDimension = ref<string | null>(null);
 const showAllTermsModal = ref(false);
 
 function showDimensionHover(dimensionName: string) {
+  console.log(`[DATA.VUE] 🖱️ Hover entered: ${dimensionName}`);
   hoveredDimension.value = dimensionName;
 }
 
 function hideDimensionHover() {
+  console.log(`[DATA.VUE] 🖱️ Hover left`);
   hoveredDimension.value = null;
 }
+
 
 // 8 dimensions data - loaded from backend
 const eightDimensions = ref([
@@ -171,18 +174,33 @@ const displayedTerms = computed(() => allTerms.value.slice(0, 5));
 
 
 async function startDimensionChat(dimensionName: string) {
+  console.log(`[DATA.VUE] ⭐ startDimensionChat called with dimension: ${dimensionName}`);
+  console.log(`[DATA.VUE] Auth state:`, {
+    isAuthenticated: authStore.isAuthenticated,
+    hasToken: !!authStore.token
+  });
+
   try {
     if (!authStore.isAuthenticated || !authStore.token) {
+      console.error('[DATA.VUE] ❌ Not authenticated, redirecting to login');
       sessionStore.setMessage('Please login to start assessment');
       router.push('/login');
       return;
     }
 
-    console.log(`[DATA.VUE] Starting fresh ${dimensionName} assessment`);
+    console.log(`[DATA.VUE] ✅ Starting fresh ${dimensionName} assessment`);
 
-    // STEP 1: Complete reset of all frontend state
-    chatStore.reset(); // This clears all messages and conversation state
+    // STEP 1: Strategic reset - preserve dimension mode intention
+    chatStore.clearMessages(); // Clear messages but preserve conversation state
+    chatStore.setCurrentConversation(null); // Clear conversation ID
+    chatStore.resetProgress(); // Clear progress state
+    chatStore.setError(null); // Clear any errors
     sessionStore.resetSession(); // This clears session state
+
+    // STEP 1.5: Immediately set dimension mode to prevent any race conditions
+    chatStore.conversationType = 'dimension';
+    chatStore.dimensionName = dimensionName;
+    console.log(`[DATA.VUE] Set dimension mode: ${dimensionName}`);
 
     // STEP 2: Clear localStorage keys that might interfere
     const sessionKeys = Object.keys(localStorage).filter(k => k.startsWith('als_session'));
@@ -198,20 +216,18 @@ async function startDimensionChat(dimensionName: string) {
     console.log(`[DATA.VUE] Creating new conversation for ${dimensionName}`);
 
     // STEP 4: Create fresh conversation using conversations API with unique timestamp
-    const timestamp = new Date().toISOString();
     const newConv = await conversationsApi.createConversation(
       authStore.token,
       'dimension',
       dimensionName,
-      `${dimensionName} Assessment - ${timestamp}`
+      `${dimensionName} Assessment - ${new Date().toLocaleTimeString()}`
     );
 
     console.log(`[DATA.VUE] Created conversation ${newConv.id} for ${dimensionName}`);
 
-    // STEP 5: Set fresh conversation state in chat store
+    // STEP 5: Set conversation ID (dimension state already set above)
     chatStore.setCurrentConversation(newConv.id);
-    chatStore.conversationType = 'dimension';
-    chatStore.dimensionName = dimensionName;
+    console.log(`[DATA.VUE] Conversation ID set: ${newConv.id}, Type: ${chatStore.conversationType}`);
 
     // STEP 6: Set dimension focus for Chat.vue to pick up
     sessionStore.setDimensionFocus(dimensionName);
@@ -223,13 +239,21 @@ async function startDimensionChat(dimensionName: string) {
     sessionStore.setMessage(`Starting ${dimensionName} assessment`);
 
   } catch (error: any) {
-    console.error('Error starting dimension chat:', error);
+    console.error(`[DATA.VUE] ❌ Error starting dimension chat for ${dimensionName}:`, error);
+    console.error(`[DATA.VUE] Error details:`, {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
+
     if (error.message && error.message.includes('401')) {
+      console.error('[DATA.VUE] Auth error detected, logging out');
       authStore.logout();
       sessionStore.setMessage('Session expired. Please login again.');
       router.push('/login');
     } else {
-      sessionStore.setMessage(`Error starting ${dimensionName} assessment`);
+      console.error(`[DATA.VUE] General error: ${error.message}`);
+      sessionStore.setMessage(`Error starting ${dimensionName} assessment: ${error.message}`);
     }
   }
 }

@@ -2431,8 +2431,6 @@ class UseCaseTwoManager:
 
     async def handle_dimension_assessment(self, context: ConversationContext, dimension: str) -> DialogueResponse:
         """Handle single dimension assessment flow"""
-
-
         try:
             assessment_state_keys = list(context.conversation.assessment_state.keys()) if context.conversation.assessment_state else []
         except Exception as e:
